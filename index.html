@@ -39,10 +39,11 @@ window.storage = {
 
 const {useState,useEffect,useCallback} = React;
 
-const INDUSTRIES=["Dệt may","Giày dép","Thực phẩm / FMCG","Cà phê / Nông sản","Điện tử / Cơ khí","Gỗ / Nội thất","Nhựa / Bao bì","Thủ công mỹ nghệ","Khác"];
+const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ","An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái"];
 const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành"];
 const BUSINESS_TYPES=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Khác"];
+const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
 const MARKETS=["EU","US","Nhật Bản","Hàn Quốc","Úc","Canada","UK","Trung Đông","ASEAN","Khác"];
 const STAGES=[
   {id:"B1",label:"B1 Xác định ngành",phase:1},{id:"B2",label:"B2 Longlist",phase:1},{id:"B3",label:"B3 Pre-score",phase:1},
@@ -84,7 +85,7 @@ const calcPerf=p=>{
   if(s>=45)return{label:"Probation",color:"#854F0B",bg:"#FAEEDA",score:Math.round(s)};
   return{label:"Inactive",color:"#A32D2D",bg:"#FCEBEB",score:Math.round(s)};
 };
-const emptyS=()=>({id:Date.now()+"_s",name:"",bizType:"",industry:"",products:"",foundedYear:"",province:"",website:"",contactName:"",zalo:"",email:"",channel:"",stage:"B1",notes:"",specialNotes:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},source:"proactive",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+const emptyS=()=>({id:Date.now()+"_s",name:"",bizType:"",legalType:"",industry:"",products:"",foundedYear:"",province:"",website:"",contactName:"",zalo:"",email:"",channel:"",stage:"B1",notes:"",specialNotes:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},source:"proactive",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
 const emptyR=()=>({id:Date.now()+"_r",rfqCode:"RFQ-"+Date.now().toString().slice(-5),salesPerson:"",receivedDate:new Date().toISOString().slice(0,10),productDesc:"",buyerMarket:[],deadline:"",moqQty:"",certRequirements:"",priceTarget:"",incoterm:"",additionalNotes:"",status:"new",supplierIds:[],supplierNotes:{},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
 
 const SK_S="vns_suppliers_v2",SK_R="vns_rfqs_v1";
@@ -216,7 +217,8 @@ function SupDetail({s,ctx}){
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:12}}>
         <IB title="Thông tin cơ bản">
-          <IR l="Loại hình KD" v={s.bizType}/>
+          <IR l="Mô hình KD" v={s.bizType}/>
+          <IR l="Loại hình DN" v={s.legalType}/>
           <IR l="Sản phẩm" v={s.products}/>
           <IR l="Năm thành lập" v={s.foundedYear}/>
           <IR l="Website" v={s.website}/>
@@ -257,7 +259,8 @@ function SupForm({s,ctx}){
       <h2 style={{margin:"0 0 1rem",fontSize:15,fontWeight:500}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
       <Sec title="Thông tin cơ bản">
         <Rw l="Tên công ty *"><input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Công ty TNHH ABC" style={iSt}/></Rw>
-        <Rw l="Loại hình KD"><select value={f.bizType||""} onChange={e=>set("bizType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BUSINESS_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
+        <Rw l="Mô hình KD"><select value={f.bizType||""} onChange={e=>set("bizType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BUSINESS_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
+        <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Ngành hàng"><select value={f.industry} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="Áo thun cotton, quần kaki export" style={iSt}/></Rw>
         <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} placeholder="VD: 2010" style={iSt}/></Rw>
@@ -359,7 +362,7 @@ function Brief({s,ctx}){
         </div>
         {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
         <div style={{background:"#F0F9F5",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:600,color:"#0F6E56",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10}}>Tên</div><div style={{fontWeight:500}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10}}>Zalo/SĐT</div><div style={{fontWeight:500}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10}}>Email</div><div style={{fontWeight:500,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>{VSERF_COLS.slice(0,6).map(c=>{const v=s.vserf[c.id]||0;return(<div key={c.id} style={{background:"#F8F8F8",borderRadius:6,padding:"7px 9px"}}><div style={{fontSize:9,color:"#888",marginBottom:3}}>{c.label}</div><div style={{height:4,borderRadius:2,background:"#E0E0E0",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A"}}/></div><div style={{fontSize:11,fontWeight:600,color:"#333",marginTop:2}}>{v}/5</div></div>);})}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>{VSERF_COLS.map(c=>{const v=s.vserf[c.id]||0;return(<div key={c.id} style={{background:"#F8F8F8",borderRadius:6,padding:"7px 9px"}}><div style={{fontSize:9,color:"#888",marginBottom:3}}>{c.label}</div><div style={{height:4,borderRadius:2,background:"#E0E0E0",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A"}}/></div><div style={{fontSize:11,fontWeight:600,color:"#333",marginTop:2}}>{v}/5</div></div>);})}</div>
         <div style={{marginTop:14,paddingTop:10,borderTop:"0.5px solid #eee",fontSize:10,color:"#bbb",display:"flex",justifyContent:"space-between"}}><span>VinaSources Supply Chain · Confidential</span><span>Xuất {today}</span></div>
       </div>
     </div>
