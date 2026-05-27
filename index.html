@@ -29,6 +29,10 @@ input,select,textarea,button{font-family:inherit}
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
+// ── auth config ──
+const EDIT_PASSWORD = "vinasources2026";
+const AUTH_KEY = "vns_auth_v1";
+
 // ── storage polyfill ──
 window.storage = {
   get: async k => { try { const v=localStorage.getItem(k); return v?{key:k,value:v}:null; } catch{return null;} },
@@ -105,7 +109,28 @@ function Sel({value,onChange,opts}){return <select value={value} onChange={e=>on
 function Empty({text}){return <div style={{textAlign:"center",padding:"2.5rem",color:"var(--color-text-secondary)",fontSize:13}}>{text}</div>;}
 function ModalWrap({children,onClose}){return <div style={{position:"fixed",inset:0,background:"#0007",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:720,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 
-function App(){
+function LoginBanner({onLogin}) {
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(false);
+  const tryLogin = () => {
+    if(pw === EDIT_PASSWORD) { localStorage.setItem(AUTH_KEY,"1"); onLogin(); }
+    else { setErr(true); setTimeout(()=>setErr(false),2000); }
+  };
+  return (
+    <div style={{background:"#FAEEDA",borderBottom:"1px solid #EF9F27",padding:"10px 1rem"}}>
+      <div style={{maxWidth:920,margin:"0 auto",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <span style={{fontSize:13,color:"#633806"}}>👁 Chế độ xem — Nhập mật khẩu để chỉnh sửa</span>
+        <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryLogin()} placeholder="Nhập mật khẩu..." style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${err?"#E24B4A":"#EF9F27"}`,fontSize:13,width:180}}/>
+          <button onClick={tryLogin} style={{padding:"5px 14px",borderRadius:6,border:"none",background:"#EF9F27",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>Đăng nhập</button>
+          {err&&<span style={{fontSize:12,color:"#A32D2D"}}>Sai mật khẩu</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   const [tab,setTab]=useState("list");
   const [suppliers,setSuppliers]=useState([]);
   const [rfqs,setRfqs]=useState([]);
@@ -125,11 +150,12 @@ function App(){
   const delR=async id=>{if(!confirm("Xóa RFQ này?"))return;await saveRfq(rfqs.filter(x=>x.id!==id));setModal(null);showToast("Đã xóa RFQ");};
 
   if(loading)return <div style={{padding:"2rem",fontSize:14,color:"#666"}}>Đang tải...</div>;
-  const ctx={suppliers,rfqs,upsertS,delS,upsertR,delR,modal,setModal,showToast};
+  const ctx={suppliers,rfqs,upsertS,delS,upsertR,delR,modal,setModal,showToast,canEdit};
 
   return (
     <div style={{fontFamily:"var(--font-sans)",minHeight:"100vh",background:"var(--color-background-tertiary)"}}>
       {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"9px 18px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500}}>{toast}</div>}
+      {!canEdit && <LoginBanner onLogin={()=>setCanEdit(true)}/>}
       <div style={{background:"var(--color-background-primary)",borderBottom:"0.5px solid var(--color-border-tertiary)",padding:"0 1rem"}}>
         <div style={{maxWidth:920,margin:"0 auto",display:"flex",alignItems:"center",gap:4}}>
           <span style={{fontWeight:600,fontSize:14,color:"#1D9E75",paddingRight:12,borderRight:"0.5px solid var(--color-border-tertiary)",marginRight:4}}>🏭 VinaSources</span>
@@ -140,8 +166,11 @@ function App(){
             </button>
           ))}
           <div style={{flex:1}}/>
-          <button onClick={()=>setModal({type:"rfq-form",data:emptyR()})} style={{padding:"6px 12px",borderRadius:6,border:"0.5px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
-          <button onClick={()=>setModal({type:"sup-form",data:emptyS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
+          {canEdit ? <>
+            <button onClick={()=>setModal({type:"rfq-form",data:emptyR()})} style={{padding:"6px 12px",borderRadius:6,border:"0.5px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
+            <button onClick={()=>setModal({type:"sup-form",data:emptyS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
+            <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"0.5px solid var(--color-border-secondary)",background:"none",color:"var(--color-text-tertiary)",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
+          </> : <span style={{fontSize:12,color:"var(--color-text-tertiary)"}}>👁 Chỉ xem</span>}
         </div>
       </div>
       <div style={{maxWidth:920,margin:"0 auto",padding:"1rem"}}>
@@ -149,13 +178,13 @@ function App(){
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
         {tab==="dashboard"&&<Dash ctx={ctx}/>}
       </div>
-      {modal?.type==="sup-form"&&<ModalWrap onClose={()=>setModal(null)}><SupForm s={modal.data} ctx={ctx}/></ModalWrap>}
+      {modal?.type==="sup-form"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><SupForm s={modal.data} ctx={ctx}/></ModalWrap>}
       {modal?.type==="sup-detail"&&<ModalWrap onClose={()=>setModal(null)}><SupDetail s={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="scoring"&&<ModalWrap onClose={()=>setModal(null)}><Scoring s={modal.data} ctx={ctx}/></ModalWrap>}
+      {modal?.type==="scoring"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><Scoring s={modal.data} ctx={ctx}/></ModalWrap>}
       {modal?.type==="brief"&&<ModalWrap onClose={()=>setModal(null)}><Brief s={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="rfq-form"&&<ModalWrap onClose={()=>setModal(null)}><RFQForm r={modal.data} ctx={ctx}/></ModalWrap>}
+      {modal?.type==="rfq-form"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><RFQForm r={modal.data} ctx={ctx}/></ModalWrap>}
       {modal?.type==="rfq-detail"&&<ModalWrap onClose={()=>setModal(null)}><RFQDetail r={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="rfq-assign"&&<ModalWrap onClose={()=>setModal(null)}><RFQAssign r={modal.data} ctx={ctx}/></ModalWrap>}
+      {modal?.type==="rfq-assign"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><RFQAssign r={modal.data} ctx={ctx}/></ModalWrap>}
     </div>
   );
 }
@@ -241,10 +270,10 @@ function SupDetail({s,ctx}){
       {s.specialNotes&&<div style={{background:"#FAEEDA",border:"0.5px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:500,color:"#854F0B",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#633806"}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"var(--color-background-secondary)",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"var(--color-text-tertiary)",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"var(--color-text-secondary)"}}>{s.notes}</div></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-        <button onClick={()=>setModal({type:"sup-form",data:s})} style={gBtn}>Sửa</button>
-        <button onClick={()=>setModal({type:"scoring",data:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>Chấm VSERF</button>
+        {canEdit&&<button onClick={()=>setModal({type:"sup-form",data:s})} style={gBtn}>Sửa</button>}
+        {canEdit&&<button onClick={()=>setModal({type:"scoring",data:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>Chấm VSERF</button>}
         <button onClick={()=>setModal({type:"brief",data:s})} style={{padding:"7px 14px",borderRadius:6,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>Xuất Brief</button>
-        <button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>
+        {canEdit&&<button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
       </div>
     </Card>
   );
@@ -459,12 +488,15 @@ function RFQDetail({r,ctx}){
         </div>
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-        <button onClick={()=>setModal({type:"rfq-form",data:r})} style={gBtn}>Sửa RFQ</button>
+        {canEdit&&<button onClick={()=>setModal({type:"rfq-form",data:r})} style={gBtn}>Sửa RFQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
           <span style={{fontSize:12,color:"var(--color-text-secondary)"}}>Trạng thái:</span>
-          <select value={r.status} onChange={e=>upsertR({...r,status:e.target.value})} style={{...iSt,padding:"4px 8px",fontSize:12,width:"auto"}}>{RFQ_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
+          {canEdit
+            ? <select value={r.status} onChange={e=>upsertR({...r,status:e.target.value})} style={{...iSt,padding:"4px 8px",fontSize:12,width:"auto"}}>{RFQ_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
+            : <span style={{fontSize:12,padding:"3px 10px",borderRadius:5,background:RFQ_STATUSES.find(x=>x.id===r.status)?.bg,color:RFQ_STATUSES.find(x=>x.id===r.status)?.color,fontWeight:500}}>{RFQ_STATUSES.find(x=>x.id===r.status)?.label}</span>
+          }
         </div>
-        <button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>
+        {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
       </div>
     </Card>
   );
