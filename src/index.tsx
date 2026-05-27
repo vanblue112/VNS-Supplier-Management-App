@@ -1,8 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
 
-// Polyfill window.storage -> dùng localStorage thay cho claude.ai storage
+// Polyfill window.storage -> localStorage
 (window as any).storage = {
   get: async (key: string) => {
     try {
@@ -24,11 +23,15 @@ import App from './App';
   },
   list: async (prefix?: string) => {
     try {
-      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      const keys = Object.keys(localStorage).filter((k: string) => !prefix || k.startsWith(prefix));
       return { keys };
     } catch { return { keys: [] }; }
   }
 };
+
+// Dynamic import để tránh lỗi case-sensitive trên Linux
+const AppModule = require('./App');
+const App = AppModule.default || AppModule;
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
