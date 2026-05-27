@@ -186,9 +186,17 @@ function SupList({ctx}){
     return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   });
   const csv=()=>{
-    const h=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
-    const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(",");});
-    const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([h.join(","),...rows].join("\n"));a.download="VinaSources.csv";a.click();
+    try {
+      const h=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
+      const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(String(v||"")).replace(/"/g,'""')}"`).join(",");});
+      const content="\uFEFF"+[h.join(","),...rows].join("\r\n");
+      const blob=new Blob([content],{type:"text/csv;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";
+      document.body.appendChild(a);a.click();
+      document.body.removeChild(a);URL.revokeObjectURL(url);
+    } catch(e){alert("Lỗi xuất CSV: "+e.message);}
   };
   return(
     <div>
