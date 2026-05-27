@@ -460,28 +460,16 @@ function ImportCSV({ctx}){
   const doImport=()=>{
     const toImport=rows.filter((_,i)=>sel[i]&&rows[i]._valid);
     if(!toImport.length){toast2("Không có dòng nào được chọn");return;}
-    // upsert từng supplier
-    let current=[...sups];
+    const current=[...sups];
     toImport.forEach(s=>{
       const idx=current.findIndex(x=>x.name.toLowerCase()===s.name.toLowerCase());
       if(idx>=0)current[idx]={...current[idx],...s,id:current[idx].id};
-      else current=[s,...current];
+      else current.unshift(s);
     });
-    ctx.saveSups?ctx.saveSups(current):toImport.forEach(s=>upsS(s));
-    // save trực tiếp
-    setSups_direct(current);
-    toast2(`Đã import ${toImport.length} supplier`);
+    try{localStorage.setItem("vns_sup_v3",JSON.stringify(current));}catch(e){}
+    toast2(`Đã import ${toImport.length} supplier — trang sẽ tải lại`);
+    setTimeout(()=>window.location.reload(),1200);
     setModal(null);
-  };
-
-  // hack: access saveSups từ ctx
-  const setSups_direct=list=>{
-    // dùng upsS từng cái nếu không có saveSups
-    // thực ra ctx có upsS, ta batch
-    const db_local={get:k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
-    db_local.set("vns_sup_v3",list);
-    // force reload
-    window.location.reload();
   };
 
   const validCount=rows.filter((_,i)=>sel[i]&&rows[i]._valid).length;
