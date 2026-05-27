@@ -40,11 +40,9 @@ window.storage = {
 const {useState,useEffect,useCallback} = React;
 
 const INDUSTRIES=["Dệt may","Giày dép","Thực phẩm / FMCG","Cà phê / Nông sản","Điện tử / Cơ khí","Gỗ / Nội thất","Nhựa / Bao bì","Thủ công mỹ nghệ","Khác"];
-const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Bình Dương","Đồng Nai","Hải Phòng","Đà Nẵng","Cần Thơ","Bắc Ninh","Hưng Yên","Long An","Tiền Giang","Khác"];
+const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ","An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái"];
 const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành"];
-const BUSINESS_TYPES=["Công ty TNHH","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Khác"];
-const SERVICE_MODELS=["OEM (sản xuất theo mẫu buyer)","ODM (có thiết kế riêng)","CMT (gia công)","FOB đầy đủ","Trading / Thương mại","Khác"];
-const PAYMENT_METHODS=["T/T (chuyển khoản)","L/C (thư tín dụng)","D/P","D/A","Trả trước 100%","30% đặt cọc - 70% trước giao hàng","Khác"];
+const BUSINESS_TYPES=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Khác"];
 const MARKETS=["EU","US","Nhật Bản","Hàn Quốc","Úc","Canada","UK","Trung Đông","ASEAN","Khác"];
 const STAGES=[
   {id:"B1",label:"B1 Xác định ngành",phase:1},{id:"B2",label:"B2 Longlist",phase:1},{id:"B3",label:"B3 Pre-score",phase:1},
@@ -279,8 +277,8 @@ function SupForm({s,ctx}){
         <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} placeholder="VD: FOB $3–5/pcs" style={iSt}/></Rw>
         <Rw l="Lead time"><input value={f.leadTime} onChange={e=>set("leadTime",e.target.value)} placeholder="30–45 ngày" style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF, EXW" style={iSt}/></Rw>
-        <Rw l="Mô hình SX"><select value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{SERVICE_MODELS.map(m=><option key={m}>{m}</option>)}</select></Rw>
-        <Rw l="Thanh toán"><select value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PAYMENT_METHODS.map(m=><option key={m}>{m}</option>)}</select></Rw>
+        <Rw l="Mô hình SX"><input value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} placeholder="VD: OEM + ODM, CMT, FOB đầy đủ..." style={iSt}/></Rw>
+        <Rw l="Thanh toán"><input value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} placeholder="VD: T/T 30% + 70%, L/C at sight..." style={iSt}/></Rw>
       </Sec>
       <Sec title="Lưu ý đặc biệt về sản phẩm">
         <textarea value={f.specialNotes} onChange={e=>set("specialNotes",e.target.value)} placeholder="VD: Chỉ làm cotton 100%, không nhận đơn pha len..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
