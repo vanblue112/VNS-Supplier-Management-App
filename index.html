@@ -134,7 +134,8 @@ function App(){
       {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
       {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="rfq-assign"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQAssign r={modal.d} ctx={ctx}/></Modal>}
+      // Import CSV modal
+  {modal?.t==="import-csv"&&canEdit&&<Modal onClose={()=>setModal(null)}><ImportCSV ctx={ctx}/></Modal>}
     </div>
   );
 }
@@ -182,6 +183,7 @@ function SupList({ctx}){
         <Sel val={fI} onChange={setFI} opts={[["all","Tất cả ngành"],...inds.map(i=>[i,i])]}/>
         <Sel val={fS} onChange={setFS} opts={[["all","Tất cả Stage"],...STAGES.map(s=>[s.id,s.label])]}/>
         <button onClick={csv} style={gBtn}>⬇ CSV</button>
+        {canEdit&&<button onClick={()=>setModal({t:"import-csv"})} style={{...gBtn,color:"#185FA5",borderColor:"#185FA5"}}>⬆ Import</button>}
       </div>
       <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>{fl.length} supplier</div>
       {fl.length===0&&<Empty text="Chưa có supplier. Nhấn + Supplier để thêm."/>}
@@ -374,7 +376,222 @@ function Brief({s}){
   );
 }
 
-function RFQList({ctx}){
+// ── CSV HEADERS (must match export) ──
+const CSV_HEADERS=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","HT hợp tác VNS","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
+
+function downloadTemplate(){
+  const row=["Công ty TNHH Mẫu","Textiles & Apparel","Áo thun cotton export","TP. Hồ Chí Minh","Manufacturer","Công ty TNHH MTV","Đối tác trực tiếp","https://example.com","Nguyễn Văn A","0901234567","sales@example.com","B1","","","50000 pcs/tháng","500 pcs/SKU","FOB $3-5/pcs","30-45 ngày","FOB","OEM + CMT","T/T 30% + 70%","Chỉ làm cotton 100%"];
+  const blob=new Blob(["\uFEFF"+[CSV_HEADERS.join(","),row.map(v=>`"${v}"`).join(",")].join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_Import_Template.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return{error:"File không có dữ liệu",rows:[]};
+  // parse header
+  const headers=parseCSVRow(lines[0]);
+  const nameIdx=headers.indexOf("Tên");
+  if(nameIdx<0)return{error:"Không tìm thấy cột 'Tên' — vui lòng dùng đúng template",rows:[]};
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const cols=parseCSVRow(lines[i]);
+    const get=h=>cols[headers.indexOf(h)]||"";
+    const stageVal=get("Stage");
+    const validStage=STAGES.find(s=>s.id===stageVal);
+    rows.push({
+      id:Date.now()+"_"+i+"s",
+      name:get("Tên"),industry:get("Ngành"),products:get("Sản phẩm"),
+      province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),
+      partnerType:get("HT hợp tác VNS")||"Chưa xác định",
+      website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),
+      stage:validStage?stageVal:"B1",
+      capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),
+      leadTime:get("Lead time"),incoterm:get("Incoterm"),
+      serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),
+      specialNotes:get("Lưu ý đặc biệt"),
+      certs:"",notes:"",channel:"",foundedYear:"",source:"import",
+      vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},
+      perf:{qc:0,delivery:0,comm:0,price:0,flex:0},
+      ca:new Date().toISOString(),ua:new Date().toISOString(),
+      _valid:!!get("Tên"),_row:i+1,
+    });
+  }
+  return{error:null,rows};
+}
+
+function parseCSVRow(line){
+  const result=[];let cur="";let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){result.push(cur.trim());cur="";}
+    else cur+=c;
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function ImportCSV({ctx}){
+  const {sups,upsS,setModal,toast2}=ctx;
+  const [rows,setRows]=useState([]);
+  const [err,setErr]=useState("");
+  const [step,setStep]=useState(1); // 1=upload, 2=preview
+  const [sel,setSel]=useState({});
+  const fileRef=React.useRef();
+
+  const onFile=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const text=ev.target.result;
+      const {error,rows:parsed}=parseCSV(text);
+      if(error){setErr(error);return;}
+      setErr("");
+      // check trùng tên với DB
+      const existing=new Set(sups.map(s=>s.name.toLowerCase().trim()));
+      const initSel={};
+      parsed.forEach((r,i)=>{initSel[i]=!existing.has(r.name.toLowerCase().trim());});
+      setRows(parsed);setSel(initSel);setStep(2);
+    };
+    reader.readAsText(f,"UTF-8");
+  };
+
+  const doImport=()=>{
+    const toImport=rows.filter((_,i)=>sel[i]&&rows[i]._valid);
+    if(!toImport.length){toast2("Không có dòng nào được chọn");return;}
+    // upsert từng supplier
+    let current=[...sups];
+    toImport.forEach(s=>{
+      const idx=current.findIndex(x=>x.name.toLowerCase()===s.name.toLowerCase());
+      if(idx>=0)current[idx]={...current[idx],...s,id:current[idx].id};
+      else current=[s,...current];
+    });
+    ctx.saveSups?ctx.saveSups(current):toImport.forEach(s=>upsS(s));
+    // save trực tiếp
+    setSups_direct(current);
+    toast2(`Đã import ${toImport.length} supplier`);
+    setModal(null);
+  };
+
+  // hack: access saveSups từ ctx
+  const setSups_direct=list=>{
+    // dùng upsS từng cái nếu không có saveSups
+    // thực ra ctx có upsS, ta batch
+    const db_local={get:k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
+    db_local.set("vns_sup_v3",list);
+    // force reload
+    window.location.reload();
+  };
+
+  const validCount=rows.filter((_,i)=>sel[i]&&rows[i]._valid).length;
+  const dupCount=rows.filter(r=>sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase())).length;
+
+  return(
+    <Card>
+      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Import Supplier từ CSV</h2>
+      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file CSV theo đúng format template · Dữ liệu sẽ được preview trước khi lưu</div>
+
+      {step===1&&(
+        <div>
+          {/* Download template */}
+          <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Bước 1 — Tải template CSV</div>
+            <div style={{fontSize:12,color:"#555",marginBottom:10,lineHeight:1.6}}>
+              Download file mẫu → điền thông tin supplier vào các cột → save → upload lên.<br/>
+              <b>Cột bắt buộc:</b> Tên công ty · Ngành · Sản phẩm
+            </div>
+            <button onClick={downloadTemplate} style={{...pBtn,background:"#3B6D11",fontSize:12}}>⬇ Download Template CSV</button>
+          </div>
+
+          {/* Upload */}
+          <div style={{border:"2px dashed #ddd",borderRadius:10,padding:"2rem",textAlign:"center",cursor:"pointer",background:"#fafafa"}} onClick={()=>fileRef.current.click()}>
+            <div style={{fontSize:24,marginBottom:8}}>📂</div>
+            <div style={{fontSize:14,fontWeight:500,color:"#555",marginBottom:4}}>Click để chọn file CSV</div>
+            <div style={{fontSize:12,color:"#aaa"}}>Chỉ nhận file .csv · Encoding UTF-8</div>
+            <input ref={fileRef} type="file" accept=".csv" onChange={onFile} style={{display:"none"}}/>
+          </div>
+          {err&&<div style={{marginTop:10,padding:"8px 12px",background:"#FCEBEB",borderRadius:6,fontSize:13,color:"#A32D2D"}}>{err}</div>}
+
+          {/* Format guide */}
+          <div style={{marginTop:14,padding:"10px 14px",background:"#f8f8f8",borderRadius:8}}>
+            <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>Các cột trong template</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+              {CSV_HEADERS.map((h,i)=><span key={h} style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:i<3?"#EAF3DE":"#f0f0f0",color:i<3?"#3B6D11":"#666",fontWeight:i<3?600:400}}>{h}{i<3?" *":""}</span>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step===2&&(
+        <div>
+          {/* Summary */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+            {[{l:"Tổng dòng",v:rows.length,c:"#185FA5"},{l:"Sẽ import",v:validCount,c:"#1D9E75"},{l:"Trùng tên",v:dupCount,c:"#854F0B"}].map(x=>(
+              <div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div>
+                <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{x.l}</div>
+              </div>
+            ))}
+          </div>
+
+          {dupCount>0&&<div style={{padding:"8px 12px",background:"#FAEEDA",borderRadius:6,fontSize:12,color:"#854F0B",marginBottom:10}}>⚠ Supplier trùng tên sẽ được cập nhật (overwrite) nếu được chọn</div>}
+
+          {/* Preview table */}
+          <div style={{maxHeight:340,overflowY:"auto",border:"1px solid #eee",borderRadius:8}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead style={{background:"#f8f8f8",position:"sticky",top:0}}>
+                <tr>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee",width:30}}>
+                    <input type="checkbox" checked={rows.every((_,i)=>sel[i])} onChange={e=>{const s={};rows.forEach((_,i)=>s[i]=e.target.checked);setSel(s);}}/>
+                  </th>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>#</th>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>Tên công ty</th>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>Ngành</th>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>Sản phẩm</th>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>Tỉnh/TP</th>
+                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r,i)=>{
+                  const isDup=sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase());
+                  return(
+                    <tr key={i} style={{background:sel[i]?"#f0faf6":"#fff",borderBottom:"1px solid #f5f5f5",opacity:r._valid?1:0.5}}>
+                      <td style={{padding:"7px 10px"}}><input type="checkbox" checked={!!sel[i]} onChange={e=>setSel(p=>({...p,[i]:e.target.checked}))}/></td>
+                      <td style={{padding:"7px 10px",color:"#aaa"}}>{r._row}</td>
+                      <td style={{padding:"7px 10px",fontWeight:500}}>{r.name||<span style={{color:"#E24B4A"}}>⚠ Trống</span>}</td>
+                      <td style={{padding:"7px 10px",color:"#555"}}>{r.industry||"—"}</td>
+                      <td style={{padding:"7px 10px",color:"#555",maxWidth:150,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.products||"—"}</td>
+                      <td style={{padding:"7px 10px",color:"#555"}}>{r.province||"—"}</td>
+                      <td style={{padding:"7px 10px"}}>
+                        {!r._valid?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>Thiếu tên</span>
+                        :isDup?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>Cập nhật</span>
+                        :<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#EAF3DE",color:"#3B6D11",fontWeight:600}}>Mới</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",marginTop:14}}>
+            <button onClick={()=>{setStep(1);setRows([]);}} style={gBtn}>← Upload lại</button>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
+              <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5}}>
+                ⬆ Import {validCount} supplier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+
   const {rfqs,setModal}=ctx;
   const [fS,setFS]=useState("all");
   const fl=rfqs.filter(r=>fS==="all"||r.status===fS);
