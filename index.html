@@ -2,229 +2,219 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>VinaSources Supplier App</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.2/babel.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f0f0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f0f0;color:#1a1a1a}
+input,select,textarea,button{font-family:inherit;outline:none}
 :root{
-  --color-background-primary:#ffffff;
-  --color-background-secondary:#f8f8f8;
-  --color-background-tertiary:#f0f0f0;
-  --color-text-primary:#1a1a1a;
-  --color-text-secondary:#555555;
-  --color-text-tertiary:#999999;
-  --color-border-tertiary:rgba(0,0,0,0.12);
-  --color-border-secondary:rgba(0,0,0,0.2);
-  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --border-radius-md:8px;
-  --border-radius-lg:12px;
+--bg1:#fff;--bg2:#f8f8f8;--bg3:#f0f0f0;
+--t1:#1a1a1a;--t2:#555;--t3:#999;
+--b1:rgba(0,0,0,0.2);--b2:rgba(0,0,0,0.12);
+--r1:8px;--r2:12px;
 }
-input,select,textarea,button{font-family:inherit}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" data-presets="react">
-// ── auth config ──
-const EDIT_PASSWORD = "vinasources2026";
-const AUTH_KEY = "vns_auth_v1";
+<div id="root"><div style="padding:2rem;color:#666;font-size:14px">Đang khởi động...</div></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef}=React;
 
-// ── storage polyfill ──
-window.storage = {
-  get: async k => { try { const v=localStorage.getItem(k); return v?{key:k,value:v}:null; } catch{return null;} },
-  set: async (k,v) => { try { localStorage.setItem(k,v); return {key:k,value:v}; } catch{return null;} },
-  delete: async k => { try { localStorage.removeItem(k); return {key:k,deleted:true}; } catch{return null;} },
-  list: async p => { try { const keys=Object.keys(localStorage).filter(k=>!p||k.startsWith(p)); return {keys}; } catch{return{keys:[]};} }
+const EDIT_PW="vinasources2026";
+const AUTH_KEY="vns_auth_v1";
+const SK_S="vns_sup_v3";
+const SK_R="vns_rfq_v2";
+
+// storage
+const db={
+  get:k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
 };
 
-const {useState,useEffect,useCallback} = React;
-
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
+const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
+const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
 const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ","An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái"];
 const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành"];
-const BUSINESS_TYPES=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Khác"];
-const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
 const MARKETS=["EU","US","Nhật Bản","Hàn Quốc","Úc","Canada","UK","Trung Đông","ASEAN","Khác"];
 const STAGES=[
-  {id:"B1",label:"B1 Xác định ngành",phase:1},{id:"B2",label:"B2 Longlist",phase:1},{id:"B3",label:"B3 Pre-score",phase:1},
-  {id:"B4",label:"B4 Liên hệ",phase:2},{id:"B5",label:"B5 Thu hồ sơ",phase:2},{id:"B6",label:"B6 Chấm VSERF",phase:2},{id:"B7",label:"B7 Xác minh",phase:2},
-  {id:"B8",label:"B8 Chuẩn hóa",phase:3},{id:"B9",label:"B9 Onboard",phase:3},{id:"B10",label:"B10 Kích hoạt RFQ",phase:3},{id:"B11",label:"B11 Theo dõi",phase:3},
+  {id:"B1",label:"B1 Xác định ngành",ph:1},{id:"B2",label:"B2 Longlist",ph:1},{id:"B3",label:"B3 Pre-score",ph:1},
+  {id:"B4",label:"B4 Liên hệ",ph:2},{id:"B5",label:"B5 Thu hồ sơ",ph:2},{id:"B6",label:"B6 Chấm VSERF",ph:2},{id:"B7",label:"B7 Xác minh",ph:2},
+  {id:"B8",label:"B8 Chuẩn hóa",ph:3},{id:"B9",label:"B9 Onboard",ph:3},{id:"B10",label:"B10 Kích hoạt RFQ",ph:3},{id:"B11",label:"B11 Theo dõi",ph:3},
 ];
-const RFQ_STATUSES=[
-  {id:"new",label:"Mới nhận",color:"#185FA5",bg:"#E6F1FB"},
-  {id:"searching",label:"Đang tìm NCC",color:"#854F0B",bg:"#FAEEDA"},
-  {id:"shortlisted",label:"Đã shortlist",color:"#534AB7",bg:"#EEEDFE"},
-  {id:"sent",label:"Đã gửi Sales",color:"#1D9E75",bg:"#EAF3DE"},
-  {id:"closed",label:"Closed",color:"#888",bg:"#F0F0F0"},
+const RFQ_ST=[
+  {id:"new",label:"Mới nhận",c:"#185FA5",bg:"#E6F1FB"},
+  {id:"searching",label:"Đang tìm NCC",c:"#854F0B",bg:"#FAEEDA"},
+  {id:"shortlisted",label:"Đã shortlist",c:"#534AB7",bg:"#EEEDFE"},
+  {id:"sent",label:"Đã gửi Sales",c:"#1D9E75",bg:"#EAF3DE"},
+  {id:"closed",label:"Closed",c:"#888",bg:"#F0F0F0"},
 ];
-const VSERF_COLS=[
-  {id:"phap_ly",label:"01 Pháp lý",desc:"Giấy phép KD, MST, hồ sơ ngành nghề XK đầy đủ"},
-  {id:"san_xuat",label:"02 Sản xuất",desc:"Nhà xưởng riêng, công suất ≥ MOQ buyer, máy móc đủ"},
-  {id:"chat_luong",label:"03 Chất lượng",desc:"ISO 9001 hoặc tương đương, QC nội bộ 3 lớp"},
-  {id:"xuat_khau",label:"04 Xuất khẩu",desc:"Đã XK ≥ 2 năm, thông thạo Incoterms FOB/CIF"},
-  {id:"chung_tu",label:"05 Chứng từ",desc:"Tự lập CO, packing list, invoice EN; HS code đúng"},
-  {id:"rfq",label:"06 Phản hồi RFQ",desc:"Trả lời ≤24h; báo giá có cost breakdown rõ"},
-  {id:"oem_odm",label:"07 OEM/ODM",desc:"Có R&D; làm mẫu 7–10 ngày; tùy chỉnh theo buyer"},
-  {id:"giao_tiep",label:"08 Giao tiếp",desc:"Sales tiếng Anh B2+; email/Zoom không cần phiên dịch"},
-  {id:"minh_bach",label:"09 Minh bạch",desc:"Sẵn sàng buyer visit, factory audit, factory video"},
+const VCOLS=[
+  {id:"phap_ly",l:"01 Pháp lý",d:"Giấy phép KD, MST, hồ sơ ngành nghề XK đầy đủ"},
+  {id:"san_xuat",l:"02 Sản xuất",d:"Nhà xưởng riêng, công suất ≥ MOQ buyer, máy móc đủ"},
+  {id:"chat_luong",l:"03 Chất lượng",d:"ISO 9001 hoặc tương đương, QC nội bộ 3 lớp"},
+  {id:"xuat_khau",l:"04 Xuất khẩu",d:"Đã XK ≥ 2 năm, thông thạo Incoterms FOB/CIF"},
+  {id:"chung_tu",l:"05 Chứng từ",d:"Tự lập CO, packing list, invoice EN; HS code đúng"},
+  {id:"rfq",l:"06 Phản hồi RFQ",d:"Trả lời ≤24h; báo giá có cost breakdown rõ"},
+  {id:"oem_odm",l:"07 OEM/ODM",d:"Có R&D; làm mẫu 7–10 ngày; tùy chỉnh theo buyer"},
+  {id:"giao_tiep",l:"08 Giao tiếp",d:"Sales tiếng Anh B2+; email/Zoom không cần phiên dịch"},
+  {id:"minh_bach",l:"09 Minh bạch",d:"Sẵn sàng buyer visit, factory audit, factory video"},
 ];
 
 const calcTier=v=>{
   const t=Object.values(v||{}).reduce((a,b)=>a+(b||0),0);
-  if((v.phap_ly||0)<3||(v.san_xuat||0)<3)return{tier:"Not Qualified",color:"#A32D2D",bg:"#FCEBEB",total:t};
-  if(t>=38)return{tier:"Tier 1 — Export-Ready",color:"#3B6D11",bg:"#EAF3DE",total:t};
-  if(t>=27)return{tier:"Tier 2 — Nearly Ready",color:"#185FA5",bg:"#E6F1FB",total:t};
-  if(t>=18)return{tier:"Tier 3 — Developing",color:"#854F0B",bg:"#FAEEDA",total:t};
-  return{tier:"Not Qualified",color:"#A32D2D",bg:"#FCEBEB",total:t};
+  if((v.phap_ly||0)<3||(v.san_xuat||0)<3)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
+  if(t>=38)return{label:"Tier 1",c:"#3B6D11",bg:"#EAF3DE",t};
+  if(t>=27)return{label:"Tier 2",c:"#185FA5",bg:"#E6F1FB",t};
+  if(t>=18)return{label:"Tier 3",c:"#854F0B",bg:"#FAEEDA",t};
+  return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
 };
-const calcPerf=p=>{
-  const w={qc:.3,delivery:.25,comm:.2,price:.15,flex:.1};
-  const s=((p.qc||0)*w.qc+(p.delivery||0)*w.delivery+(p.comm||0)*w.comm+(p.price||0)*w.price+(p.flex||0)*w.flex)/5*100;
-  if(s>=85)return{label:"Preferred",color:"#3B6D11",bg:"#EAF3DE",score:Math.round(s)};
-  if(s>=65)return{label:"Active",color:"#185FA5",bg:"#E6F1FB",score:Math.round(s)};
-  if(s>=45)return{label:"Probation",color:"#854F0B",bg:"#FAEEDA",score:Math.round(s)};
-  return{label:"Inactive",color:"#A32D2D",bg:"#FCEBEB",score:Math.round(s)};
-};
-const emptyS=()=>({id:Date.now()+"_s",name:"",bizType:"",legalType:"",industry:"",products:"",foundedYear:"",province:"",website:"",contactName:"",zalo:"",email:"",channel:"",stage:"B1",notes:"",specialNotes:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},source:"proactive",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
-const emptyR=()=>({id:Date.now()+"_r",rfqCode:"RFQ-"+Date.now().toString().slice(-5),salesPerson:"",receivedDate:new Date().toISOString().slice(0,10),productDesc:"",buyerMarket:[],deadline:"",moqQty:"",certRequirements:"",priceTarget:"",incoterm:"",additionalNotes:"",status:"new",supplierIds:[],supplierNotes:{},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
 
-const SK_S="vns_suppliers_v2",SK_R="vns_rfqs_v1";
-const storeGet=async k=>{try{const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}catch{return null;}};
-const storeSet=async(k,v)=>{try{await window.storage.set(k,JSON.stringify(v));}catch{}};
+const newS=()=>({id:Date.now()+"s",name:"",bizModel:"",legalType:"",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString()});
+const newR=()=>({id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",sids:[],snotes:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
 
-const iSt={padding:"7px 10px",borderRadius:6,border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-primary)",color:"var(--color-text-primary)",fontSize:13,width:"100%"};
-const gBtn={padding:"7px 14px",borderRadius:6,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:13,color:"var(--color-text-secondary)"};
+// ── UI atoms ──
+const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
+const gBtn={padding:"7px 14px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",fontSize:13,color:"#555"};
 const pBtn={padding:"7px 18px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500};
 
-function Card({children}){return <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:12,padding:"1.4rem"}}>{children}</div>;}
-function Sec({title,children}){return <div style={{marginBottom:"1.1rem"}}><div style={{fontSize:11,fontWeight:500,color:"var(--color-text-tertiary)",textTransform:"uppercase",letterSpacing:1,marginBottom:7,borderBottom:"0.5px solid var(--color-border-tertiary)",paddingBottom:4}}>{title}</div><div style={{display:"grid",gap:7}}>{children}</div></div>;}
-function Rw({l,children}){return <div style={{display:"grid",gridTemplateColumns:"130px 1fr",gap:8,alignItems:"start"}}><span style={{fontSize:13,color:"var(--color-text-secondary)",paddingTop:8}}>{l}</span><div>{children}</div></div>;}
-function IB({title,children}){return <div><div style={{fontSize:11,fontWeight:500,color:"var(--color-text-tertiary)",marginBottom:5}}>{title}</div>{children}</div>;}
-function IR({l,v}){return <div style={{display:"flex",gap:8,fontSize:13,padding:"2px 0"}}><span style={{color:"var(--color-text-secondary)",minWidth:75}}>{l}</span><span style={{flex:1}}>{v||<span style={{color:"var(--color-text-tertiary)"}}>—</span>}</span></div>;}
-function Sel({value,onChange,opts}){return <select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"7px 10px",borderRadius:6,border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-primary)",color:"var(--color-text-primary)",fontSize:13}}>{opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>;}
-function Empty({text}){return <div style={{textAlign:"center",padding:"2.5rem",color:"var(--color-text-secondary)",fontSize:13}}>{text}</div>;}
-function ModalWrap({children,onClose}){return <div style={{position:"fixed",inset:0,background:"#0007",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:720,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
+function Card({children,style={}}){return <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1.4rem",...style}}>{children}</div>;}
+function Sec({title,children}){return<div style={{marginBottom:"1.1rem"}}><div style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:7,borderBottom:"1px solid #f0f0f0",paddingBottom:4}}>{title}</div><div style={{display:"grid",gap:8}}>{children}</div></div>;}
+function Rw({l,children}){return<div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:8,alignItems:"start"}}><span style={{fontSize:13,color:"#666",paddingTop:8,lineHeight:1.3}}>{l}</span><div>{children}</div></div>;}
+function IB({title,children}){return<div><div style={{fontSize:11,fontWeight:600,color:"#999",marginBottom:6,textTransform:"uppercase",letterSpacing:.8}}>{title}</div>{children}</div>;}
+function IR({l,v}){return<div style={{display:"flex",gap:8,fontSize:13,padding:"3px 0"}}><span style={{color:"#777",minWidth:90,flexShrink:0}}>{l}</span><span style={{color:"#1a1a1a",flex:1}}>{v||<span style={{color:"#ccc"}}>—</span>}</span></div>;}
+function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChange(e.target.value)} style={{...iSt,width:"auto"}}>{opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>;}
+function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
+function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 
-function LoginBanner({onLogin}) {
-  const [pw, setPw] = useState("");
-  const [err, setErr] = useState(false);
-  const tryLogin = () => {
-    if(pw === EDIT_PASSWORD) { localStorage.setItem(AUTH_KEY,"1"); onLogin(); }
-    else { setErr(true); setTimeout(()=>setErr(false),2000); }
-  };
-  return (
-    <div style={{background:"#FAEEDA",borderBottom:"1px solid #EF9F27",padding:"10px 1rem"}}>
-      <div style={{maxWidth:920,margin:"0 auto",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        <span style={{fontSize:13,color:"#633806"}}>👁 Chế độ xem — Nhập mật khẩu để chỉnh sửa</span>
-        <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
-          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryLogin()} placeholder="Nhập mật khẩu..." style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${err?"#E24B4A":"#EF9F27"}`,fontSize:13,width:180}}/>
-          <button onClick={tryLogin} style={{padding:"5px 14px",borderRadius:6,border:"none",background:"#EF9F27",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>Đăng nhập</button>
-          {err&&<span style={{fontSize:12,color:"#A32D2D"}}>Sai mật khẩu</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-  const [tab,setTab]=useState("list");
-  const [suppliers,setSuppliers]=useState([]);
+// ── App ──
+function App(){
+  const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
+  const [sups,setSups]=useState([]);
   const [rfqs,setRfqs]=useState([]);
-  const [loading,setLoading]=useState(true);
+  const [tab,setTab]=useState("list");
   const [modal,setModal]=useState(null);
   const [toast,setToast]=useState(null);
+  const [loading,setLoading]=useState(true);
 
-  useEffect(()=>{Promise.all([storeGet(SK_S),storeGet(SK_R)]).then(([s,r])=>{setSuppliers(s||[]);setRfqs(r||[]);setLoading(false);});},[]);
+  useEffect(()=>{setSups(db.get(SK_S)||[]);setRfqs(db.get(SK_R)||[]);setLoading(false);},[]);
 
-  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2400);};
-  const saveSup=useCallback(async l=>{setSuppliers(l);await storeSet(SK_S,l);},[]);
-  const saveRfq=useCallback(async l=>{setRfqs(l);await storeSet(SK_R,l);},[]);
+  const toast2=(m)=>{setToast(m);setTimeout(()=>setToast(null),2500);};
+  const saveSups=useCallback(l=>{setSups(l);db.set(SK_S,l);},[]);
+  const saveRfqs=useCallback(l=>{setRfqs(l);db.set(SK_R,l);},[]);
 
-  const upsertS=async s=>{const u={...s,updatedAt:new Date().toISOString()};const i=suppliers.findIndex(x=>x.id===u.id);const n=i>=0?suppliers.map((x,j)=>j===i?u:x):[u,...suppliers];await saveSup(n);showToast(i>=0?"Đã cập nhật":"Đã thêm supplier mới");setModal(null);};
-  const delS=async id=>{if(!confirm("Xóa supplier này?"))return;await saveSup(suppliers.filter(x=>x.id!==id));setModal(null);showToast("Đã xóa");};
-  const upsertR=async r=>{const u={...r,updatedAt:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);const n=i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs];await saveRfq(n);showToast(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ mới");setModal(null);};
-  const delR=async id=>{if(!confirm("Xóa RFQ này?"))return;await saveRfq(rfqs.filter(x=>x.id!==id));setModal(null);showToast("Đã xóa RFQ");};
+  const upsS=s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
+  const delS=id=>{if(!confirm("Xóa supplier này?"))return;saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const upsR=r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ");setModal(null);};
+  const delR=id=>{if(!confirm("Xóa RFQ?"))return;saveRfqs(rfqs.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const logout=()=>{localStorage.removeItem(AUTH_KEY);setCanEdit(false);};
 
-  if(loading)return <div style={{padding:"2rem",fontSize:14,color:"#666"}}>Đang tải...</div>;
-  const ctx={suppliers,rfqs,upsertS,delS,upsertR,delR,modal,setModal,showToast,canEdit};
+  if(loading)return <div style={{padding:"2rem",color:"#666"}}>Đang tải...</div>;
+  const ctx={sups,rfqs,upsS,delS,upsR,delR,setModal,toast2,canEdit};
 
-  return (
-    <div style={{fontFamily:"var(--font-sans)",minHeight:"100vh",background:"var(--color-background-tertiary)"}}>
-      {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"9px 18px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500}}>{toast}</div>}
-      {!canEdit && <LoginBanner onLogin={()=>setCanEdit(true)}/>}
-      <div style={{background:"var(--color-background-primary)",borderBottom:"0.5px solid var(--color-border-tertiary)",padding:"0 1rem"}}>
-        <div style={{maxWidth:920,margin:"0 auto",display:"flex",alignItems:"center",gap:4}}>
-          <span style={{fontWeight:600,fontSize:14,color:"#1D9E75",paddingRight:12,borderRight:"0.5px solid var(--color-border-tertiary)",marginRight:4}}>🏭 VinaSources</span>
-          {[{id:"list",label:"Supplier DB"},{id:"rfq",label:"RFQ Tracking"},{id:"dashboard",label:"Dashboard"}].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"12px 10px",fontSize:13,cursor:"pointer",color:tab===t.id?"var(--color-text-primary)":"var(--color-text-secondary)",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?500:400,position:"relative"}}>
-              {t.label}
-              {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&<span style={{position:"absolute",top:6,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
+  return(
+    <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
+      {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"10px 20px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500,boxShadow:"0 2px 12px rgba(0,0,0,0.15)"}}>{toast}</div>}
+      {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
+      {/* NAV */}
+      <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
+        <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
+          <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6,letterSpacing:.3}}>🏭 VinaSources</span>
+          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ Tracking"},{id:"dash",l:"Dashboard"}].map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
+              {t.l}
+              {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&
+                <span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
             </button>
           ))}
           <div style={{flex:1}}/>
-          {canEdit ? <>
-            <button onClick={()=>setModal({type:"rfq-form",data:emptyR()})} style={{padding:"6px 12px",borderRadius:6,border:"0.5px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
-            <button onClick={()=>setModal({type:"sup-form",data:emptyS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
-            <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"0.5px solid var(--color-border-secondary)",background:"none",color:"var(--color-text-tertiary)",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
-          </> : <span style={{fontSize:12,color:"var(--color-text-tertiary)"}}>👁 Chỉ xem</span>}
+          {canEdit?(
+            <>
+              <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
+              <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
+              <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
+            </>
+          ):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
         </div>
       </div>
-      <div style={{maxWidth:920,margin:"0 auto",padding:"1rem"}}>
+      {/* CONTENT */}
+      <div style={{maxWidth:940,margin:"0 auto",padding:"1rem"}}>
         {tab==="list"&&<SupList ctx={ctx}/>}
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
-        {tab==="dashboard"&&<Dash ctx={ctx}/>}
+        {tab==="dash"&&<Dash ctx={ctx}/>}
       </div>
-      {modal?.type==="sup-form"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><SupForm s={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="sup-detail"&&<ModalWrap onClose={()=>setModal(null)}><SupDetail s={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="scoring"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><Scoring s={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="brief"&&<ModalWrap onClose={()=>setModal(null)}><Brief s={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="rfq-form"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><RFQForm r={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="rfq-detail"&&<ModalWrap onClose={()=>setModal(null)}><RFQDetail r={modal.data} ctx={ctx}/></ModalWrap>}
-      {modal?.type==="rfq-assign"&&canEdit&&<ModalWrap onClose={()=>setModal(null)}><RFQAssign r={modal.data} ctx={ctx}/></ModalWrap>}
+      {/* MODALS */}
+      {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="scoring"&&canEdit&&<Modal onClose={()=>setModal(null)}><Scoring s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
+      {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="rfq-assign"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQAssign r={modal.d} ctx={ctx}/></Modal>}
     </div>
   );
 }
 
+function LoginBanner({onLogin}){
+  const [pw,setPw]=useState("");const [err,setErr]=useState(false);
+  const try_=()=>{if(pw===EDIT_PW){localStorage.setItem(AUTH_KEY,"1");onLogin();}else{setErr(true);setTimeout(()=>setErr(false),2000);}};
+  return(
+    <div style={{background:"#FAEEDA",borderBottom:"1px solid #EF9F27",padding:"9px 1rem"}}>
+      <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <span style={{fontSize:13,color:"#633806"}}>👁 Chế độ xem — Nhập mật khẩu để chỉnh sửa</span>
+        <div style={{display:"flex",gap:6,marginLeft:"auto",alignItems:"center"}}>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&try_()} placeholder="Mật khẩu..." style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${err?"#E24B4A":"#EF9F27"}`,fontSize:13,width:160}}/>
+          <button onClick={try_} style={{padding:"5px 14px",borderRadius:6,border:"none",background:"#EF9F27",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>OK</button>
+          {err&&<span style={{fontSize:12,color:"#A32D2D",fontWeight:500}}>Sai mật khẩu</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SUPPLIER LIST ──
 function SupList({ctx}){
-  const {suppliers,setModal}=ctx;
-  const [q,setQ]=useState(""),[fT,setFT]=useState("all"),[fI,setFI]=useState("all"),[fS,setFS]=useState("all");
-  const inds=[...new Set(suppliers.map(s=>s.industry).filter(Boolean))];
-  const fl=suppliers.filter(s=>{
-    const t=calcTier(s.vserf);
-    return (fT==="all"||t.tier.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+  const {sups,setModal}=ctx;
+  const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
+  const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))];
+  const fl=sups.filter(s=>{
+    const ti=calcTier(s.vserf);
+    return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   });
-  const exportCSV=()=>{
-    const h=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Lưu ý đặc biệt"];
-    const rows=fl.map(s=>{const t=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.website,s.contactName,s.zalo,s.email,s.stage,t.tier,t.total,s.specialNotes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(",");});
+  const csv=()=>{
+    const h=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
+    const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(",");});
     const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([h.join(","),...rows].join("\n"));a.download="VinaSources.csv";a.click();
   };
-  return (
+  return(
     <div>
       <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm tên, sản phẩm, tỉnh..." style={iSt}/>
-        <Sel value={fT} onChange={setFT} opts={[["all","Tất cả Tier"],["Tier 1","Tier 1"],["Tier 2","Tier 2"],["Tier 3","Tier 3"],["Not","Not Qualified"]]}/>
-        <Sel value={fI} onChange={setFI} opts={[["all","Tất cả ngành"],...inds.map(i=>[i,i])]}/>
-        <Sel value={fS} onChange={setFS} opts={[["all","Tất cả Stage"],...STAGES.map(s=>[s.id,s.label])]}/>
-        <button onClick={exportCSV} style={gBtn}>⬇ CSV</button>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm tên, sản phẩm, tỉnh..." style={{...iSt,flex:1,minWidth:160}}/>
+        <Sel val={fT} onChange={setFT} opts={[["all","Tất cả Tier"],["Tier 1","Tier 1"],["Tier 2","Tier 2"],["Tier 3","Tier 3"],["Not","Not Qualified"]]}/>
+        <Sel val={fI} onChange={setFI} opts={[["all","Tất cả ngành"],...inds.map(i=>[i,i])]}/>
+        <Sel val={fS} onChange={setFS} opts={[["all","Tất cả Stage"],...STAGES.map(s=>[s.id,s.label])]}/>
+        <button onClick={csv} style={gBtn}>⬇ CSV</button>
       </div>
-      <div style={{fontSize:12,color:"var(--color-text-tertiary)",marginBottom:8}}>{fl.length} supplier</div>
+      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>{fl.length} supplier</div>
       {fl.length===0&&<Empty text="Chưa có supplier. Nhấn + Supplier để thêm."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
-        {fl.map(s=>{const t=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);return(
-          <div key={s.id} onClick={()=>setModal({type:"sup-detail",data:s})} style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
-            <div style={{width:34,height:34,borderRadius:8,background:t.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{t.tier.startsWith("Tier 1")?"🥇":t.tier.startsWith("Tier 2")?"🥈":t.tier.startsWith("Tier 3")?"🥉":"✕"}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:500,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"var(--color-text-tertiary)"}}>Chưa đặt tên</span>}</div>
-              <div style={{fontSize:12,color:"var(--color-text-secondary)"}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
+        {fl.map(s=>{const ti=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);return(
+          <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"box-shadow .15s"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+              {ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}
             </div>
-            {s.source==="reactive"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:500,flexShrink:0}}>RFQ</span>}
-            <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:t.bg,color:t.color,fontWeight:500,flexShrink:0}}>{t.tier.split("—")[0].trim()}</span>
-            <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"var(--color-background-secondary)",color:"var(--color-text-secondary)",flexShrink:0}}>{st?.id}</span>
-            <span style={{fontSize:12,color:"var(--color-text-tertiary)",minWidth:32,textAlign:"right",flexShrink:0}}>{t.total}/45</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div>
+              <div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
+            </div>
+            {s.source==="reactive"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:600,flexShrink:0}}>RFQ</span>}
+            <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+            <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
+            <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
           </div>
         );})}
       </div>
@@ -232,185 +222,195 @@ function SupList({ctx}){
   );
 }
 
+// ── SUPPLIER DETAIL ──
 function SupDetail({s,ctx}){
-  const {setModal,delS}=ctx;
-  const t=calcTier(s.vserf);const p=calcPerf(s.perf);
+  const {setModal,delS,canEdit}=ctx;
+  const ti=calcTier(s.vserf);
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:14}}>
-        <div><h2 style={{margin:0,fontSize:17,fontWeight:500}}>{s.name||"(Chưa có tên)"}</h2><div style={{fontSize:13,color:"var(--color-text-secondary)",marginTop:3}}>{s.industry} · {s.province}</div></div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <span style={{fontSize:12,padding:"3px 10px",borderRadius:5,background:t.bg,color:t.color,fontWeight:500}}>{t.tier} · {t.total}/45</span>
-          {s.perf?.qc>0&&<span style={{fontSize:12,padding:"3px 10px",borderRadius:5,background:p.bg,color:p.color,fontWeight:500}}>{p.label} · {p.score}%</span>}
-        </div>
+        <div><h2 style={{margin:0,fontSize:18,fontWeight:600}}>{s.name||"(Chưa có tên)"}</h2><div style={{fontSize:13,color:"#777",marginTop:3}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
+        <span style={{fontSize:13,padding:"4px 12px",borderRadius:6,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
         <IB title="Thông tin cơ bản">
-          <IR l="Mô hình KD" v={s.bizType}/>
-          <IR l="Loại hình DN" v={s.legalType}/>
-          <IR l="Sản phẩm" v={s.products}/>
-          <IR l="Năm thành lập" v={s.foundedYear}/>
-          <IR l="Website" v={s.website}/>
-          <IR l="Kênh" v={s.channel}/>
+          <IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/>
+          <IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/>
+          <IR l="Website" v={s.website}/><IR l="Kênh" v={s.channel}/>
           <IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/>
         </IB>
-        <IB title="Đầu mối liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
-        <IB title="Năng lực">
-          <IR l="Chứng nhận" v={s.certs}/>
-          <IR l="Công suất/tháng" v={s.capacity}/>
-          <IR l="MOQ" v={s.moq}/>
-          <IR l="Price range" v={s.priceRange}/>
-          <IR l="Lead time" v={s.leadTime}/>
-          <IR l="Incoterm" v={s.incoterm}/>
-          <IR l="Mô hình SX" v={s.serviceModel}/>
-          <IR l="Thanh toán" v={s.paymentMethod}/>
+        <IB title="Đầu mối liên hệ">
+          <IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/>
         </IB>
-        <IB title="VSERF">{VSERF_COLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"2px 0"}}><span style={{color:"var(--color-text-secondary)"}}>{c.label}</span><span style={{fontWeight:500,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"var(--color-text-primary)"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
+        <IB title="Năng lực & thương mại">
+          <IR l="Chứng nhận" v={s.certs}/><IR l="Công suất/tháng" v={s.capacity}/>
+          <IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/>
+          <IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/>
+          <IR l="Mô hình SX" v={s.serviceModel}/><IR l="Thanh toán" v={s.paymentMethod}/>
+        </IB>
+        <IB title="VSERF (9 trụ cột)">
+          {VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}
+        </IB>
       </div>
-      {s.specialNotes&&<div style={{background:"#FAEEDA",border:"0.5px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:500,color:"#854F0B",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#633806"}}>{s.specialNotes}</div></div>}
-      {s.notes&&<div style={{background:"var(--color-background-secondary)",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"var(--color-text-tertiary)",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"var(--color-text-secondary)"}}>{s.notes}</div></div>}
+      {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
+      {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-        {canEdit&&<button onClick={()=>setModal({type:"sup-form",data:s})} style={gBtn}>Sửa</button>}
-        {canEdit&&<button onClick={()=>setModal({type:"scoring",data:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>Chấm VSERF</button>}
-        <button onClick={()=>setModal({type:"brief",data:s})} style={{padding:"7px 14px",borderRadius:6,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>Xuất Brief</button>
+        {canEdit&&<button onClick={()=>setModal({t:"sup-form",d:s})} style={gBtn}>Sửa</button>}
+        {canEdit&&<button onClick={()=>setModal({t:"scoring",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>Chấm VSERF</button>}
+        <button onClick={()=>setModal({t:"brief",d:s})} style={{padding:"7px 14px",borderRadius:6,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>Xuất Brief</button>
         {canEdit&&<button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
       </div>
     </Card>
   );
 }
 
+// ── SUPPLIER FORM ──
 function SupForm({s,ctx}){
-  const {upsertS,setModal}=ctx;
-  const [f,setF]=useState(s);
+  const {upsS,setModal}=ctx;
+  const [f,setF]=useState({...s});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   return(
     <Card>
-      <h2 style={{margin:"0 0 1rem",fontSize:15,fontWeight:500}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
+      <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
       <Sec title="Thông tin cơ bản">
         <Rw l="Tên công ty *"><input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Công ty TNHH ABC" style={iSt}/></Rw>
-        <Rw l="Mô hình KD"><select value={f.bizType||""} onChange={e=>set("bizType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BUSINESS_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
+        <Rw l="Mô hình KD"><select value={f.bizModel||""} onChange={e=>set("bizModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BIZ_MODELS.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
-        <Rw l="Ngành hàng"><select value={f.industry} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
-        <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="Áo thun cotton, quần kaki export" style={iSt}/></Rw>
+        <Rw l="Ngành hàng"><select value={f.industry||""} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
+        <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="VD: Áo thun cotton, quần kaki export" style={iSt}/></Rw>
         <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} placeholder="VD: 2010" style={iSt}/></Rw>
-        <Rw l="Tỉnh / Thành phố"><select value={f.province} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
-        <Rw l="Website"><input value={f.website} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/></Rw>
-        <Rw l="Kênh tìm kiếm"><select value={f.channel} onChange={e=>set("channel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{CHANNELS.map(c=><option key={c}>{c}</option>)}</select></Rw>
+        <Rw l="Tỉnh / Thành phố"><select value={f.province||""} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
+        <Rw l="Website"><input value={f.website||""} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/></Rw>
+        <Rw l="Kênh tìm kiếm"><select value={f.channel||""} onChange={e=>set("channel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{CHANNELS.map(c=><option key={c}>{c}</option>)}</select></Rw>
       </Sec>
       <Sec title="Đầu mối liên hệ">
-        <Rw l="Họ tên"><input value={f.contactName} onChange={e=>set("contactName",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Zalo / SĐT ★"><input value={f.zalo} onChange={e=>set("zalo",e.target.value)} placeholder="0901 234 567" style={iSt}/></Rw>
-        <Rw l="Email"><input value={f.email} onChange={e=>set("email",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Họ tên"><input value={f.contactName||""} onChange={e=>set("contactName",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Zalo / SĐT ★"><input value={f.zalo||""} onChange={e=>set("zalo",e.target.value)} placeholder="0901 234 567" style={iSt}/></Rw>
+        <Rw l="Email"><input value={f.email||""} onChange={e=>set("email",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Năng lực & thương mại">
-        <Rw l="Chứng nhận"><input value={f.certs} onChange={e=>set("certs",e.target.value)} placeholder="ISO 9001, BSCI, WRAP..." style={iSt}/></Rw>
+        <Rw l="Chứng nhận"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="ISO 9001, BSCI, WRAP..." style={iSt}/></Rw>
         <Rw l="Công suất / tháng"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} placeholder="VD: 50,000 pcs/tháng" style={iSt}/></Rw>
-        <Rw l="MOQ"><input value={f.moq} onChange={e=>set("moq",e.target.value)} placeholder="500 pcs/SKU" style={iSt}/></Rw>
+        <Rw l="MOQ"><input value={f.moq||""} onChange={e=>set("moq",e.target.value)} placeholder="500 pcs/SKU" style={iSt}/></Rw>
         <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} placeholder="VD: FOB $3–5/pcs" style={iSt}/></Rw>
-        <Rw l="Lead time"><input value={f.leadTime} onChange={e=>set("leadTime",e.target.value)} placeholder="30–45 ngày" style={iSt}/></Rw>
-        <Rw l="Incoterm"><input value={f.incoterm} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF, EXW" style={iSt}/></Rw>
+        <Rw l="Lead time"><input value={f.leadTime||""} onChange={e=>set("leadTime",e.target.value)} placeholder="30–45 ngày" style={iSt}/></Rw>
+        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF, EXW" style={iSt}/></Rw>
         <Rw l="Mô hình SX"><input value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} placeholder="VD: OEM + ODM, CMT, FOB đầy đủ..." style={iSt}/></Rw>
         <Rw l="Thanh toán"><input value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} placeholder="VD: T/T 30% + 70%, L/C at sight..." style={iSt}/></Rw>
       </Sec>
       <Sec title="Lưu ý đặc biệt về sản phẩm">
-        <textarea value={f.specialNotes} onChange={e=>set("specialNotes",e.target.value)} placeholder="VD: Chỉ làm cotton 100%, không nhận đơn pha len..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
+        <textarea value={f.specialNotes||""} onChange={e=>set("specialNotes",e.target.value)} placeholder="VD: Chỉ làm cotton 100%, không nhận đơn pha len. Min 1000 pcs/màu..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
       </Sec>
-      <Sec title="Pipeline">
+      <Sec title="Pipeline & nội bộ">
         <Rw l="Stage"><select value={f.stage} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
-        <Rw l="Ghi chú nội bộ"><textarea value={f.notes} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Ghi chú nội bộ"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
         <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-        <button onClick={()=>upsertS(f)} style={pBtn}>Lưu</button>
+        <button onClick={()=>upsS(f)} style={pBtn}>Lưu</button>
       </div>
     </Card>
   );
 }
 
+// ── SCORING ──
 function Scoring({s,ctx}){
-  const {upsertS,setModal}=ctx;
+  const {upsS,setModal}=ctx;
   const [sc,setSc]=useState({...s.vserf});
   const [pf,setPf]=useState({...s.perf});
-  const t=calcTier(sc);
+  const ti=calcTier(sc);
   return(
     <Card>
-      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:500}}>VSERF — {s.name}</h2>
-      <div style={{fontSize:12,color:"var(--color-text-secondary)",marginBottom:12}}>9 trụ cột · 1–5 điểm · Tổng tối đa 45</div>
-      <div style={{background:t.bg,border:`1px solid ${t.color}`,borderRadius:8,padding:"10px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span style={{fontWeight:500,color:t.color,fontSize:14}}>{t.tier}</span>
-        <span style={{fontWeight:600,color:t.color,fontSize:18}}>{t.total} / 45</span>
+      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>VSERF — {s.name}</h2>
+      <div style={{fontSize:12,color:"#777",marginBottom:12}}>9 trụ cột · 0–5 điểm · Tổng tối đa 45</div>
+      <div style={{background:ti.bg,border:`1.5px solid ${ti.c}`,borderRadius:8,padding:"10px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontWeight:600,color:ti.c,fontSize:14}}>{ti.label}</span>
+        <span style={{fontWeight:700,color:ti.c,fontSize:20}}>{ti.t} / 45</span>
       </div>
-      {VSERF_COLS.map(c=>{const v=sc[c.id]||0;const warn=(c.id==="phap_ly"||c.id==="san_xuat")&&v<3;return(
-        <div key={c.id} style={{marginBottom:12,padding:"10px 12px",border:`0.5px solid ${warn?"#E24B4A":"var(--color-border-tertiary)"}`,borderRadius:8,background:warn?"#FFF5F5":"var(--color-background-secondary)"}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontWeight:500,fontSize:13,color:warn?"#A32D2D":"var(--color-text-primary)"}}>{c.label}</span><span style={{fontWeight:500,fontSize:14,color:warn?"#A32D2D":"var(--color-text-primary)"}}>{v}/5</span></div>
-          <div style={{fontSize:11,color:"var(--color-text-tertiary)",marginBottom:5}}>{c.desc}</div>
-          {warn&&<div style={{fontSize:11,color:"#A32D2D",marginBottom:4}}>⚠ Bắt buộc ≥3 — dưới ngưỡng → Not Qualified</div>}
+      {VCOLS.map(c=>{const v=sc[c.id]||0;const warn=(c.id==="phap_ly"||c.id==="san_xuat")&&v<3;return(
+        <div key={c.id} style={{marginBottom:12,padding:"10px 12px",border:`1px solid ${warn?"#E24B4A":"#eee"}`,borderRadius:8,background:warn?"#FFF5F5":"#fafafa"}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontWeight:600,fontSize:13,color:warn?"#A32D2D":"#1a1a1a"}}>{c.l}</span><span style={{fontWeight:600,fontSize:14,color:warn?"#A32D2D":"#1a1a1a"}}>{v}/5</span></div>
+          <div style={{fontSize:11,color:"#aaa",marginBottom:6}}>{c.d}</div>
+          {warn&&<div style={{fontSize:11,color:"#A32D2D",marginBottom:5}}>⚠ Bắt buộc ≥3 điểm — dưới ngưỡng → Not Qualified</div>}
           <input type="range" min={0} max={5} step={1} value={v} onChange={e=>setSc(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--color-text-tertiary)"}}>{[0,1,2,3,4,5].map(n=><span key={n}>{n}</span>)}</div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#ccc"}}>{[0,1,2,3,4,5].map(n=><span key={n}>{n}</span>)}</div>
         </div>
       );})}
-      <div style={{fontSize:13,fontWeight:500,margin:"14px 0 8px"}}>Hiệu suất định kỳ</div>
+      <div style={{fontSize:13,fontWeight:600,margin:"14px 0 8px",color:"#555"}}>Hiệu suất định kỳ (nếu đã có đơn)</div>
       {[{id:"qc",l:"Pass QC lần đầu",w:"30%"},{id:"delivery",l:"Giao hàng đúng hạn",w:"25%"},{id:"comm",l:"Phản hồi & giao tiếp",w:"20%"},{id:"price",l:"Giá cạnh tranh",w:"15%"},{id:"flex",l:"Xử lý phát sinh",w:"10%"}].map(c=>(
         <div key={c.id} style={{marginBottom:10,display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center"}}>
-          <div><div style={{fontSize:13}}>{c.l} <span style={{fontSize:11,color:"var(--color-text-tertiary)"}}>({c.w})</span></div><input type="range" min={0} max={5} step={1} value={pf[c.id]||0} onChange={e=>setPf(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/></div>
-          <span style={{fontSize:14,fontWeight:500,minWidth:28,textAlign:"right"}}>{pf[c.id]||0}/5</span>
+          <div><div style={{fontSize:13,color:"#1a1a1a"}}>{c.l} <span style={{fontSize:11,color:"#aaa"}}>({c.w})</span></div><input type="range" min={0} max={5} step={1} value={pf[c.id]||0} onChange={e=>setPf(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/></div>
+          <span style={{fontSize:14,fontWeight:600,minWidth:30,textAlign:"right"}}>{pf[c.id]||0}/5</span>
         </div>
       ))}
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
         <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-        <button onClick={()=>upsertS({...s,vserf:sc,perf:pf})} style={pBtn}>Lưu điểm</button>
+        <button onClick={()=>upsS({...s,vserf:sc,perf:pf})} style={pBtn}>Lưu điểm</button>
       </div>
     </Card>
   );
 }
 
-function Brief({s,ctx}){
-  const {setModal}=ctx;
-  const t=calcTier(s.vserf);const today=new Date().toLocaleDateString("vi-VN");
+// ── BRIEF ──
+function Brief({s}){
+  const ti=calcTier(s.vserf);const today=new Date().toLocaleDateString("vi-VN");
   return(
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
-        <button onClick={()=>setModal(null)} style={gBtn}>← Quay lại</button>
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
         <button onClick={()=>window.print()} style={{...gBtn,marginLeft:"auto"}}>🖨 In / PDF</button>
       </div>
-      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:12,padding:"1.8rem",color:"#1a1a1a"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #1D9E75",paddingBottom:12,marginBottom:14}}>
-          <div><div style={{fontSize:10,fontWeight:700,color:"#1D9E75",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>VinaSources — Supplier Brief</div><h1 style={{margin:0,fontSize:20,fontWeight:600}}>{s.name}</h1><div style={{fontSize:12,color:"#555",marginTop:3}}>{s.industry} · {s.province}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:700,padding:"5px 12px",borderRadius:6,background:t.bg,color:t.color}}>{t.tier.split("—")[0].trim()}</div><div style={{fontSize:11,color:t.color,marginTop:3}}>{t.total}/45 VSERF</div><div style={{fontSize:10,color:"#aaa",marginTop:3}}>{today}</div></div>
+      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:12,padding:"2rem",color:"#1a1a1a"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2.5px solid #1D9E75",paddingBottom:14,marginBottom:16}}>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#1D9E75",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>VinaSources — Supplier Brief</div><h1 style={{margin:0,fontSize:22,fontWeight:700}}>{s.name}</h1><div style={{fontSize:12,color:"#777",marginTop:4}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:17,fontWeight:700,padding:"6px 14px",borderRadius:7,background:ti.bg,color:ti.c}}>{ti.label}</div><div style={{fontSize:11,color:ti.c,marginTop:4}}>{ti.t}/45 VSERF</div><div style={{fontSize:10,color:"#bbb",marginTop:3}}>{today}</div></div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:12}}>
-          <div><div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.6}}>{s.products||"—"}</div></div>
-          <div><div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Năng lực thương mại</div><div style={{fontSize:12,lineHeight:1.9}}>            {s.moq&&<div><span style={{color:"#777"}}>MOQ: </span>{s.moq}</div>}
-              {s.capacity&&<div><span style={{color:"#777"}}>Công suất: </span>{s.capacity}</div>}
-              {s.priceRange&&<div><span style={{color:"#777"}}>Price range: </span>{s.priceRange}</div>}
-              {s.leadTime&&<div><span style={{color:"#777"}}>Lead time: </span>{s.leadTime}</div>}
-              {s.incoterm&&<div><span style={{color:"#777"}}>Incoterm: </span>{s.incoterm}</div>}
-              {s.serviceModel&&<div><span style={{color:"#777"}}>Mô hình SX: </span>{s.serviceModel}</div>}
-              {s.paymentMethod&&<div><span style={{color:"#777"}}>Thanh toán: </span>{s.paymentMethod}</div>}
-              {s.certs&&<div><span style={{color:"#777"}}>Chứng nhận: </span>{s.certs}</div>}</div></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.7,color:"#1a1a1a"}}>{s.products||"—"}</div></div>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Năng lực thương mại</div>
+            <div style={{fontSize:12,lineHeight:2,color:"#333"}}>
+              {s.moq&&<div><span style={{color:"#aaa"}}>MOQ: </span>{s.moq}</div>}
+              {s.capacity&&<div><span style={{color:"#aaa"}}>Công suất: </span>{s.capacity}</div>}
+              {s.priceRange&&<div><span style={{color:"#aaa"}}>Price range: </span>{s.priceRange}</div>}
+              {s.leadTime&&<div><span style={{color:"#aaa"}}>Lead time: </span>{s.leadTime}</div>}
+              {s.incoterm&&<div><span style={{color:"#aaa"}}>Incoterm: </span>{s.incoterm}</div>}
+              {s.serviceModel&&<div><span style={{color:"#aaa"}}>Mô hình SX: </span>{s.serviceModel}</div>}
+              {s.paymentMethod&&<div><span style={{color:"#aaa"}}>Thanh toán: </span>{s.paymentMethod}</div>}
+              {s.certs&&<div><span style={{color:"#aaa"}}>Chứng nhận: </span>{s.certs}</div>}
+            </div>
+          </div>
         </div>
-        {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
-        <div style={{background:"#F0F9F5",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:600,color:"#0F6E56",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10}}>Tên</div><div style={{fontWeight:500}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10}}>Zalo/SĐT</div><div style={{fontWeight:500}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10}}>Email</div><div style={{fontWeight:500,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>{VSERF_COLS.map(c=>{const v=s.vserf[c.id]||0;return(<div key={c.id} style={{background:"#F8F8F8",borderRadius:6,padding:"7px 9px"}}><div style={{fontSize:9,color:"#888",marginBottom:3}}>{c.label}</div><div style={{height:4,borderRadius:2,background:"#E0E0E0",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A"}}/></div><div style={{fontSize:11,fontWeight:600,color:"#333",marginTop:2}}>{v}/5</div></div>);})}</div>
-        <div style={{marginTop:14,paddingTop:10,borderTop:"0.5px solid #eee",fontSize:10,color:"#bbb",display:"flex",justifyContent:"space-between"}}><span>VinaSources Supply Chain · Confidential</span><span>Xuất {today}</span></div>
+        {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
+        <div style={{background:"#F0F9F5",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#0F6E56",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Tên</div><div style={{fontWeight:600}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Zalo/SĐT</div><div style={{fontWeight:600}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Email</div><div style={{fontWeight:600,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
+          {VCOLS.map(c=>{const v=s.vserf[c.id]||0;return(
+            <div key={c.id} style={{background:"#f8f8f8",borderRadius:7,padding:"8px 10px"}}>
+              <div style={{fontSize:9,color:"#aaa",marginBottom:4}}>{c.l}</div>
+              <div style={{height:5,borderRadius:3,background:"#e5e5e5",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A",borderRadius:3}}/></div>
+              <div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:3}}>{v}/5</div>
+            </div>
+          );})}
+        </div>
+        {s.website&&<div style={{marginTop:12,fontSize:11,color:"#aaa"}}>🌐 {s.website}</div>}
+        <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid #f0f0f0",fontSize:10,color:"#ccc",display:"flex",justifyContent:"space-between"}}><span>VinaSources Supply Chain · Confidential</span><span>Xuất {today}</span></div>
       </div>
     </div>
   );
 }
 
+// ── RFQ LIST ──
 function RFQList({ctx}){
   const {rfqs,setModal}=ctx;
   const [fS,setFS]=useState("all");
   const fl=rfqs.filter(r=>fS==="all"||r.status===fS);
   return(
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}><span style={{fontSize:13,fontWeight:500}}>RFQ Tracking</span><div style={{flex:1}}/><Sel value={fS} onChange={setFS} opts={[["all","Tất cả trạng thái"],...RFQ_STATUSES.map(s=>[s.id,s.label])]}/></div>
+      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}><span style={{fontSize:14,fontWeight:600}}>RFQ Tracking</span><div style={{flex:1}}/><Sel val={fS} onChange={setFS} opts={[["all","Tất cả trạng thái"],...RFQ_ST.map(s=>[s.id,s.label])]}/></div>
       {fl.length===0&&<Empty text="Chưa có RFQ. Nhấn + RFQ mới để tạo."/>}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {fl.map(r=>{const st=RFQ_STATUSES.find(x=>x.id===r.status)||RFQ_STATUSES[0];const urgent=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*86400000);return(
-          <div key={r.id} onClick={()=>setModal({type:"rfq-detail",data:r})} style={{background:"var(--color-background-primary)",border:`0.5px solid ${urgent&&r.status!=="closed"?"#E24B4A":"var(--color-border-tertiary)"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span style={{fontWeight:500,fontSize:12,color:"var(--color-text-tertiary)",minWidth:80}}>{r.rfqCode}</span><span style={{fontWeight:500,fontSize:14,flex:1}}>{r.productDesc||"(Chưa mô tả)"}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:st.bg,color:st.color,fontWeight:500}}>{st.label}</span>{urgent&&r.status!=="closed"&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:500}}>🔴 Gấp</span>}</div>
-            <div style={{fontSize:12,color:"var(--color-text-secondary)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap"}}>{r.buyerMarket?.length>0&&<span>🌍 {r.buyerMarket.join(", ")}</span>}{r.deadline&&<span>📅 {r.deadline}</span>}{r.salesPerson&&<span>👤 {r.salesPerson}</span>}{r.supplierIds?.length>0&&<span>🏭 {r.supplierIds.length} NCC</span>}</div>
+        {fl.map(r=>{const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];const urg=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);return(
+          <div key={r.id} onClick={()=>setModal({t:"rfq-detail",d:r})} style={{background:"#fff",border:`1px solid ${urg&&r.status!=="closed"?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span style={{fontWeight:600,fontSize:12,color:"#aaa",minWidth:80}}>{r.code}</span><span style={{fontWeight:600,fontSize:14,flex:1}}>{r.desc||"(Chưa mô tả)"}</span><span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}</div>
+            <div style={{fontSize:12,color:"#777",marginTop:5,display:"flex",gap:14,flexWrap:"wrap"}}>{r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}{r.deadline&&<span>📅 {r.deadline}</span>}{r.sales&&<span>👤 {r.sales}</span>}{r.sids?.length>0&&<span>🏭 {r.sids.length} NCC</span>}</div>
           </div>
         );})}
       </div>
@@ -418,83 +418,84 @@ function RFQList({ctx}){
   );
 }
 
+// ── RFQ FORM ──
 function RFQForm({r,ctx}){
-  const {upsertR,setModal}=ctx;
-  const [f,setF]=useState(r);
+  const {upsR,setModal}=ctx;
+  const [f,setF]=useState({...r});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
-  const tog=m=>set("buyerMarket",f.buyerMarket?.includes(m)?f.buyerMarket.filter(x=>x!==m):[...(f.buyerMarket||[]),m]);
+  const tog=m=>set("markets",f.markets?.includes(m)?f.markets.filter(x=>x!==m):[...(f.markets||[]),m]);
   return(
     <Card>
-      <h2 style={{margin:"0 0 1rem",fontSize:15,fontWeight:500}}>Tạo RFQ mới từ Sales</h2>
+      <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>Tạo RFQ từ Sales</h2>
       <Sec title="Thông tin RFQ">
-        <Rw l="Mã RFQ"><input value={f.rfqCode} onChange={e=>set("rfqCode",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Sales phụ trách"><input value={f.salesPerson} onChange={e=>set("salesPerson",e.target.value)} placeholder="Nguyễn Văn B" style={iSt}/></Rw>
-        <Rw l="Ngày nhận"><input type="date" value={f.receivedDate} onChange={e=>set("receivedDate",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Deadline báo giá"><input type="date" value={f.deadline} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Mã RFQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Sales phụ trách"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} placeholder="Nguyễn Văn B" style={iSt}/></Rw>
+        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Deadline báo giá"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Yêu cầu sản phẩm">
-        <Rw l="Mô tả sản phẩm *"><textarea value={f.productDesc} onChange={e=>set("productDesc",e.target.value)} placeholder="VD: Áo polo cotton 220gsm, logo thêu..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-        <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`0.5px solid ${f.buyerMarket?.includes(m)?"#185FA5":"var(--color-border-secondary)"}`,background:f.buyerMarket?.includes(m)?"#E6F1FB":"none",color:f.buyerMarket?.includes(m)?"#185FA5":"var(--color-text-secondary)",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
-        <Rw l="MOQ / Số lượng"><input value={f.moqQty} onChange={e=>set("moqQty",e.target.value)} placeholder="500 pcs, 1 container 20ft" style={iSt}/></Rw>
-        <Rw l="Giá mục tiêu"><input value={f.priceTarget} onChange={e=>set("priceTarget",e.target.value)} placeholder="FOB $3.5–4.0/pcs" style={iSt}/></Rw>
-        <Rw l="Incoterm"><input value={f.incoterm} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
-        <Rw l="Chứng chỉ yêu cầu"><input value={f.certRequirements} onChange={e=>set("certRequirements",e.target.value)} placeholder="BSCI, REACH, CA65..." style={iSt}/></Rw>
-        <Rw l="Ghi chú thêm"><textarea value={f.additionalNotes} onChange={e=>set("additionalNotes",e.target.value)} placeholder="Yêu cầu đặc biệt, packaging..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="VD: Áo polo cotton 220gsm, logo thêu..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
+        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs, 1 container 20ft" style={iSt}/></Rw>
+        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5–4.0/pcs" style={iSt}/></Rw>
+        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
+        <Rw l="Chứng chỉ yêu cầu"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65..." style={iSt}/></Rw>
+        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt, packaging..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
-      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsertR(f)} style={pBtn}>Lưu RFQ</button></div>
+      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu RFQ</button></div>
     </Card>
   );
 }
 
+// ── RFQ DETAIL ──
 function RFQDetail({r,ctx}){
-  const {suppliers,setModal,upsertR,delR}=ctx;
-  const st=RFQ_STATUSES.find(x=>x.id===r.status)||RFQ_STATUSES[0];
-  const assigned=suppliers.filter(s=>r.supplierIds?.includes(s.id));
+  const {sups,setModal,upsR,delR,canEdit}=ctx;
+  const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
+  const asgn=sups.filter(s=>r.sids?.includes(s.id));
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:14}}>
-        <div><div style={{fontSize:12,color:"var(--color-text-tertiary)",marginBottom:2}}>{r.rfqCode}</div><h2 style={{margin:0,fontSize:16,fontWeight:500}}>{r.productDesc||"(Chưa mô tả)"}</h2>{r.salesPerson&&<div style={{fontSize:13,color:"var(--color-text-secondary)",marginTop:3}}>👤 {r.salesPerson}</div>}</div>
-        <span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.color,fontWeight:500}}>{st.label}</span>
+        <div><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>{r.code}</div><h2 style={{margin:0,fontSize:16,fontWeight:600}}>{r.desc||"(Chưa mô tả)"}</h2>{r.sales&&<div style={{fontSize:13,color:"#777",marginTop:3}}>👤 {r.sales}</div>}</div>
+        <span style={{fontSize:12,padding:"4px 12px",borderRadius:6,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:14}}>
-        <IB title="Yêu cầu"><IR l="Thị trường" v={r.buyerMarket?.join(", ")}/><IR l="MOQ / SL" v={r.moqQty}/><IR l="Giá mục tiêu" v={r.priceTarget}/><IR l="Chứng chỉ" v={r.certRequirements}/></IB>
-        <IB title="Timeline"><IR l="Ngày nhận" v={r.receivedDate}/><IR l="Deadline" v={r.deadline}/></IB>
+        <IB title="Yêu cầu"><IR l="Thị trường" v={r.markets?.join(", ")}/><IR l="MOQ/SL" v={r.qty}/><IR l="Giá mục tiêu" v={r.price}/><IR l="Chứng chỉ" v={r.certs}/></IB>
+        <IB title="Timeline"><IR l="Ngày nhận" v={r.date}/><IR l="Deadline" v={r.deadline}/></IB>
       </div>
+      {r.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú thêm</div><div style={{fontSize:13}}>{r.notes}</div></div>}
       <div style={{marginBottom:12}}>
-        <div style={{fontSize:12,fontWeight:500,color:"var(--color-text-tertiary)",textTransform:"uppercase",letterSpacing:1,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span>NCC được gán ({assigned.length})</span>
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>setModal({type:"rfq-assign",data:r})} style={{...gBtn,fontSize:11,padding:"3px 8px"}}>+ Gán NCC từ DB</button>
-            <button onClick={()=>setModal({type:"sup-form",data:{...emptyS(),source:"reactive"}})} style={{fontSize:11,padding:"3px 8px",borderRadius:5,border:"0.5px solid #534AB7",background:"none",color:"#534AB7",cursor:"pointer"}}>+ NCC mới</button>
-          </div>
+        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span>NCC được gán ({asgn.length})</span>
+          {canEdit&&<div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán từ DB</button>
+            <button onClick={()=>setModal({t:"sup-form",d:{...newS(),source:"reactive"}})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #534AB7",background:"none",color:"#534AB7",cursor:"pointer"}}>+ NCC mới</button>
+          </div>}
         </div>
-        {assigned.length===0&&<div style={{fontSize:13,color:"var(--color-text-tertiary)",padding:"10px 0"}}>Chưa có NCC. Gán từ DB hoặc thêm mới.</div>}
+        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"10px 0"}}>Chưa có NCC. {canEdit?"Gán từ DB hoặc thêm mới.":""}</div>}
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {assigned.map(s=>{const t=calcTier(s.vserf);const note=r.supplierNotes?.[s.id]||"";return(
-            <div key={s.id} style={{background:"var(--color-background-secondary)",borderRadius:8,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
+          {asgn.map(s=>{const ti=calcTier(s.vserf);const note=r.snotes?.[s.id]||"";return(
+            <div key={s.id} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
               <div style={{flex:1}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:500,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"1px 7px",borderRadius:4,background:t.bg,color:t.color,fontWeight:500}}>{t.tier.split("—")[0].trim()} · {t.total}/45</span></div>
-                <div style={{fontSize:12,color:"var(--color-text-secondary)",marginTop:2}}>{s.products} · {s.province}</div>
-                {s.zalo&&<div style={{fontSize:12,color:"var(--color-text-secondary)"}}>📱 {s.zalo}</div>}
-                <input value={note} onChange={e=>{upsertR({...r,supplierNotes:{...r.supplierNotes,[s.id]:e.target.value}});}} placeholder="Ghi chú báo giá, phản hồi..." style={{...iSt,fontSize:12,marginTop:6,boxSizing:"border-box"}}/>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"1px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span></div>
+                <div style={{fontSize:12,color:"#777",marginTop:2}}>{s.products} · {s.province}</div>
+                {s.zalo&&<div style={{fontSize:12,color:"#777"}}>📱 {s.zalo}</div>}
+                {canEdit&&<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá, phản hồi..." style={{...iSt,fontSize:12,marginTop:6,boxSizing:"border-box"}}/>}
+                {!canEdit&&note&&<div style={{fontSize:12,color:"#555",marginTop:6,fontStyle:"italic"}}>{note}</div>}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                <button onClick={()=>setModal({type:"brief",data:s})} style={{fontSize:11,padding:"3px 8px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
-                <button onClick={()=>upsertR({...r,supplierIds:r.supplierIds.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"3px 8px",borderRadius:5,border:"0.5px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>
+                <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
+                {canEdit&&<button onClick={()=>upsR({...r,sids:r.sids.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
               </div>
             </div>
           );})}
         </div>
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-        {canEdit&&<button onClick={()=>setModal({type:"rfq-form",data:r})} style={gBtn}>Sửa RFQ</button>}
+        {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>Sửa RFQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
-          <span style={{fontSize:12,color:"var(--color-text-secondary)"}}>Trạng thái:</span>
-          {canEdit
-            ? <select value={r.status} onChange={e=>upsertR({...r,status:e.target.value})} style={{...iSt,padding:"4px 8px",fontSize:12,width:"auto"}}>{RFQ_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
-            : <span style={{fontSize:12,padding:"3px 10px",borderRadius:5,background:RFQ_STATUSES.find(x=>x.id===r.status)?.bg,color:RFQ_STATUSES.find(x=>x.id===r.status)?.color,fontWeight:500}}>{RFQ_STATUSES.find(x=>x.id===r.status)?.label}</span>
-          }
+          <span style={{fontSize:12,color:"#777"}}>Trạng thái:</span>
+          {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"4px 8px",fontSize:12,width:"auto"}}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
         </div>
         {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
       </div>
@@ -502,58 +503,73 @@ function RFQDetail({r,ctx}){
   );
 }
 
+// ── RFQ ASSIGN ──
 function RFQAssign({r,ctx}){
-  const {suppliers,upsertR,setModal}=ctx;
-  const [sel,setSel]=useState(r.supplierIds||[]);
+  const {sups,upsR,setModal}=ctx;
+  const [sel,setSel]=useState(r.sids||[]);
   const [q,setQ]=useState("");
-  const fl=suppliers.filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+  const fl=sups.filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   return(
     <Card>
-      <h2 style={{margin:"0 0 10px",fontSize:15,fontWeight:500}}>Gán NCC vào {r.rfqCode}</h2>
-      <div style={{fontSize:13,color:"var(--color-text-secondary)",marginBottom:12,padding:"8px 12px",background:"#E6F1FB",borderRadius:6}}>📋 {r.productDesc||"—"} · {r.buyerMarket?.join(", ")||"—"} · {r.certRequirements||"—"}</div>
+      <h2 style={{margin:"0 0 10px",fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
+      <div style={{fontSize:13,color:"#555",marginBottom:12,padding:"8px 12px",background:"#E6F1FB",borderRadius:6}}>📋 {r.desc||"—"} · {r.markets?.join(", ")||"—"} · {r.certs||"—"}</div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10,boxSizing:"border-box"}}/>
-      <div style={{maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
-        {fl.map(s=>{const t=calcTier(s.vserf);const chk=sel.includes(s.id);return(
-          <div key={s.id} onClick={()=>tog(s.id)} style={{background:chk?"var(--color-background-secondary)":"var(--color-background-primary)",border:`0.5px solid ${chk?"#1D9E75":"var(--color-border-tertiary)"}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",display:"flex",gap:10,alignItems:"center"}}>
-            <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,lineHeight:1}}>✓</span>}</div>
-            <div style={{flex:1,minWidth:0}}><div style={{fontWeight:500,fontSize:13}}>{s.name}</div><div style={{fontSize:12,color:"var(--color-text-secondary)"}}>{s.products} · {s.province}</div></div>
-            <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:t.bg,color:t.color,fontWeight:500,flexShrink:0}}>{t.tier.split("—")[0].trim()} · {t.total}/45</span>
+      <div style={{maxHeight:360,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+        {fl.map(s=>{const ti=calcTier(s.vserf);const chk=sel.includes(s.id);return(
+          <div key={s.id} onClick={()=>tog(s.id)} style={{background:chk?"#f0faf6":"#fff",border:`1px solid ${chk?"#1D9E75":"#e5e5e5"}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",display:"flex",gap:10,alignItems:"center"}}>
+            <div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:12,fontWeight:700}}>✓</span>}</div>
+            <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:13}}>{s.name}</div><div style={{fontSize:12,color:"#777"}}>{s.products} · {s.province}</div></div>
+            <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label} · {ti.t}/45</span>
           </div>
         );})}
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",marginTop:12}}>
-        <span style={{fontSize:13,color:"var(--color-text-secondary)"}}>{sel.length} NCC được chọn</span>
-        <div style={{display:"flex",gap:8}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>{upsertR({...r,supplierIds:sel,status:sel.length>0?"shortlisted":r.status});setModal(null);}} style={pBtn}>Lưu & cập nhật RFQ</button></div>
+        <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn</span>
+        <div style={{display:"flex",gap:8}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>{upsR({...r,sids:sel,status:sel.length>0?"shortlisted":r.status});setModal(null);}} style={pBtn}>Lưu</button></div>
       </div>
     </Card>
   );
 }
 
+// ── DASHBOARD ──
 function Dash({ctx}){
-  const {suppliers,rfqs}=ctx;
-  const tiers={t1:0,t2:0,t3:0,nq:0};let tv=0,vc=0;
-  suppliers.forEach(s=>{const t=calcTier(s.vserf);if(t.tier.startsWith("Tier 1"))tiers.t1++;else if(t.tier.startsWith("Tier 2"))tiers.t2++;else if(t.tier.startsWith("Tier 3"))tiers.t3++;else tiers.nq++;if(t.total>0){tv+=t.total;vc++;}});
-  const av=vc?Math.round(tv/vc):0;const t12=suppliers.length?Math.round((tiers.t1+tiers.t2)/suppliers.length*100):0;
-  const sc={};suppliers.forEach(s=>{sc[s.stage]=(sc[s.stage]||0)+1;});
-  const ind={};suppliers.forEach(s=>{if(s.industry)ind[s.industry]=(ind[s.industry]||0)+1;});
-  const kpis=[{l:"Tổng supplier",v:suppliers.length,t:"—",c:"#185FA5"},{l:"Tier 1+2",v:tiers.t1+tiers.t2,t:"≥40%",c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",t:"≥40%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",t:"≥32/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"RFQ đang mở",v:rfqs.filter(r=>r.status!=="closed").length,t:"—",c:"#534AB7"},{l:"RFQ đã gửi Sales",v:rfqs.filter(r=>r.status==="sent").length,t:"—",c:"#854F0B"}];
+  const {sups,rfqs}=ctx;
+  const ti={t1:0,t2:0,t3:0,nq:0};let tv=0,vc=0;
+  sups.forEach(s=>{const t=calcTier(s.vserf);if(t.label==="Tier 1")ti.t1++;else if(t.label==="Tier 2")ti.t2++;else if(t.label==="Tier 3")ti.t3++;else ti.nq++;if(t.t>0){tv+=t.t;vc++;}});
+  const av=vc?Math.round(tv/vc):0;const t12=sups.length?Math.round((ti.t1+ti.t2)/sups.length*100):0;
+  const sc={};sups.forEach(s=>{sc[s.stage]=(sc[s.stage]||0)+1;});
+  const ind={};sups.forEach(s=>{if(s.industry)ind[s.industry]=(ind[s.industry]||0)+1;});
+  const kpis=[{l:"Tổng supplier",v:sups.length,t:"—",c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,t:"≥40%",c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",t:"≥40%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",t:"≥32/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"RFQ đang mở",v:rfqs.filter(r=>r.status!=="closed").length,t:"—",c:"#534AB7"},{l:"RFQ đã gửi Sales",v:rfqs.filter(r=>r.status==="sent").length,t:"—",c:"#854F0B"}];
   return(
     <div>
-      <div style={{fontSize:15,fontWeight:500,marginBottom:12}}>Dashboard Management</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>{kpis.map(k=><div key={k.l} style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:10,padding:"12px 14px"}}><div style={{fontSize:11,color:"var(--color-text-secondary)",marginBottom:3}}>{k.l}</div><div style={{fontSize:20,fontWeight:500,color:k.c}}>{k.v}</div><div style={{fontSize:10,color:"var(--color-text-tertiary)"}}>Mục tiêu: {k.t}</div></div>)}</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-        <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1 Export-Ready",v:tiers.t1,c:"#1D9E75"},{l:"Tier 2 Nearly Ready",v:tiers.t2,c:"#185FA5"},{l:"Tier 3 Developing",v:tiers.t3,c:"#854F0B"},{l:"Not Qualified",v:tiers.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"var(--color-text-secondary)",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:500,color:r.c}}>{r.v}</span></div>)}</div>
-        <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:500,marginBottom:10}}>RFQ theo trạng thái</div>{RFQ_STATUSES.map(st=>{const cnt=rfqs.filter(r=>r.status===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:st.color,flexShrink:0}}/><span style={{fontSize:12,color:"var(--color-text-secondary)",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:500,color:st.color}}>{cnt}</span></div>;})}</div>
+      <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard Management</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>
+        {kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div><div style={{fontSize:10,color:"#ccc",marginTop:2}}>Mục tiêu: {k.t}</div></div>)}
       </div>
-      <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:500,marginBottom:10}}>Pipeline</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}><span style={{fontSize:10,color:"var(--color-text-tertiary)",minWidth:22}}>{st.id}</span><div style={{flex:1,height:8,background:"var(--color-background-secondary)",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.phase===1?"#9FE1CB":st.phase===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:500,minWidth:18,textAlign:"right"}}>{cnt}</span></div>;})}</div>
-      {Object.keys(ind).length>0&&<div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:500,marginBottom:8}}>Ngành hàng</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{Object.entries(ind).sort((a,b)=>b[1]-a[1]).map(([i,c])=><div key={i} style={{padding:"4px 10px",borderRadius:16,background:"var(--color-background-secondary)",fontSize:12,color:"var(--color-text-secondary)"}}>{i} <b style={{color:"var(--color-text-primary)"}}>{c}</b></div>)}</div></div>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>
+          {[{l:"Tier 1 Export-Ready",v:ti.t1,c:"#1D9E75"},{l:"Tier 2 Nearly Ready",v:ti.t2,c:"#185FA5"},{l:"Tier 3 Developing",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}
+        </div>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>RFQ theo trạng thái</div>
+          {RFQ_ST.map(st=>{const cnt=rfqs.filter(r=>r.status===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:st.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}
+        </div>
+      </div>
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline</div>
+        {STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}><span style={{fontSize:10,color:"#ccc",minWidth:22}}>{st.id}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right"}}>{cnt}</span></div>;})}
+      </div>
+      {Object.keys(ind).length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Ngành hàng</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{Object.entries(ind).sort((a,b)=>b[1]-a[1]).map(([i,c])=><div key={i} style={{padding:"4px 12px",borderRadius:20,background:"#f5f5f5",fontSize:12,color:"#555"}}>{i} <b style={{color:"#1a1a1a"}}>{c}</b></div>)}</div>
+      </div>}
     </div>
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
 </body>
 </html>
