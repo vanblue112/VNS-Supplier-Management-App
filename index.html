@@ -11,25 +11,17 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f0f0;color:#1a1a1a}
 input,select,textarea,button{font-family:inherit;outline:none}
-:root{
---bg1:#fff;--bg2:#f8f8f8;--bg3:#f0f0f0;
---t1:#1a1a1a;--t2:#555;--t3:#999;
---b1:rgba(0,0,0,0.2);--b2:rgba(0,0,0,0.12);
---r1:8px;--r2:12px;
-}
+:root{--bg1:#fff;--bg2:#f8f8f8;--bg3:#f0f0f0;--t1:#1a1a1a;--t2:#555;--t3:#999;--b1:rgba(0,0,0,0.2);--b2:rgba(0,0,0,0.12);--r1:8px;--r2:12px;}
 </style>
 </head>
 <body>
 <div id="root"><div style="padding:2rem;color:#666;font-size:14px">Đang khởi động...</div></div>
 <script type="text/babel">
-const {useState,useEffect,useCallback,useRef}=React;
-
+const {useState,useEffect,useCallback}=React;
 const EDIT_PW="vinasources2026";
 const AUTH_KEY="vns_auth_v1";
 const SK_S="vns_sup_v3";
 const SK_R="vns_rfq_v2";
-
-// storage
 const db={
   get:k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
@@ -37,10 +29,9 @@ const db={
 
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
-const PARTNER_TYPES=["Đối tác trực tiếp","Đối tác nền tảng","Chưa xác định"];
 const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
 const PARTNER_TYPES=["Đối tác trực tiếp","Đối tác nền tảng","Chưa xác định"];
-// end constants["Hà Nội","TP. Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ","An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái"];
+const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ","An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái"];
 const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành"];
 const MARKETS=["EU","US","Nhật Bản","Hàn Quốc","Úc","Canada","UK","Trung Đông","ASEAN","Khác"];
 const STAGES=[
@@ -79,7 +70,6 @@ const calcTier=v=>{
 const newS=()=>({id:Date.now()+"s",name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString()});
 const newR=()=>({id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",sids:[],snotes:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
 
-// ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
 const gBtn={padding:"7px 14px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",fontSize:13,color:"#555"};
 const pBtn={padding:"7px 18px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500};
@@ -88,12 +78,11 @@ function Card({children,style={}}){return <div style={{background:"#fff",border:
 function Sec({title,children}){return<div style={{marginBottom:"1.1rem"}}><div style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:7,borderBottom:"1px solid #f0f0f0",paddingBottom:4}}>{title}</div><div style={{display:"grid",gap:8}}>{children}</div></div>;}
 function Rw({l,children}){return<div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:8,alignItems:"start"}}><span style={{fontSize:13,color:"#666",paddingTop:8,lineHeight:1.3}}>{l}</span><div>{children}</div></div>;}
 function IB({title,children}){return<div><div style={{fontSize:11,fontWeight:600,color:"#999",marginBottom:6,textTransform:"uppercase",letterSpacing:.8}}>{title}</div>{children}</div>;}
-function IR({l,v}){return<div style={{display:"flex",gap:8,fontSize:13,padding:"3px 0"}}><span style={{color:"#777",minWidth:90,flexShrink:0}}>{l}</span><span style={{color:"#1a1a1a",flex:1}}>{v||<span style={{color:"#ccc"}}>—</span>}</span></div>;}
+function IR({l,v}){return<div style={{display:"flex",gap:8,fontSize:13,padding:"3px 0"}}><span style={{color:"#777",minWidth:100,flexShrink:0}}>{l}</span><span style={{color:"#1a1a1a",flex:1}}>{v||<span style={{color:"#ccc"}}>—</span>}</span></div>;}
 function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChange(e.target.value)} style={{...iSt,width:"auto"}}>{opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>;}
 function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
 function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 
-// ── App ──
 function App(){
   const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
   const [sups,setSups]=useState([]);
@@ -102,54 +91,43 @@ function App(){
   const [modal,setModal]=useState(null);
   const [toast,setToast]=useState(null);
   const [loading,setLoading]=useState(true);
-
   useEffect(()=>{setSups(db.get(SK_S)||[]);setRfqs(db.get(SK_R)||[]);setLoading(false);},[]);
-
-  const toast2=(m)=>{setToast(m);setTimeout(()=>setToast(null),2500);};
+  const toast2=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
   const saveSups=useCallback(l=>{setSups(l);db.set(SK_S,l);},[]);
   const saveRfqs=useCallback(l=>{setRfqs(l);db.set(SK_R,l);},[]);
-
   const upsS=s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
   const delS=id=>{if(!confirm("Xóa supplier này?"))return;saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
   const upsR=r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ");setModal(null);};
   const delR=id=>{if(!confirm("Xóa RFQ?"))return;saveRfqs(rfqs.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
   const logout=()=>{localStorage.removeItem(AUTH_KEY);setCanEdit(false);};
-
   if(loading)return <div style={{padding:"2rem",color:"#666"}}>Đang tải...</div>;
   const ctx={sups,rfqs,upsS,delS,upsR,delR,setModal,toast2,canEdit};
-
   return(
     <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
       {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"10px 20px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500,boxShadow:"0 2px 12px rgba(0,0,0,0.15)"}}>{toast}</div>}
       {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
-      {/* NAV */}
       <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
         <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
-          <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6,letterSpacing:.3}}>🏭 VinaSources</span>
+          <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
           {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ Tracking"},{id:"dash",l:"Dashboard"}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
               {t.l}
-              {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&
-                <span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
+              {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
             </button>
           ))}
           <div style={{flex:1}}/>
-          {canEdit?(
-            <>
-              <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
-              <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
-              <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
-            </>
-          ):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
+          {canEdit?(<>
+            <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
+            <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
+            <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
+          </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
         </div>
       </div>
-      {/* CONTENT */}
       <div style={{maxWidth:940,margin:"0 auto",padding:"1rem"}}>
         {tab==="list"&&<SupList ctx={ctx}/>}
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
         {tab==="dash"&&<Dash ctx={ctx}/>}
       </div>
-      {/* MODALS */}
       {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="scoring"&&canEdit&&<Modal onClose={()=>setModal(null)}><Scoring s={modal.d} ctx={ctx}/></Modal>}
@@ -178,7 +156,6 @@ function LoginBanner({onLogin}){
   );
 }
 
-// ── SUPPLIER LIST ──
 function SupList({ctx}){
   const {sups,setModal}=ctx;
   const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
@@ -188,17 +165,14 @@ function SupList({ctx}){
     return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   });
   const csv=()=>{
-    try {
-      const h=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
-      const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(String(v||"")).replace(/"/g,'""')}"`).join(",");});
-      const content="\uFEFF"+[h.join(","),...rows].join("\r\n");
-      const blob=new Blob([content],{type:"text/csv;charset=utf-8"});
+    try{
+      const h=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","HT hợp tác VNS","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
+      const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.partnerType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(String(v||"")).replace(/"/g,'""')}"`).join(",");});
+      const blob=new Blob(["\uFEFF"+[h.join(","),...rows].join("\r\n")],{type:"text/csv;charset=utf-8"});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      a.href=url;a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";
-      document.body.appendChild(a);a.click();
-      document.body.removeChild(a);URL.revokeObjectURL(url);
-    } catch(e){alert("Lỗi xuất CSV: "+e.message);}
+      const a=document.createElement("a");a.href=url;a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";
+      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){alert("Lỗi CSV: "+e.message);}
   };
   return(
     <div>
@@ -213,14 +187,13 @@ function SupList({ctx}){
       {fl.length===0&&<Empty text="Chưa có supplier. Nhấn + Supplier để thêm."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {fl.map(s=>{const ti=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);return(
-          <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",transition:"box-shadow .15s"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-            <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
-              {ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}
-            </div>
+          <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div>
               <div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
             </div>
+            {s.partnerType&&s.partnerType!=="Chưa xác định"&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":"#E6F1FB",color:s.partnerType==="Đối tác trực tiếp"?"#3B6D11":"#185FA5",fontWeight:600,flexShrink:0}}>{s.partnerType==="Đối tác trực tiếp"?"Trực tiếp":"Nền tảng"}</span>}
             {s.source==="reactive"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:600,flexShrink:0}}>RFQ</span>}
             <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
             <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
@@ -232,15 +205,19 @@ function SupList({ctx}){
   );
 }
 
-// ── SUPPLIER DETAIL ──
 function SupDetail({s,ctx}){
   const {setModal,delS,canEdit}=ctx;
   const ti=calcTier(s.vserf);
+  const ptColor=s.partnerType==="Đối tác trực tiếp"?"#3B6D11":s.partnerType==="Đối tác nền tảng"?"#185FA5":"#aaa";
+  const ptBg=s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":s.partnerType==="Đối tác nền tảng"?"#E6F1FB":"#f0f0f0";
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:14}}>
         <div><h2 style={{margin:0,fontSize:18,fontWeight:600}}>{s.name||"(Chưa có tên)"}</h2><div style={{fontSize:13,color:"#777",marginTop:3}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
-        <span style={{fontSize:13,padding:"4px 12px",borderRadius:6,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          <span style={{fontSize:13,padding:"4px 12px",borderRadius:6,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
+          <span style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:ptBg,color:ptColor,fontWeight:600}}>{s.partnerType||"Chưa xác định"}</span>
+        </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
         <IB title="Thông tin cơ bản">
@@ -274,7 +251,6 @@ function SupDetail({s,ctx}){
   );
 }
 
-// ── SUPPLIER FORM ──
 function SupForm({s,ctx}){
   const {upsS,setModal}=ctx;
   const [f,setF]=useState({...s});
@@ -286,9 +262,9 @@ function SupForm({s,ctx}){
         <Rw l="Tên công ty *"><input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Công ty TNHH ABC" style={iSt}/></Rw>
         <Rw l="Mô hình KD"><select value={f.bizModel||""} onChange={e=>set("bizModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BIZ_MODELS.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
-        <Rw l="HT hợp tác VNS"><select value={f.partnerType||"Chưa xác định"} onChange={e=>set("partnerType",e.target.value)} style={{...iSt,borderColor:f.partnerType==="Đối tác trực tiếp"?"#1D9E75":f.partnerType==="Đối tác nền tảng"?"#185FA5":"#ddd"}}><option value="">-- Chọn --</option>{PARTNER_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
+        <Rw l="HT hợp tác VNS"><select value={f.partnerType||"Chưa xác định"} onChange={e=>set("partnerType",e.target.value)} style={{...iSt,borderColor:f.partnerType==="Đối tác trực tiếp"?"#1D9E75":f.partnerType==="Đối tác nền tảng"?"#185FA5":"#ddd"}}>{PARTNER_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Ngành hàng"><select value={f.industry||""} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
-        <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="VD: Áo thun cotton, quần kaki export" style={iSt}/></Rw>
+        <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="Áo thun cotton, quần kaki export" style={iSt}/></Rw>
         <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} placeholder="VD: 2010" style={iSt}/></Rw>
         <Rw l="Tỉnh / Thành phố"><select value={f.province||""} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
         <Rw l="Website"><input value={f.website||""} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/></Rw>
@@ -301,16 +277,16 @@ function SupForm({s,ctx}){
       </Sec>
       <Sec title="Năng lực & thương mại">
         <Rw l="Chứng nhận"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="ISO 9001, BSCI, WRAP..." style={iSt}/></Rw>
-        <Rw l="Công suất / tháng"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} placeholder="VD: 50,000 pcs/tháng" style={iSt}/></Rw>
+        <Rw l="Công suất / tháng"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} placeholder="50,000 pcs/tháng" style={iSt}/></Rw>
         <Rw l="MOQ"><input value={f.moq||""} onChange={e=>set("moq",e.target.value)} placeholder="500 pcs/SKU" style={iSt}/></Rw>
-        <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} placeholder="VD: FOB $3–5/pcs" style={iSt}/></Rw>
+        <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} placeholder="FOB $3–5/pcs" style={iSt}/></Rw>
         <Rw l="Lead time"><input value={f.leadTime||""} onChange={e=>set("leadTime",e.target.value)} placeholder="30–45 ngày" style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF, EXW" style={iSt}/></Rw>
-        <Rw l="Mô hình SX"><input value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} placeholder="VD: OEM + ODM, CMT, FOB đầy đủ..." style={iSt}/></Rw>
-        <Rw l="Thanh toán"><input value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} placeholder="VD: T/T 30% + 70%, L/C at sight..." style={iSt}/></Rw>
+        <Rw l="Mô hình SX"><input value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} placeholder="OEM + ODM, CMT, FOB đầy đủ..." style={iSt}/></Rw>
+        <Rw l="Thanh toán"><input value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} placeholder="T/T 30% + 70%, L/C at sight..." style={iSt}/></Rw>
       </Sec>
       <Sec title="Lưu ý đặc biệt về sản phẩm">
-        <textarea value={f.specialNotes||""} onChange={e=>set("specialNotes",e.target.value)} placeholder="VD: Chỉ làm cotton 100%, không nhận đơn pha len. Min 1000 pcs/màu..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
+        <textarea value={f.specialNotes||""} onChange={e=>set("specialNotes",e.target.value)} placeholder="Chỉ làm cotton 100%, không nhận đơn pha len..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
       </Sec>
       <Sec title="Pipeline & nội bộ">
         <Rw l="Stage"><select value={f.stage} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
@@ -324,7 +300,6 @@ function SupForm({s,ctx}){
   );
 }
 
-// ── SCORING ──
 function Scoring({s,ctx}){
   const {upsS,setModal}=ctx;
   const [sc,setSc]=useState({...s.vserf});
@@ -350,7 +325,7 @@ function Scoring({s,ctx}){
       <div style={{fontSize:13,fontWeight:600,margin:"14px 0 8px",color:"#555"}}>Hiệu suất định kỳ (nếu đã có đơn)</div>
       {[{id:"qc",l:"Pass QC lần đầu",w:"30%"},{id:"delivery",l:"Giao hàng đúng hạn",w:"25%"},{id:"comm",l:"Phản hồi & giao tiếp",w:"20%"},{id:"price",l:"Giá cạnh tranh",w:"15%"},{id:"flex",l:"Xử lý phát sinh",w:"10%"}].map(c=>(
         <div key={c.id} style={{marginBottom:10,display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center"}}>
-          <div><div style={{fontSize:13,color:"#1a1a1a"}}>{c.l} <span style={{fontSize:11,color:"#aaa"}}>({c.w})</span></div><input type="range" min={0} max={5} step={1} value={pf[c.id]||0} onChange={e=>setPf(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/></div>
+          <div><div style={{fontSize:13}}>{c.l} <span style={{fontSize:11,color:"#aaa"}}>({c.w})</span></div><input type="range" min={0} max={5} step={1} value={pf[c.id]||0} onChange={e=>setPf(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/></div>
           <span style={{fontSize:14,fontWeight:600,minWidth:30,textAlign:"right"}}>{pf[c.id]||0}/5</span>
         </div>
       ))}
@@ -362,21 +337,18 @@ function Scoring({s,ctx}){
   );
 }
 
-// ── BRIEF ──
 function Brief({s}){
   const ti=calcTier(s.vserf);const today=new Date().toLocaleDateString("vi-VN");
   return(
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:10}}>
-        <button onClick={()=>window.print()} style={{...gBtn,marginLeft:"auto"}}>🖨 In / PDF</button>
-      </div>
+      <div style={{display:"flex",marginBottom:10}}><button onClick={()=>window.print()} style={{...gBtn,marginLeft:"auto"}}>🖨 In / PDF</button></div>
       <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:12,padding:"2rem",color:"#1a1a1a"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2.5px solid #1D9E75",paddingBottom:14,marginBottom:16}}>
           <div><div style={{fontSize:10,fontWeight:700,color:"#1D9E75",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>VinaSources — Supplier Brief</div><h1 style={{margin:0,fontSize:22,fontWeight:700}}>{s.name}</h1><div style={{fontSize:12,color:"#777",marginTop:4}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
           <div style={{textAlign:"right"}}><div style={{fontSize:17,fontWeight:700,padding:"6px 14px",borderRadius:7,background:ti.bg,color:ti.c}}>{ti.label}</div><div style={{fontSize:11,color:ti.c,marginTop:4}}>{ti.t}/45 VSERF</div><div style={{fontSize:10,color:"#bbb",marginTop:3}}>{today}</div></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
-          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.7,color:"#1a1a1a"}}>{s.products||"—"}</div></div>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.7}}>{s.products||"—"}</div></div>
           <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Năng lực thương mại</div>
             <div style={{fontSize:12,lineHeight:2,color:"#333"}}>
               {s.moq&&<div><span style={{color:"#aaa"}}>MOQ: </span>{s.moq}</div>}
@@ -393,13 +365,7 @@ function Brief({s}){
         {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
         <div style={{background:"#F0F9F5",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#0F6E56",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Tên</div><div style={{fontWeight:600}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Zalo/SĐT</div><div style={{fontWeight:600}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Email</div><div style={{fontWeight:600,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
-          {VCOLS.map(c=>{const v=s.vserf[c.id]||0;return(
-            <div key={c.id} style={{background:"#f8f8f8",borderRadius:7,padding:"8px 10px"}}>
-              <div style={{fontSize:9,color:"#aaa",marginBottom:4}}>{c.l}</div>
-              <div style={{height:5,borderRadius:3,background:"#e5e5e5",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A",borderRadius:3}}/></div>
-              <div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:3}}>{v}/5</div>
-            </div>
-          );})}
+          {VCOLS.map(c=>{const v=s.vserf[c.id]||0;return(<div key={c.id} style={{background:"#f8f8f8",borderRadius:7,padding:"8px 10px"}}><div style={{fontSize:9,color:"#aaa",marginBottom:4}}>{c.l}</div><div style={{height:5,borderRadius:3,background:"#e5e5e5",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A",borderRadius:3}}/></div><div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:3}}>{v}/5</div></div>);})}
         </div>
         {s.website&&<div style={{marginTop:12,fontSize:11,color:"#aaa"}}>🌐 {s.website}</div>}
         <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid #f0f0f0",fontSize:10,color:"#ccc",display:"flex",justifyContent:"space-between"}}><span>VinaSources Supply Chain · Confidential</span><span>Xuất {today}</span></div>
@@ -408,7 +374,6 @@ function Brief({s}){
   );
 }
 
-// ── RFQ LIST ──
 function RFQList({ctx}){
   const {rfqs,setModal}=ctx;
   const [fS,setFS]=useState("all");
@@ -429,7 +394,6 @@ function RFQList({ctx}){
   );
 }
 
-// ── RFQ FORM ──
 function RFQForm({r,ctx}){
   const {upsR,setModal}=ctx;
   const [f,setF]=useState({...r});
@@ -445,12 +409,12 @@ function RFQForm({r,ctx}){
         <Rw l="Deadline báo giá"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Yêu cầu sản phẩm">
-        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="VD: Áo polo cotton 220gsm, logo thêu..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Áo polo cotton 220gsm, logo thêu..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
         <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs, 1 container 20ft" style={iSt}/></Rw>
         <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5–4.0/pcs" style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
-        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="VD: BSCI, REACH, CA65, ISO 9001, HACCP..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65, ISO 9001, HACCP..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt, packaging..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
@@ -459,28 +423,23 @@ function RFQForm({r,ctx}){
   );
 }
 
-// ── RFQ DETAIL ──
 function RFQDetail({r,ctx}){
   const {sups,setModal,upsR,delR,canEdit}=ctx;
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const asgn=sups.filter(s=>r.sids?.includes(s.id));
   const urg=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);
-
-  // format certs thành tags
   const certTags=(r.certs||"").split(/[,;•\n]+/).map(c=>c.trim()).filter(Boolean);
-
   return(
     <Card>
-      {/* Header */}
       <div style={{marginBottom:16}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:8}}>
-          <span style={{fontSize:11,fontWeight:600,color:"#aaa",letterSpacing:.5}}>{r.code}</span>
-          <div style={{display:"flex",gap:6,flexShrink:0}}>
+          <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
+          <div style={{display:"flex",gap:6}}>
             <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
             {urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
           </div>
         </div>
-        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5,color:"#1a1a1a"}}>{r.desc||"(Chưa mô tả)"}</h2>
+        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5}}>{r.desc||"(Chưa mô tả)"}</h2>
         <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>
           {r.sales&&<span>👤 {r.sales}</span>}
           {r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}
@@ -488,40 +447,11 @@ function RFQDetail({r,ctx}){
           {r.deadline&&<span style={{color:urg?"#A32D2D":"#777",fontWeight:urg?600:400}}>📅 Deadline: {r.deadline}</span>}
         </div>
       </div>
-
-      {/* 3-col info strip */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
-        {[
-          {l:"MOQ / Số lượng",v:r.qty},
-          {l:"Giá mục tiêu",v:r.price},
-          {l:"Incoterm",v:r.incoterm},
-        ].map(x=>x.v?(
-          <div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}>
-            <div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>{x.l}</div>
-            <div style={{fontSize:13,fontWeight:500,color:"#1a1a1a"}}>{x.v}</div>
-          </div>
-        ):null)}
+        {[{l:"MOQ / Số lượng",v:r.qty},{l:"Giá mục tiêu",v:r.price},{l:"Incoterm",v:r.incoterm}].map(x=>x.v?(<div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>{x.l}</div><div style={{fontSize:13,fontWeight:500}}>{x.v}</div></div>):null)}
       </div>
-
-      {/* Chứng chỉ yêu cầu — tags */}
-      {certTags.length>0&&(
-        <div style={{marginBottom:14}}>
-          <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:7}}>Chứng chỉ yêu cầu</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {certTags.map((c,i)=><span key={i} style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:"#EAF3DE",color:"#3B6D11",fontWeight:500,border:"1px solid #C5DFA8"}}>{c}</span>)}
-          </div>
-        </div>
-      )}
-
-      {/* Ghi chú thêm — format đẹp */}
-      {r.notes&&(
-        <div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}>
-          <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Ghi chú & Yêu cầu kỹ thuật</div>
-          <div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div>
-        </div>
-      )}
-
-      {/* NCC gán vào RFQ */}
+      {certTags.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:7}}>Chứng chỉ yêu cầu</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{certTags.map((c,i)=><span key={i} style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:"#EAF3DE",color:"#3B6D11",fontWeight:500,border:"1px solid #C5DFA8"}}>{c}</span>)}</div></div>}
+      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Ghi chú & Yêu cầu kỹ thuật</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
       <div style={{marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>NCC được gán ({asgn.length})</span>
@@ -530,22 +460,15 @@ function RFQDetail({r,ctx}){
             <button onClick={()=>setModal({t:"sup-form",d:{...newS(),source:"reactive"}})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #534AB7",background:"none",color:"#534AB7",cursor:"pointer"}}>+ NCC mới</button>
           </div>}
         </div>
-        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"8px 0"}}>Chưa có NCC. {canEdit?"Gán từ DB hoặc thêm mới.":""}</div>}
+        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"8px 0"}}>Chưa có NCC.{canEdit?" Gán từ DB hoặc thêm mới.":""}</div>}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {asgn.map(s=>{const ti=calcTier(s.vserf);const note=r.snotes?.[s.id]||"";return(
             <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start"}}>
               <div style={{flex:1}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}>
-                  <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
-                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
-                  {s.bizModel&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f0f0f0",color:"#666"}}>{s.bizModel}</span>}
-                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>{s.bizModel&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f0f0f0",color:"#666"}}>{s.bizModel}</span>}</div>
                 <div style={{fontSize:12,color:"#777"}}>{[s.products,s.province].filter(Boolean).join(" · ")}</div>
                 {s.zalo&&<div style={{fontSize:12,color:"#777",marginTop:2}}>📱 {s.zalo}</div>}
-                {canEdit
-                  ?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá, phản hồi NCC..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>
-                  :note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>
-                }
+                {canEdit?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá, phản hồi NCC..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>:note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
                 <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>Brief</button>
@@ -555,16 +478,11 @@ function RFQDetail({r,ctx}){
           );})}
         </div>
       </div>
-
-      {/* Footer actions */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>✏️ Sửa RFQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
           <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
-          {canEdit
-            ?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
-            :<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
-          }
+          {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
         </div>
         {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
       </div>
@@ -572,7 +490,6 @@ function RFQDetail({r,ctx}){
   );
 }
 
-// ── RFQ ASSIGN ──
 function RFQAssign({r,ctx}){
   const {sups,upsR,setModal}=ctx;
   const [sel,setSel]=useState(r.sids||[]);
@@ -582,7 +499,7 @@ function RFQAssign({r,ctx}){
   return(
     <Card>
       <h2 style={{margin:"0 0 10px",fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
-      <div style={{fontSize:13,color:"#555",marginBottom:12,padding:"8px 12px",background:"#E6F1FB",borderRadius:6}}>📋 {r.desc||"—"} · {r.markets?.join(", ")||"—"} · {r.certs||"—"}</div>
+      <div style={{fontSize:13,color:"#555",marginBottom:12,padding:"8px 12px",background:"#E6F1FB",borderRadius:6}}>📋 {r.desc||"—"} · {r.markets?.join(", ")||"—"}</div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10,boxSizing:"border-box"}}/>
       <div style={{maxHeight:360,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
         {fl.map(s=>{const ti=calcTier(s.vserf);const chk=sel.includes(s.id);return(
@@ -601,7 +518,6 @@ function RFQAssign({r,ctx}){
   );
 }
 
-// ── DASHBOARD ──
 function Dash({ctx}){
   const {sups,rfqs}=ctx;
   const ti={t1:0,t2:0,t3:0,nq:0};let tv=0,vc=0;
@@ -617,23 +533,11 @@ function Dash({ctx}){
         {kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div><div style={{fontSize:10,color:"#ccc",marginTop:2}}>Mục tiêu: {k.t}</div></div>)}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>
-          {[{l:"Tier 1 Export-Ready",v:ti.t1,c:"#1D9E75"},{l:"Tier 2 Nearly Ready",v:ti.t2,c:"#185FA5"},{l:"Tier 3 Developing",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}
-        </div>
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>RFQ theo trạng thái</div>
-          {RFQ_ST.map(st=>{const cnt=rfqs.filter(r=>r.status===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:st.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}
-        </div>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1 Export-Ready",v:ti.t1,c:"#1D9E75"},{l:"Tier 2 Nearly Ready",v:ti.t2,c:"#185FA5"},{l:"Tier 3 Developing",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>RFQ theo trạng thái</div>{RFQ_ST.map(st=>{const cnt=rfqs.filter(r=>r.status===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:st.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}</div>
       </div>
-      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline</div>
-        {STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}
-      </div>
-      {Object.keys(ind).length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Ngành hàng</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{Object.entries(ind).sort((a,b)=>b[1]-a[1]).map(([i,c])=><div key={i} style={{padding:"4px 12px",borderRadius:20,background:"#f5f5f5",fontSize:12,color:"#555"}}>{i} <b style={{color:"#1a1a1a"}}>{c}</b></div>)}</div>
-      </div>}
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}</div>
+      {Object.keys(ind).length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Ngành hàng</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{Object.entries(ind).sort((a,b)=>b[1]-a[1]).map(([i,c])=><div key={i} style={{padding:"4px 12px",borderRadius:20,background:"#f5f5f5",fontSize:12,color:"#555"}}>{i} <b style={{color:"#1a1a1a"}}>{c}</b></div>)}</div></div>}
     </div>
   );
 }
