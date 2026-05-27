@@ -42,6 +42,9 @@ const {useState,useEffect,useCallback} = React;
 const INDUSTRIES=["Dệt may","Giày dép","Thực phẩm / FMCG","Cà phê / Nông sản","Điện tử / Cơ khí","Gỗ / Nội thất","Nhựa / Bao bì","Thủ công mỹ nghệ","Khác"];
 const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Bình Dương","Đồng Nai","Hải Phòng","Đà Nẵng","Cần Thơ","Bắc Ninh","Hưng Yên","Long An","Tiền Giang","Khác"];
 const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành"];
+const BUSINESS_TYPES=["Công ty TNHH","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Khác"];
+const SERVICE_MODELS=["OEM (sản xuất theo mẫu buyer)","ODM (có thiết kế riêng)","CMT (gia công)","FOB đầy đủ","Trading / Thương mại","Khác"];
+const PAYMENT_METHODS=["T/T (chuyển khoản)","L/C (thư tín dụng)","D/P","D/A","Trả trước 100%","30% đặt cọc - 70% trước giao hàng","Khác"];
 const MARKETS=["EU","US","Nhật Bản","Hàn Quốc","Úc","Canada","UK","Trung Đông","ASEAN","Khác"];
 const STAGES=[
   {id:"B1",label:"B1 Xác định ngành",phase:1},{id:"B2",label:"B2 Longlist",phase:1},{id:"B3",label:"B3 Pre-score",phase:1},
@@ -83,7 +86,7 @@ const calcPerf=p=>{
   if(s>=45)return{label:"Probation",color:"#854F0B",bg:"#FAEEDA",score:Math.round(s)};
   return{label:"Inactive",color:"#A32D2D",bg:"#FCEBEB",score:Math.round(s)};
 };
-const emptyS=()=>({id:Date.now()+"_s",name:"",industry:"",products:"",province:"",website:"",contactName:"",zalo:"",email:"",channel:"",stage:"B1",notes:"",specialNotes:"",certs:"",moq:"",leadTime:"",incoterm:"",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},source:"proactive",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+const emptyS=()=>({id:Date.now()+"_s",name:"",bizType:"",industry:"",products:"",foundedYear:"",province:"",website:"",contactName:"",zalo:"",email:"",channel:"",stage:"B1",notes:"",specialNotes:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},source:"proactive",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
 const emptyR=()=>({id:Date.now()+"_r",rfqCode:"RFQ-"+Date.now().toString().slice(-5),salesPerson:"",receivedDate:new Date().toISOString().slice(0,10),productDesc:"",buyerMarket:[],deadline:"",moqQty:"",certRequirements:"",priceTarget:"",incoterm:"",additionalNotes:"",status:"new",supplierIds:[],supplierNotes:{},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
 
 const SK_S="vns_suppliers_v2",SK_R="vns_rfqs_v1";
@@ -214,9 +217,25 @@ function SupDetail({s,ctx}){
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:12}}>
-        <IB title="Thông tin cơ bản"><IR l="Sản phẩm" v={s.products}/><IR l="Website" v={s.website}/><IR l="Kênh" v={s.channel}/><IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/></IB>
+        <IB title="Thông tin cơ bản">
+          <IR l="Loại hình KD" v={s.bizType}/>
+          <IR l="Sản phẩm" v={s.products}/>
+          <IR l="Năm thành lập" v={s.foundedYear}/>
+          <IR l="Website" v={s.website}/>
+          <IR l="Kênh" v={s.channel}/>
+          <IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/>
+        </IB>
         <IB title="Đầu mối liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
-        <IB title="Năng lực"><IR l="Chứng nhận" v={s.certs}/><IR l="MOQ" v={s.moq}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/></IB>
+        <IB title="Năng lực">
+          <IR l="Chứng nhận" v={s.certs}/>
+          <IR l="Công suất/tháng" v={s.capacity}/>
+          <IR l="MOQ" v={s.moq}/>
+          <IR l="Price range" v={s.priceRange}/>
+          <IR l="Lead time" v={s.leadTime}/>
+          <IR l="Incoterm" v={s.incoterm}/>
+          <IR l="Mô hình SX" v={s.serviceModel}/>
+          <IR l="Thanh toán" v={s.paymentMethod}/>
+        </IB>
         <IB title="VSERF">{VSERF_COLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"2px 0"}}><span style={{color:"var(--color-text-secondary)"}}>{c.label}</span><span style={{fontWeight:500,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"var(--color-text-primary)"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
       </div>
       {s.specialNotes&&<div style={{background:"#FAEEDA",border:"0.5px solid #EF9F27",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:500,color:"#854F0B",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#633806"}}>{s.specialNotes}</div></div>}
@@ -240,8 +259,10 @@ function SupForm({s,ctx}){
       <h2 style={{margin:"0 0 1rem",fontSize:15,fontWeight:500}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
       <Sec title="Thông tin cơ bản">
         <Rw l="Tên công ty *"><input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Công ty TNHH ABC" style={iSt}/></Rw>
+        <Rw l="Loại hình KD"><select value={f.bizType||""} onChange={e=>set("bizType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BUSINESS_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Ngành hàng"><select value={f.industry} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="Áo thun cotton, quần kaki export" style={iSt}/></Rw>
+        <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} placeholder="VD: 2010" style={iSt}/></Rw>
         <Rw l="Tỉnh / Thành phố"><select value={f.province} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
         <Rw l="Website"><input value={f.website} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/></Rw>
         <Rw l="Kênh tìm kiếm"><select value={f.channel} onChange={e=>set("channel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{CHANNELS.map(c=><option key={c}>{c}</option>)}</select></Rw>
@@ -253,9 +274,13 @@ function SupForm({s,ctx}){
       </Sec>
       <Sec title="Năng lực & thương mại">
         <Rw l="Chứng nhận"><input value={f.certs} onChange={e=>set("certs",e.target.value)} placeholder="ISO 9001, BSCI, WRAP..." style={iSt}/></Rw>
+        <Rw l="Công suất / tháng"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} placeholder="VD: 50,000 pcs/tháng" style={iSt}/></Rw>
         <Rw l="MOQ"><input value={f.moq} onChange={e=>set("moq",e.target.value)} placeholder="500 pcs/SKU" style={iSt}/></Rw>
+        <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} placeholder="VD: FOB $3–5/pcs" style={iSt}/></Rw>
         <Rw l="Lead time"><input value={f.leadTime} onChange={e=>set("leadTime",e.target.value)} placeholder="30–45 ngày" style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF, EXW" style={iSt}/></Rw>
+        <Rw l="Mô hình SX"><select value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{SERVICE_MODELS.map(m=><option key={m}>{m}</option>)}</select></Rw>
+        <Rw l="Thanh toán"><select value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PAYMENT_METHODS.map(m=><option key={m}>{m}</option>)}</select></Rw>
       </Sec>
       <Sec title="Lưu ý đặc biệt về sản phẩm">
         <textarea value={f.specialNotes} onChange={e=>set("specialNotes",e.target.value)} placeholder="VD: Chỉ làm cotton 100%, không nhận đơn pha len..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
@@ -325,7 +350,14 @@ function Brief({s,ctx}){
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:12}}>
           <div><div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.6}}>{s.products||"—"}</div></div>
-          <div><div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Năng lực thương mại</div><div style={{fontSize:12,lineHeight:1.9}}>{s.moq&&<div><span style={{color:"#777"}}>MOQ: </span>{s.moq}</div>}{s.leadTime&&<div><span style={{color:"#777"}}>Lead time: </span>{s.leadTime}</div>}{s.incoterm&&<div><span style={{color:"#777"}}>Incoterm: </span>{s.incoterm}</div>}{s.certs&&<div><span style={{color:"#777"}}>Chứng nhận: </span>{s.certs}</div>}</div></div>
+          <div><div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Năng lực thương mại</div><div style={{fontSize:12,lineHeight:1.9}}>            {s.moq&&<div><span style={{color:"#777"}}>MOQ: </span>{s.moq}</div>}
+              {s.capacity&&<div><span style={{color:"#777"}}>Công suất: </span>{s.capacity}</div>}
+              {s.priceRange&&<div><span style={{color:"#777"}}>Price range: </span>{s.priceRange}</div>}
+              {s.leadTime&&<div><span style={{color:"#777"}}>Lead time: </span>{s.leadTime}</div>}
+              {s.incoterm&&<div><span style={{color:"#777"}}>Incoterm: </span>{s.incoterm}</div>}
+              {s.serviceModel&&<div><span style={{color:"#777"}}>Mô hình SX: </span>{s.serviceModel}</div>}
+              {s.paymentMethod&&<div><span style={{color:"#777"}}>Thanh toán: </span>{s.paymentMethod}</div>}
+              {s.certs&&<div><span style={{color:"#777"}}>Chứng nhận: </span>{s.certs}</div>}</div></div>
         </div>
         {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
         <div style={{background:"#F0F9F5",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:600,color:"#0F6E56",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10}}>Tên</div><div style={{fontWeight:500}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10}}>Zalo/SĐT</div><div style={{fontWeight:500}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10}}>Email</div><div style={{fontWeight:500,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
