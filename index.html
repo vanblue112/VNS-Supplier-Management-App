@@ -461,49 +461,107 @@ function RFQDetail({r,ctx}){
   const {sups,setModal,upsR,delR,canEdit}=ctx;
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const asgn=sups.filter(s=>r.sids?.includes(s.id));
+  const urg=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);
+
+  // format certs thành tags
+  const certTags=(r.certs||"").split(/[,;•\n]+/).map(c=>c.trim()).filter(Boolean);
+
   return(
     <Card>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:14}}>
-        <div><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>{r.code}</div><h2 style={{margin:0,fontSize:16,fontWeight:600}}>{r.desc||"(Chưa mô tả)"}</h2>{r.sales&&<div style={{fontSize:13,color:"#777",marginTop:3}}>👤 {r.sales}</div>}</div>
-        <span style={{fontSize:12,padding:"4px 12px",borderRadius:6,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
+      {/* Header */}
+      <div style={{marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:8}}>
+          <span style={{fontSize:11,fontWeight:600,color:"#aaa",letterSpacing:.5}}>{r.code}</span>
+          <div style={{display:"flex",gap:6,flexShrink:0}}>
+            <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
+            {urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
+          </div>
+        </div>
+        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5,color:"#1a1a1a"}}>{r.desc||"(Chưa mô tả)"}</h2>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>
+          {r.sales&&<span>👤 {r.sales}</span>}
+          {r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}
+          {r.date&&<span>📥 Nhận: {r.date}</span>}
+          {r.deadline&&<span style={{color:urg?"#A32D2D":"#777",fontWeight:urg?600:400}}>📅 Deadline: {r.deadline}</span>}
+        </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:14}}>
-        <IB title="Yêu cầu"><IR l="Thị trường" v={r.markets?.join(", ")}/><IR l="MOQ/SL" v={r.qty}/><IR l="Giá mục tiêu" v={r.price}/><IR l="Chứng chỉ" v={r.certs}/></IB>
-        <IB title="Timeline"><IR l="Ngày nhận" v={r.date}/><IR l="Deadline" v={r.deadline}/></IB>
+
+      {/* 3-col info strip */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+        {[
+          {l:"MOQ / Số lượng",v:r.qty},
+          {l:"Giá mục tiêu",v:r.price},
+          {l:"Incoterm",v:r.incoterm},
+        ].map(x=>x.v?(
+          <div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}>
+            <div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>{x.l}</div>
+            <div style={{fontSize:13,fontWeight:500,color:"#1a1a1a"}}>{x.v}</div>
+          </div>
+        ):null)}
       </div>
-      {r.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú thêm</div><div style={{fontSize:13}}>{r.notes}</div></div>}
-      <div style={{marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+
+      {/* Chứng chỉ yêu cầu — tags */}
+      {certTags.length>0&&(
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:7}}>Chứng chỉ yêu cầu</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {certTags.map((c,i)=><span key={i} style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:"#EAF3DE",color:"#3B6D11",fontWeight:500,border:"1px solid #C5DFA8"}}>{c}</span>)}
+          </div>
+        </div>
+      )}
+
+      {/* Ghi chú thêm — format đẹp */}
+      {r.notes&&(
+        <div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}>
+          <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Ghi chú & Yêu cầu kỹ thuật</div>
+          <div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div>
+        </div>
+      )}
+
+      {/* NCC gán vào RFQ */}
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>NCC được gán ({asgn.length})</span>
           {canEdit&&<div style={{display:"flex",gap:6}}>
             <button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán từ DB</button>
             <button onClick={()=>setModal({t:"sup-form",d:{...newS(),source:"reactive"}})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #534AB7",background:"none",color:"#534AB7",cursor:"pointer"}}>+ NCC mới</button>
           </div>}
         </div>
-        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"10px 0"}}>Chưa có NCC. {canEdit?"Gán từ DB hoặc thêm mới.":""}</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"8px 0"}}>Chưa có NCC. {canEdit?"Gán từ DB hoặc thêm mới.":""}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {asgn.map(s=>{const ti=calcTier(s.vserf);const note=r.snotes?.[s.id]||"";return(
-            <div key={s.id} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
+            <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start"}}>
               <div style={{flex:1}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"1px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span></div>
-                <div style={{fontSize:12,color:"#777",marginTop:2}}>{s.products} · {s.province}</div>
-                {s.zalo&&<div style={{fontSize:12,color:"#777"}}>📱 {s.zalo}</div>}
-                {canEdit&&<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá, phản hồi..." style={{...iSt,fontSize:12,marginTop:6,boxSizing:"border-box"}}/>}
-                {!canEdit&&note&&<div style={{fontSize:12,color:"#555",marginTop:6,fontStyle:"italic"}}>{note}</div>}
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}>
+                  <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
+                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
+                  {s.bizModel&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f0f0f0",color:"#666"}}>{s.bizModel}</span>}
+                </div>
+                <div style={{fontSize:12,color:"#777"}}>{[s.products,s.province].filter(Boolean).join(" · ")}</div>
+                {s.zalo&&<div style={{fontSize:12,color:"#777",marginTop:2}}>📱 {s.zalo}</div>}
+                {canEdit
+                  ?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá, phản hồi NCC..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>
+                  :note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>
+                }
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
-                {canEdit&&<button onClick={()=>upsR({...r,sids:r.sids.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
+              <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
+                <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>Brief</button>
+                {canEdit&&<button onClick={()=>upsR({...r,sids:r.sids.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
               </div>
             </div>
           );})}
         </div>
       </div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-        {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>Sửa RFQ</button>}
+
+      {/* Footer actions */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>✏️ Sửa RFQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
-          <span style={{fontSize:12,color:"#777"}}>Trạng thái:</span>
-          {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"4px 8px",fontSize:12,width:"auto"}}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
+          <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
+          {canEdit
+            ?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
+            :<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
+          }
         </div>
         {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
       </div>
