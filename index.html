@@ -447,7 +447,7 @@ function RFQForm({r,ctx}){
         <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs, 1 container 20ft" style={iSt}/></Rw>
         <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5–4.0/pcs" style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
-        <Rw l="Chứng chỉ yêu cầu"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65..." style={iSt}/></Rw>
+        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="VD: BSCI, REACH, CA65, ISO 9001, HACCP..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt, packaging..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
