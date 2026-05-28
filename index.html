@@ -572,13 +572,43 @@ function ImportCSV({ctx}){
     if(!f)return;
     const reader=new FileReader();
     reader.onload=ev=>{
-      const {error,rows:parsed}=parseCSVFile(ev.target.result);
-      if(error){setErr(error);return;}
+      let text=ev.target.result;
+      // Strip BOM if present
+      if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+      const {error,rows:parsed}=parseCSVFile(text);
+      if(error){
+        // Retry with windows-1252
+        const r2=new FileReader();
+        r2.onload=ev2=>{
+          let t2=ev2.target.result;
+          if(t2.charCodeAt(0)===0xFEFF)t2=t2.slice(1);
+          const {error:e2,rows:p2}=parseCSVFile(t2);
+          if(e2){setErr(e2);return;}
+          setErr("");
+          const initSel={};p2.forEach((_,i)=>{initSel[i]=true;});
+          setRows(p2);setSel(initSel);setStep(2);
+        };
+        r2.onerror=()=>setErr("Không đọc được file.");
+        r2.readAsText(f,"windows-1252");
+        return;
+      }
       setErr("");
       const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
       setRows(parsed);setSel(initSel);setStep(2);
     };
-    reader.onerror=()=>setErr("Không đọc được file.");
+    reader.onerror=()=>{
+      // Retry with cp1252
+      const r2=new FileReader();
+      r2.onload=ev2=>{
+        const {error,rows:parsed}=parseCSVFile(ev2.target.result);
+        if(error){setErr(error);return;}
+        setErr("");
+        const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
+        setRows(parsed);setSel(initSel);setStep(2);
+      };
+      r2.onerror=()=>setErr("Không đọc được file.");
+      r2.readAsText(f,"windows-1252");
+    };
     reader.readAsText(f,"UTF-8");
   };
   const onFile=e=>{if(e.target.files[0])processFile(e.target.files[0]);};
