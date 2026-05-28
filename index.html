@@ -866,8 +866,32 @@ function EmailDraft({r,sups,onClose}){
 
     let subject,body;
     if(isInq){
-      subject=`Subject: Product Inquiry — ${r.desc||"[Product]"} | VinaSources`;
-      body=`Dear ${supName} Team,
+      subject=`Subject: Hỏi thăm sản phẩm / Product Inquiry — ${r.desc||"[Sản phẩm]"} | VinaSources`;
+      body=`Kính gửi đội ngũ ${supName},
+
+Tôi là [Tên của bạn] từ VinaSources, công ty chuỗi cung ứng tại Việt Nam chuyên kết nối nhà sản xuất trong nước với các buyer quốc tế tại ${r.markets?.join(", ")||"các thị trường quốc tế"}.
+
+Chúng tôi đang tìm hiểu nguồn cung cho sản phẩm dưới đây và muốn tìm hiểu năng lực sản xuất của quý công ty:
+
+Sản phẩm: ${r.desc||"[Mô tả sản phẩm]"}
+Thị trường mục tiêu: ${r.markets?.join(", ")||"Chưa xác định"}${r.deadline?`\nCần phản hồi trước: ${r.deadline}`:""}
+
+Ở giai đoạn này, chúng tôi muốn xác nhận:
+• Sản phẩm có nằm trong danh mục sản xuất của quý công ty không
+• Công suất tổng thể và lead time dự kiến
+• Kinh nghiệm xuất khẩu sang thị trường mục tiêu
+• Các chứng nhận hiện có${r.notes?`\n\nThông tin thêm:\n${r.notes}`:""}
+
+Đây là bước hỏi thăm ban đầu — RFQ chính thức với thông số kỹ thuật đầy đủ sẽ được gửi sau nếu hai bên phù hợp.
+
+Trân trọng,
+[Tên của bạn]
+Sourcing Team | VinaSources
+Email: [your@email.com] | Zalo: [số]
+
+────────────────────────────────
+
+Dear ${supName} Team,
 
 My name is [Your Name] from VinaSources, a supply chain company based in Vietnam. We connect Vietnamese manufacturers with international buyers across markets including ${r.markets?.join(", ")||"global markets"}.
 
@@ -884,17 +908,40 @@ At this stage, we are looking to understand:
 
 This is an initial inquiry — a formal RFQ with detailed specifications will follow if there is a mutual fit.
 
-Please feel free to reply to this email or reach out via [Phone/Zalo]. We look forward to hearing from you.
-
 Best regards,
 [Your Name]
 Sourcing Team | VinaSources
 Email: [your@email.com] | Zalo: [number]`;
     } else {
-      subject=`Subject: Request for Quotation — ${r.desc||"[Product]"} (${r.code}) | VinaSources`;
-      body=`Dear ${supName} Team,
+      subject=`Subject: Yêu cầu báo giá / Request for Quotation — ${r.desc||"[Sản phẩm]"} (${r.code}) | VinaSources`;
+      body=`Kính gửi đội ngũ ${supName},
 
-My name is [Your Name] from VinaSources, a Vietnamese supply chain company specializing in connecting local manufacturers with international buyers. We are currently working with a buyer targeting ${r.markets?.join(", ")||"international markets"} and would like to request a formal quotation from your company.
+Tôi là [Tên của bạn] từ VinaSources, công ty chuỗi cung ứng tại Việt Nam chuyên kết nối nhà sản xuất trong nước với buyer quốc tế. Chúng tôi đang làm việc với một buyer tại ${r.markets?.join(", ")||"thị trường quốc tế"} và muốn gửi yêu cầu báo giá chính thức đến quý công ty.
+
+— THÔNG TIN RFQ —
+Mã RFQ: ${r.code}
+Sản phẩm: ${r.desc||"[Mô tả sản phẩm]"}
+Thị trường mục tiêu: ${r.markets?.join(", ")||"Chưa xác định"}${r.qty?`\nSố lượng: ${r.qty}`:""}${r.price?`\nGiá mục tiêu: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nChứng nhận yêu cầu: ${r.certs}`:""}${r.deadline?`\nHạn báo giá: ${r.deadline}`:""}
+
+Vui lòng cung cấp báo giá bao gồm:
+• Đơn giá (nếu có thể, kèm breakdown: nguyên liệu / gia công / bao bì / vận chuyển)
+• MOQ và lead time
+• Điều khoản thanh toán
+• Lưu ý đặc biệt về sản phẩm (nếu có)${r.notes?`\n\nYêu cầu bổ sung:\n${r.notes}`:""}
+
+Kính mong nhận được phản hồi trước ${r.deadline||"[ngày hạn]"}.
+
+Trân trọng,
+[Tên của bạn]
+Sourcing Team | VinaSources
+Email: [your@email.com] | Zalo: [số]
+Ngày: ${today}
+
+────────────────────────────────
+
+Dear ${supName} Team,
+
+My name is [Your Name] from VinaSources, a Vietnamese supply chain company. We are working with a buyer targeting ${r.markets?.join(", ")||"international markets"} and would like to request a formal quotation.
 
 — RFQ DETAILS —
 RFQ Code: ${r.code}
@@ -907,9 +954,7 @@ Please provide a quotation including:
 • Payment terms
 • Any product limitations or special notes${r.notes?`\n\nAdditional requirements:\n${r.notes}`:""}
 
-Kindly send your quotation to this email by ${r.deadline||"[deadline]"}. If you have any questions, please do not hesitate to contact us.
-
-We look forward to your prompt response.
+Kindly send your quotation by ${r.deadline||"[deadline]"}.
 
 Best regards,
 [Your Name]
