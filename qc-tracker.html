@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>QC Tracker — VinaSources</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:14px}
+input,select,textarea,button{font-family:inherit;outline:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:18px;height:18px;border:2px solid #1D9E75;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;display:inline-block}
+
+/* NAV */
+.nav{background:#fff;border-bottom:1px solid #e5e5e5;padding:0 1rem;display:flex;align-items:center;gap:12px}
+.nav-logo{font-weight:700;font-size:14px;color:#1D9E75;padding:13px 14px 13px 0;border-right:1px solid #eee;margin-right:6px;text-decoration:none}
+.nav-back{font-size:12px;color:#777;text-decoration:none;padding:6px 10px;border-radius:6px;border:1px solid #eee}
+.nav-back:hover{background:#f5f5f3}
+.nav-title{font-size:13px;font-weight:600;color:#1a1a1a}
+.nav-sub{font-size:11px;color:#aaa;margin-left:4px}
+.nav-save{margin-left:auto;font-size:11px;padding:4px 12px;border-radius:12px;border:1px solid #C5DFA8;background:#E8F4E2;color:#3B6D11;font-weight:600}
+.nav-save.saving{background:#FDF3CD;border-color:#E6C870;color:#7A4500}
+.nav-save.error{background:#FCE4E4;border-color:#E0A0A0;color:#A32D2D}
+
+/* STEPS */
+.steps{display:flex;gap:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:0 1rem;overflow-x:auto}
+.step-btn{flex-shrink:0;padding:10px 16px;font-size:12px;font-weight:600;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:#999;transition:all .15s;line-height:1.4;text-align:center}
+.step-btn.active{color:#1a1a1a;border-bottom-color:#1D9E75}
+.step-btn.done{color:#1D9E75}
+.step-num{display:block;font-size:16px;font-weight:700;margin-bottom:2px}
+
+/* PANELS */
+.panel{display:none;max-width:860px;margin:0 auto;padding:1rem}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1.2rem;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:12px;color:#111}
+.meta-table{width:100%;border-collapse:collapse}
+.meta-table tr{border-bottom:1px solid #f0f0f0}
+.meta-table tr:last-child{border-bottom:none}
+.meta-table .ml{width:35%;font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;background:#f9f9f7;white-space:nowrap;border-right:1px solid #f0f0f0}
+.meta-table .ml .en{font-size:10px;font-weight:400;color:#aaa;text-transform:none;display:block;margin-top:1px}
+.meta-table .mv{padding:6px 10px}
+.meta-table .mv input,.meta-table .mv select,.meta-table .mv textarea{width:100%;font-size:13px;padding:5px 8px;border:1px solid #d5d5d0;border-radius:5px;background:#fff;font-family:inherit}
+.meta-table .mv textarea{resize:none;min-height:60px}
+
+/* VERDICT */
+.verdict-banner{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;font-weight:600;border:1.5px solid transparent}
+
+/* CHECKLIST */
+.cl-section{border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;background:#fff;margin-bottom:8px}
+.cl-section-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;background:#f9f9f7;cursor:pointer}
+.cl-section-hd h3{font-size:12px;font-weight:600}
+.cl-section-hd h3 .en{font-size:10px;font-weight:400;color:#999;display:block;margin-top:1px}
+.cl-badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;background:#eee;color:#888}
+.cl-body{display:none}
+.cl-body.open{display:block}
+.cl-table{width:100%;border-collapse:collapse}
+.cl-table th{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;padding:6px 10px;border-bottom:1px solid #ebebeb;text-align:left;background:#fafafa}
+.cl-table td{padding:6px 10px;font-size:12px;border-bottom:1px solid #f0f0ee;vertical-align:middle}
+.cl-table tr:last-child td{border-bottom:none}
+.cl-table tr:hover{background:#fafafa}
+.lbl-vi{display:block;font-size:12px}
+.lbl-en{display:block;font-size:10px;color:#999;font-style:italic;margin-top:1px}
+.sev-badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700;vertical-align:middle}
+.sev-badge.critical{background:#ffeaea;color:#c0392b}
+.sev-badge.major{background:#fff2d6;color:#a06800}
+.sev-badge.minor{background:#e8f0f8;color:#3a6a96}
+.score-sel{font-size:12px;padding:4px 6px;border-radius:5px;border:1px solid #d5d5d0;background:#fff;width:100%;font-family:inherit}
+.note-inp{font-size:11px;padding:3px 6px;border-radius:4px;border:1px solid #ebebeb;background:#fff;width:100%;resize:none;overflow:hidden;min-height:26px;font-family:inherit}
+.score-disp{font-size:13px;font-weight:700;text-align:center}
+.add-row{font-size:12px;color:#555;cursor:pointer;padding:7px 11px;display:flex;align-items:center;gap:5px;border-top:1px solid #f0f0ee;width:100%;font-weight:500;background:none;border-left:none;border-right:none;border-bottom:none}
+.add-row:hover{background:#f9f9f7}
+
+/* SCORE CARDS */
+.sc-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.sc{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:10px;text-align:center}
+.sc .lb{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em;line-height:1.5}
+.sc .vl{font-size:18px;font-weight:700;margin-top:3px}
+
+/* SEV SUMMARY */
+.sev-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sev-cell{border-radius:8px;padding:9px;text-align:center;border:1px solid #e5e5e5}
+.sev-cell.crit{border-color:#f5b5b5;background:#fff7f7}
+.sev-cell.maj{border-color:#f0c070;background:#fffbf0}
+.sev-cell.min{border-color:#c5d8e8;background:#f7fbff}
+.sev-lb{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.sev-vl{font-size:18px;font-weight:700;margin-top:3px}
+
+/* RATING */
+.rating-star{font-size:22px;cursor:pointer;background:none;border:none;padding:2px;transition:opacity .1s}
+
+/* REMARK */
+.remark-box{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:13px;margin-bottom:12px}
+.remark-box label{display:block;font-size:11px;font-weight:600;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.remark-box textarea{width:100%;font-size:13px;padding:7px 9px;border-radius:6px;border:1px solid #d5d5d0;background:#fffef8;resize:none;font-family:inherit;min-height:70px}
+.cap-box{background:#fff8f0;border:1px solid #f0c070;border-radius:8px;padding:13px;margin-bottom:12px;display:none}
+.cap-box label{display:block;font-size:11px;font-weight:600;color:#7a4500;margin-bottom:6px;text-transform:uppercase}
+.cap-box textarea{width:100%;font-size:12px;padding:7px 9px;border-radius:6px;border:1px solid #e0b060;background:#fffef5;resize:none;font-family:inherit;min-height:70px}
+
+/* NAV BUTTONS */
+.nav-btns{display:flex;justify-content:space-between;margin-top:16px}
+button.primary{padding:7px 18px;border-radius:7px;border:none;background:#111;color:#fff;font-size:13px;cursor:pointer;font-weight:500;font-family:inherit}
+button.primary:hover{background:#333}
+button.sec{padding:7px 16px;border-radius:7px;border:1px solid #d0d0cc;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;font-weight:500;font-family:inherit}
+button.sec:hover{background:#f0f0ee}
+button.danger{padding:7px 16px;border-radius:7px;border:1px solid #E0A0A0;background:#fff;color:#A32D2D;font-size:13px;cursor:pointer;font-weight:500;font-family:inherit}
+
+/* AQL */
+.aql-box{background:#f5f5f3;border:1px solid #e5e5e5;border-radius:8px;padding:14px;margin-top:10px}
+.aql-result{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.aql-cell{background:#fff;border:1px solid #e5e5e5;border-radius:7px;padding:10px;text-align:center}
+.aql-cell .al{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.aql-cell .av{font-size:18px;font-weight:700;color:#111}
+
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center}
+.modal-ov.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:22px;width:460px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal label{display:block;font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;margin-top:12px}
+.modal input[type=text]{width:100%;font-size:13px;padding:7px 9px;border:1px solid #d5d5d0;border-radius:6px;font-family:inherit}
+.sev-radio-group{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.sev-radio{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid #e0e0dc;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;background:#fff}
+.sev-radio input{margin:0}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* POST RATINGS */
+.rating-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.rating-opt{padding:5px 12px;border-radius:20px;border:1.5px solid #e0e0dc;cursor:pointer;font-size:12px;font-weight:500;background:#fff}
+.rating-opt.sel{border-color:#111;background:#111;color:#fff}
+
+@media print{
+  .nav,.steps,.nav-btns{display:none!important}
+  .panel{display:block!important;padding:0}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <a class="nav-logo" href="index.html">🏭 VinaSources</a>
+  <a class="nav-back" href="index.html" id="back-link">← Orders</a>
+  <span class="nav-title" id="nav-title">QC Tracker</span>
+  <span class="nav-sub" id="nav-sub"></span>
+  <span class="nav-save" id="save-ind">✓ Đã lưu</span>
+</div>
+
+<!-- STEPS -->
+<div class="steps" id="steps-nav">
+  <button id="sb-0" class="step-btn active" onclick="goStep(0)"><span class="step-num">0</span>Đơn hàng<br>&amp; AQL</button>
+  <button id="sb-1" class="step-btn" onclick="goStep(1)"><span class="step-num">1</span>IPI<br>0–20%</button>
+  <button id="sb-2" class="step-btn" onclick="goStep(2)"><span class="step-num">2</span>DUPRO<br>30–50%</button>
+  <button id="sb-3" class="step-btn" onclick="goStep(3)"><span class="step-num">3</span>FRI/PSI<br>≥80%</button>
+  <button id="sb-4" class="step-btn" onclick="goStep(4)"><span class="step-num">4</span>CLI<br>Container</button>
+  <button id="sb-5" class="step-btn" onclick="goStep(5)"><span class="step-num">5</span>Post<br>Delivery</button>
+</div>
+
+<!-- MODAL thêm tiêu chí -->
+<div class="modal-ov" id="modal-ov">
+  <div class="modal">
+    <h3>+ Thêm tiêu chí</h3>
+    <label>Tiêu chí (Tiếng Việt) *</label>
+    <input type="text" id="m-vi" placeholder="Nhập tên tiêu chí...">
+    <label>Criterion (English)</label>
+    <input type="text" id="m-en" placeholder="Optional...">
+    <label>Mức độ nghiêm trọng *</label>
+    <div class="sev-radio-group">
+      <label class="sev-radio"><input type="radio" name="m-sev" value="critical"> <strong style="color:#c0392b">CRITICAL</strong></label>
+      <label class="sev-radio"><input type="radio" name="m-sev" value="major" checked> <strong style="color:#a06800">MAJOR</strong></label>
+      <label class="sev-radio"><input type="radio" name="m-sev" value="minor"> <strong style="color:#3a6a96">MINOR</strong></label>
+    </div>
+    <div class="modal-actions">
+      <button class="sec" onclick="closeModal()">Hủy</button>
+      <button class="primary" onclick="confirmAdd()">Thêm</button>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 0: Đơn hàng & AQL -->
+<div id="panel-0" class="panel active">
+  <div class="card">
+    <div class="card-title">📦 Thông tin đơn hàng</div>
+    <table class="meta-table">
+      <tr><td class="ml">Supplier<span class="en">Nhà cung cấp</span></td><td class="mv"><input id="o-sup" placeholder="Tên công ty" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">PO / Contract No.<span class="en">Mã PO</span></td><td class="mv"><input id="o-po" placeholder="PO-2026-xxx" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Product / SKU<span class="en">Tên &amp; mã sản phẩm</span></td><td class="mv"><input id="o-prod" placeholder="Product name &amp; SKU" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Total Lot Qty<span class="en">Tổng số lượng lô (units)</span></td><td class="mv"><input id="o-qty" type="number" placeholder="1000" oninput="calcAQL();debounceSave()"></td></tr>
+      <tr><td class="ml">Order Value (USD)<span class="en">Giá trị đơn hàng</span></td><td class="mv"><input id="o-val" type="number" placeholder="5000" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Planned Ship Date<span class="en">Ngày giao hàng dự kiến</span></td><td class="mv"><input id="o-ship" type="date" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Lead Executive<span class="en">Người phụ trách</span></td><td class="mv"><input id="o-exec" placeholder="Họ tên" oninput="debounceSave()"></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 AQL Calculator — ISO 2859-1 / ANSI ASQ Z1.4</div>
+    <div class="aql-box">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">Inspection Level</label>
+          <select id="aql-level" onchange="calcAQL()" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #d5d5d0;font-family:inherit;font-size:13px">
+            <option value="I">Level I</option><option value="II" selected>Level II (chuẩn)</option><option value="III">Level III</option>
+          </select></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">AQL Critical</label>
+          <select id="aql-crit" onchange="calcAQL()" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #d5d5d0;font-family:inherit;font-size:13px">
+            <option value="0">0 (Zero tolerance)</option><option value="0.065">0.065</option><option value="0.1">0.1</option><option value="0.65" selected>0.65</option><option value="1.0">1.0</option>
+          </select></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:4px">AQL Major / Minor</label>
+          <select id="aql-maj" onchange="calcAQL()" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #d5d5d0;font-family:inherit;font-size:13px">
+            <option value="1.0">1.0 / 2.5</option><option value="1.5" selected>1.5 / 4.0 (chuẩn XK)</option><option value="2.5">2.5 / 6.5</option><option value="4.0">4.0 / 6.5</option>
+          </select></div>
+      </div>
+      <div class="aql-result">
+        <div class="aql-cell"><div class="al">Cỡ mẫu / Sample Size</div><div class="av" id="ar-n">—</div></div>
+        <div class="aql-cell"><div class="al">Chấp nhận ≤ (Major)</div><div class="av" id="ar-ac">—</div></div>
+        <div class="aql-cell"><div class="al">Từ chối ≥ (Major)</div><div class="av" id="ar-re">—</div></div>
+      </div>
+      <div id="aql-detail" style="margin-top:10px;font-size:11px;color:#888;line-height:1.8"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Giai đoạn thực hiện</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;background:#fff"><input type="checkbox" id="do-ipi" checked onchange="applyPhaseToggle()"> 🔬 IPI (0–20%)</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;background:#fff"><input type="checkbox" id="do-dupro" checked onchange="applyPhaseToggle()"> 🔧 DUPRO (30–50%)</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;background:#fff"><input type="checkbox" id="do-fri" checked onchange="applyPhaseToggle()"> 📦 FRI/PSI (≥80%)</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;background:#fff"><input type="checkbox" id="do-cli" checked onchange="applyPhaseToggle()"> 🚢 CLI (Container)</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;background:#fff"><input type="checkbox" id="do-post" checked onchange="applyPhaseToggle()"> 📬 Post-delivery</label>
+    </div>
+  </div>
+
+  <div class="nav-btns"><div></div><button class="primary" onclick="startQC()">Bắt đầu QC ▶</button></div>
+</div>
+
+<!-- STEP 1: IPI -->
+<div id="panel-1" class="panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><h2 style="font-size:15px;font-weight:700">🔬 IPI: Initial Production Inspection</h2><div style="font-size:11px;color:#888;margin-top:2px">0–20% sản xuất · Kiểm tra nguyên liệu đầu vào và mẫu đầu dây chuyền</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="ipi-date" type="date" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0" oninput="debounceSave()">
+      <input id="ipi-auditor" placeholder="Auditor" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0;width:140px" oninput="debounceSave()">
+    </div>
+  </div>
+  <div id="ipi-content"></div>
+</div>
+
+<!-- STEP 2: DUPRO -->
+<div id="panel-2" class="panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><h2 style="font-size:15px;font-weight:700">🔧 DUPRO: During Production Inspection</h2><div style="font-size:11px;color:#888;margin-top:2px">30–50% hoàn thành · AQL sampling</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="dup-date" type="date" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0" oninput="debounceSave()">
+      <input id="dup-auditor" placeholder="Auditor" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0;width:140px" oninput="debounceSave()">
+    </div>
+  </div>
+  <div class="card" style="background:#f5f5f3">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="aql-cell"><div class="al">Cỡ mẫu DUPRO</div><div class="av" id="dup-n">—</div></div>
+      <div class="aql-cell"><div class="al">Qty đã SX</div><div class="av"><input id="dup-qty" type="number" placeholder="—" oninput="calcDupProgress();debounceSave()" style="width:80px;text-align:center;font-size:16px;font-weight:700;border:none;background:transparent;font-family:inherit"></div></div>
+      <div class="aql-cell"><div class="al">% Hoàn thành</div><div class="av" id="dup-pct">—</div></div>
+    </div>
+  </div>
+  <div id="dupro-content"></div>
+</div>
+
+<!-- STEP 3: FRI -->
+<div id="panel-3" class="panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><h2 style="font-size:15px;font-weight:700">📦 FRI/PSI: Final Random Inspection</h2><div style="font-size:11px;color:#888;margin-top:2px">≥80% đóng gói · AQL ISO 2859-1 · Kết luận xuất hàng</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="fri-date" type="date" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0" oninput="debounceSave()">
+      <input id="fri-auditor" placeholder="Auditor" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0;width:140px" oninput="debounceSave()">
+    </div>
+  </div>
+  <div class="card" style="background:#f5f5f3">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="aql-cell"><div class="al">Sample Size</div><div class="av" id="fri-n">—</div></div>
+      <div class="aql-cell"><div class="al">Lỗi Critical</div><div class="av"><input id="fri-crit" type="number" value="0" min="0" oninput="calcFriVerdict();debounceSave()" style="width:60px;text-align:center;font-size:16px;font-weight:700;border:none;background:transparent;font-family:inherit"></div></div>
+      <div class="aql-cell"><div class="al">Lỗi Major</div><div class="av"><input id="fri-maj" type="number" value="0" min="0" oninput="calcFriVerdict();debounceSave()" style="width:60px;text-align:center;font-size:16px;font-weight:700;border:none;background:transparent;font-family:inherit"></div></div>
+      <div class="aql-cell"><div class="al">Lỗi Minor</div><div class="av"><input id="fri-min" type="number" value="0" min="0" oninput="calcFriVerdict();debounceSave()" style="width:60px;text-align:center;font-size:16px;font-weight:700;border:none;background:transparent;font-family:inherit"></div></div>
+    </div>
+  </div>
+  <div id="fri-verdict" style="display:none" class="verdict-banner"></div>
+  <div id="fri-content"></div>
+</div>
+
+<!-- STEP 4: CLI -->
+<div id="panel-4" class="panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><h2 style="font-size:15px;font-weight:700">🚢 CLI: Container Loading Inspection</h2><div style="font-size:11px;color:#888;margin-top:2px">Xác nhận hàng xếp đúng trước khi niêm phong</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="cli-date" type="date" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0" oninput="debounceSave()">
+      <input id="cli-auditor" placeholder="Auditor" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0;width:140px" oninput="debounceSave()">
+    </div>
+  </div>
+  <div id="cli-content"></div>
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">🔒 Thông tin Container &amp; Seal</div>
+    <table class="meta-table">
+      <tr><td class="ml">Container No.</td><td class="mv"><input id="cli-container" placeholder="MSCU1234567" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Seal No.</td><td class="mv"><input id="cli-seal" placeholder="SL123456" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Loại container</td><td class="mv"><select id="cli-type" onchange="debounceSave()"><option>20'FCL</option><option>40'FCL</option><option>40'HC</option><option>LCL</option></select></td></tr>
+      <tr><td class="ml">Tổng thùng xếp</td><td class="mv"><input id="cli-cartons" type="number" placeholder="50" oninput="debounceSave()"></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- STEP 5: Post Delivery -->
+<div id="panel-5" class="panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><h2 style="font-size:15px;font-weight:700">📬 Post-Delivery Review</h2><div style="font-size:11px;color:#888;margin-top:2px">7–14 ngày sau giao hàng · Phản hồi buyer · Cập nhật hồ sơ supplier</div></div>
+    <input id="post-date" type="date" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #d5d5d0" oninput="debounceSave()">
+  </div>
+
+  <div class="card">
+    <div class="card-title">⭐ Đánh giá từ Buyer</div>
+    <div id="ratings-container"></div>
+  </div>
+
+  <div id="post-content"></div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">📊 Cập nhật hồ sơ Supplier</div>
+    <table class="meta-table">
+      <tr><td class="ml">Tổng lỗi phát hiện</td><td class="mv"><input id="post-defects" type="number" placeholder="0" oninput="debounceSave()"></td></tr>
+      <tr><td class="ml">Giao hàng đúng hạn?</td><td class="mv"><select id="post-ontime" onchange="debounceSave()"><option value="">—</option><option value="yes">✓ Đúng hạn</option><option value="d1">Trễ ≤3 ngày</option><option value="d2">Trễ 4–7 ngày</option><option value="d3">Trễ &gt;7 ngày</option></select></td></tr>
+      <tr><td class="ml">Đề xuất tier Supplier</td><td class="mv"><select id="post-tier" onchange="debounceSave()"><option value="">— Giữ nguyên —</option><option value="preferred">⭐⭐⭐ Preferred</option><option value="active">⭐⭐ Active</option><option value="probation">⭐ Probation</option><option value="inactive">✗ Inactive</option></select></td></tr>
+    </table>
+  </div>
+
+  <div class="remark-box">
+    <label>💬 Tổng kết đơn hàng / Lessons Learned</label>
+    <textarea id="post-remark" placeholder="Tổng kết chất lượng, bài học, đề xuất cho đơn tiếp theo..." oninput="debounceSave()"></textarea>
+  </div>
+
+  <div class="nav-btns">
+    <button class="sec" onclick="goStep(4)">◀ CLI</button>
+    <button class="primary" onclick="exportReport()">⬇ Export Report</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const API_URL = 'https://script.google.com/macros/s/AKfycbyyHiNH2lj8eiZqcgtR3vdNufbefe2kBxhlDppqzJ20m6WmBiVIqlRrYiNTc-wyHSRX/exec';
+const SHEET_QCO = 'QCOrders';
+const SHEET_QCI = 'QCItems';
+
+// ── STATE ──
+let qcOrderId = null;
+let orderId = null;
+let currentStep = 0;
+let saveTimer = null;
+let _aqlData = {};
+let _modalCtx = null;
+
+// phaseState: { items: {itemId: {score, note}}, custom: [{id,lbl,lblEn,sev}], verdict, cap, remark }
+let phaseState = {
+  ipi:   { items:{}, custom:[], verdict:'', cap:'', remark:'' },
+  dupro: { items:{}, custom:[], verdict:'', cap:'', remark:'' },
+  fri:   { items:{}, custom:[], verdict:'', cap:'', remark:'' },
+  cli:   { items:{}, custom:[], verdict:'', cap:'', remark:'' },
+  post:  { items:{}, custom:[], rating:{}, remark:'' }
+};
+
+// ── API ──
+async function apiGet(sheet, field, value) {
+  const p = new URLSearchParams({ action:'getByField', sheet, field, value });
+  const r = await fetch(`${API_URL}?${p}`);
+  return r.json();
+}
+async function apiUpsert(sheet, record) {
+  const r = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'upsert', sheet, record }) });
+  return r.json();
+}
+async function apiDelete(sheet, id) {
+  const r = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'delete', sheet, id }) });
+  return r.json();
+}
+async function apiGetAll(sheet) {
+  const p = new URLSearchParams({ action:'getAll', sheet });
+  const r = await fetch(`${API_URL}?${p}`);
+  return r.json();
+}
+
+// ── INIT ──
+window.onload = async () => {
+  const params = new URLSearchParams(location.search);
+  orderId = params.get('orderId');
+  qcOrderId = params.get('qcId');
+
+  // Set today's date
+  const t = new Date().toISOString().split('T')[0];
+  ['ipi-date','dup-date','fri-date','cli-date','post-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = t;
+  });
+
+  if (qcOrderId) {
+    await loadQCSession(qcOrderId);
+  } else if (orderId) {
+    // Check if QC session exists for this order
+    const res = await apiGet(SHEET_QCO, 'orderId', orderId);
+    if (res.data && res.data.length > 0) {
+      qcOrderId = res.data[0].id;
+      await loadQCSession(qcOrderId);
+    } else {
+      // New session
+      qcOrderId = Date.now() + 'qc';
+      await saveSession(); // create immediately
+    }
+  } else {
+    // Standalone mode
+    qcOrderId = Date.now() + 'qc';
+  }
+
+  buildRatings();
+  applyPhaseToggle();
+  setSaveStatus('ok', '✓ Đã lưu');
+};
+
+async function loadQCSession(id) {
+  setSaveStatus('saving', '⏳ Đang tải...');
+  try {
+    // Load QCOrder
+    const p = new URLSearchParams({ action:'getOne', sheet:SHEET_QCO, id });
+    const r = await fetch(`${API_URL}?${p}`);
+    const res = await r.json();
+    if (!res.data) { setSaveStatus('ok','✓ Mới'); return; }
+    const d = res.data;
+
+    // Restore fields
+    setV('o-sup', d.supplier || '');
+    setV('o-po', d.poCode || '');
+    setV('o-prod', d.product || '');
+    setV('o-qty', d.lotQty || '');
+    setV('o-val', d.orderValue || '');
+    setV('o-ship', d.shipDate || '');
+    setV('o-exec', d.executive || '');
+    setV('ipi-date', d.ipiDate || '');
+    setV('ipi-auditor', d.ipiAuditor || '');
+    setV('dup-date', d.duproDate || '');
+    setV('dup-auditor', d.duproAuditor || '');
+    setV('dup-qty', d.duproProdQty || '');
+    setV('fri-date', d.friDate || '');
+    setV('fri-auditor', d.friAuditor || '');
+    setV('fri-crit', d.friCritFound || '0');
+    setV('fri-maj', d.friMajFound || '0');
+    setV('fri-min', d.friMinFound || '0');
+    setV('cli-date', d.cliDate || '');
+    setV('cli-auditor', d.cliAuditor || '');
+    setV('cli-container', d.cliContainer || '');
+    setV('cli-seal', d.cliSeal || '');
+    setV('cli-type', d.cliType || "20'FCL");
+    setV('cli-cartons', d.cliCartons || '');
+    setV('post-date', d.postDate || '');
+    setV('post-defects', d.postDefects || '');
+    setV('post-ontime', d.postOntime || '');
+    setV('post-tier', d.postTier || '');
+    setV('post-remark', d.postRemark || '');
+
+    // Restore phases
+    ['ipi','dupro','fri','cli','post'].forEach(ph => {
+      const v = parseJ(d[ph + 'State']);
+      if (v) phaseState[ph] = v;
+    });
+
+    // Restore phases toggle
+    ['ipi','dupro','fri','cli','post'].forEach(ph => {
+      const cb = document.getElementById('do-' + ph);
+      if (cb && d['do_' + ph] !== undefined) cb.checked = d['do_' + ph] !== 'false' && d['do_' + ph] !== false;
+    });
+
+    // Nav title
+    if (d.poCode || d.supplier) {
+      document.getElementById('nav-sub').textContent = `${d.poCode || ''} ${d.supplier ? '· ' + d.supplier : ''}`;
+    }
+
+    calcAQL();
+    calcDupProgress();
+    calcFriVerdict();
+
+    setSaveStatus('ok', '✓ Đã tải');
+  } catch(e) {
+    setSaveStatus('error', '✗ Lỗi tải');
+  }
+}
+
+// ── SAVE ──
+function debounceSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  setSaveStatus('saving', '⏳ Đang lưu...');
+  saveTimer = setTimeout(saveSession, 800);
+}
+
+async function saveSession() {
+  try {
+    const record = {
+      id: qcOrderId,
+      orderId: orderId || '',
+      supplier: gV('o-sup'),
+      poCode: gV('o-po'),
+      product: gV('o-prod'),
+      lotQty: gV('o-qty'),
+      orderValue: gV('o-val'),
+      shipDate: gV('o-ship'),
+      executive: gV('o-exec'),
+      ipiDate: gV('ipi-date'),
+      ipiAuditor: gV('ipi-auditor'),
+      duproDate: gV('dup-date'),
+      duproAuditor: gV('dup-auditor'),
+      duproProdQty: gV('dup-qty'),
+      friDate: gV('fri-date'),
+      friAuditor: gV('fri-auditor'),
+      friCritFound: gV('fri-crit'),
+      friMajFound: gV('fri-maj'),
+      friMinFound: gV('fri-min'),
+      cliDate: gV('cli-date'),
+      cliAuditor: gV('cli-auditor'),
+      cliContainer: gV('cli-container'),
+      cliSeal: gV('cli-seal'),
+      cliType: gV('cli-type'),
+      cliCartons: gV('cli-cartons'),
+      postDate: gV('post-date'),
+      postDefects: gV('post-defects'),
+      postOntime: gV('post-ontime'),
+      postTier: gV('post-tier'),
+      postRemark: gV('post-remark'),
+      ipiState: JSON.stringify(phaseState.ipi),
+      duproState: JSON.stringify(phaseState.dupro),
+      friState: JSON.stringify(phaseState.fri),
+      cliState: JSON.stringify(phaseState.cli),
+      postState: JSON.stringify(phaseState.post),
+      do_ipi: document.getElementById('do-ipi')?.checked,
+      do_dupro: document.getElementById('do-dupro')?.checked,
+      do_fri: document.getElementById('do-fri')?.checked,
+      do_cli: document.getElementById('do-cli')?.checked,
+      do_post: document.getElementById('do-post')?.checked,
+      friVerdict: phaseState.fri.verdict || '',
+      ua: new Date().toISOString()
+    };
+    await apiUpsert(SHEET_QCO, record);
+    setSaveStatus('ok', '✓ Đã lưu ' + new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'}));
+
+    // If FRI PASS → update Order stage to shipment
+    if (orderId && phaseState.fri.verdict && phaseState.fri.verdict.includes('PASS') && !phaseState.fri.verdict.includes('CONDITIONAL')) {
+      // Signal to parent: update order stage
+      if (window.opener) {
+        try { window.opener.postMessage({ type:'qc_pass', orderId, verdict: phaseState.fri.verdict }, '*'); } catch(e){}
+      }
+    }
+  } catch(e) {
+    setSaveStatus('error', '✗ Lỗi lưu');
+  }
+}
+
+function setSaveStatus(type, text) {
+  const el = document.getElementById('save-ind');
+  if (!el) return;
+  el.className = 'nav-save' + (type==='saving'?' saving':type==='error'?' error':'');
+  el.textContent = text;
+}
+
+// ── HELPERS ──
+const gV = id => { const el = document.getElementById(id); return el ? el.value || '' : ''; };
+const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+const parseJ = v => { if (!v) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch { return null; } };
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// ── AQL ──
+const AQL_CODE = {
+  'I':  [[2,6,'A'],[7,15,'A'],[16,25,'B'],[26,50,'C'],[51,90,'C'],[91,150,'D'],[151,280,'E'],[281,500,'F'],[501,1200,'G'],[1201,3200,'H'],[3201,10000,'J'],[10001,35000,'K']],
+  'II': [[2,8,'A'],[9,15,'B'],[16,25,'C'],[26,50,'D'],[51,90,'E'],[91,150,'F'],[151,280,'G'],[281,500,'H'],[501,1200,'J'],[1201,3200,'K'],[3201,10000,'L'],[10001,35000,'M'],[35001,150000,'N']],
+  'III':[[2,8,'B'],[9,15,'C'],[16,25,'D'],[26,50,'E'],[51,90,'F'],[91,150,'G'],[151,280,'H'],[281,500,'J'],[501,1200,'K'],[1201,3200,'L'],[3201,10000,'M'],[10001,35000,'N']]
+};
+const AQL_N = {A:2,B:3,C:5,D:8,E:13,F:20,G:32,H:50,J:80,K:125,L:200,M:315,N:500};
+const AQL_AC = {
+  '0.65':{A:[0,1],B:[0,1],C:[0,1],D:[0,1],E:[0,1],F:[0,1],G:[1,2],H:[1,2],J:[2,3],K:[3,4],L:[5,6],M:[7,8],N:[10,11]},
+  '1.0': {A:[0,1],B:[0,1],C:[0,1],D:[0,1],E:[0,1],F:[1,2],G:[1,2],H:[2,3],J:[3,4],K:[5,6],L:[7,8],M:[10,11],N:[14,15]},
+  '1.5': {A:[0,1],B:[0,1],C:[0,1],D:[0,1],E:[1,2],F:[1,2],G:[2,3],H:[3,4],J:[5,6],K:[7,8],L:[10,11],M:[14,15],N:[21,22]},
+  '2.5': {A:[0,1],B:[0,1],C:[0,1],D:[1,2],E:[1,2],F:[2,3],G:[3,4],H:[5,6],J:[7,8],K:[10,11],L:[14,15],M:[21,22],N:[21,22]},
+  '4.0': {A:[0,1],B:[0,1],C:[1,2],D:[1,2],E:[2,3],F:[3,4],G:[5,6],H:[7,8],J:[10,11],K:[14,15],L:[21,22],M:[21,22],N:[21,22]},
+};
+function getCode(qty, level) {
+  const t = AQL_CODE[level] || AQL_CODE['II'];
+  for (let i=0;i<t.length;i++) if (qty>=t[i][0]&&qty<=t[i][1]) return t[i][2];
+  return 'N';
+}
+function calcAQL() {
+  const qty = parseInt(gV('o-qty')) || 0;
+  const level = gV('aql-level') || 'II';
+  const majVal = gV('aql-maj') || '1.5';
+  const critVal = gV('aql-crit') || '0.65';
+  if (!qty) { ['ar-n','ar-ac','ar-re'].forEach(x=>{const el=document.getElementById(x);if(el)el.textContent='—';}); return; }
+  const code = getCode(qty, level);
+  const n = AQL_N[code] || 50;
+  const minKey = majVal==='1.0'?'2.5':majVal==='1.5'?'4.0':'6.5';
+  const majAR = AQL_AC[majVal]?AQL_AC[majVal][code]:[0,1];
+  const critKey = critVal==='0'?'0.065':critVal;
+  const critAR = AQL_AC[critVal]?AQL_AC[critVal][code]:[0,1];
+  const sn=document.getElementById('ar-n');if(sn)sn.textContent=n;
+  const sa=document.getElementById('ar-ac');if(sa)sa.textContent=majAR[0];
+  const sr=document.getElementById('ar-re');if(sr)sr.textContent=majAR[1];
+  document.getElementById('aql-detail').innerHTML=`Code: <b>${code}</b> &nbsp;|&nbsp; Critical Ac=${critAR[0]} Re=${critAR[1]} &nbsp;|&nbsp; Major (${majVal}) Ac=${majAR[0]} Re=${majAR[1]}`;
+  const fn=document.getElementById('fri-n');if(fn)fn.textContent=n;
+  const dn=document.getElementById('dup-n');if(dn)dn.textContent=n;
+  _aqlData = { n, code, critAR, majAR };
+  debounceSave();
+}
+function calcDupProgress() {
+  const total = parseInt(gV('o-qty'))||0;
+  const done = parseInt(gV('dup-qty'))||0;
+  const pct = total>0?Math.round(done/total*100):0;
+  const el = document.getElementById('dup-pct');
+  if (el) { el.textContent=pct+'%'; el.style.color=pct>=30&&pct<=55?'#1a5c28':'#a32d2d'; }
+}
+function calcFriVerdict() {
+  const d = _aqlData; if (!d.n) return;
+  const cf = parseInt(gV('fri-crit'))||0;
+  const mf = parseInt(gV('fri-maj'))||0;
+  const minf = parseInt(gV('fri-min'))||0;
+  let v, bg, bc;
+  if (cf > (d.critAR?d.critAR[0]:0)) { v='✗ REJECT — Critical defects exceed limit'; bg='#fce4e4'; bc='#a32d2d'; }
+  else if (mf > (d.majAR?d.majAR[0]:0)) { v='✗ REJECT — Major defects exceed AQL'; bg='#fce4e4'; bc='#a32d2d'; }
+  else if (minf > 0) { v='⚠ CONDITIONAL PASS — Minor issues, CAP required'; bg='#fdf3cd'; bc='#c8960c'; }
+  else { v='✓ PASS — Approved for shipment'; bg='#d4edda'; bc='#2a7a10'; }
+  const bn = document.getElementById('fri-verdict');
+  if (bn) { bn.style.display='flex';bn.style.background=bg;bn.style.borderColor=bc;bn.style.color=bc;bn.innerHTML=`<strong>${v}</strong>`; }
+  phaseState.fri.verdict = v;
+  debounceSave();
+}
+
+// ── STEPS ──
+function startQC() {
+  const act = getActivePhases();
+  if (!act.length) { alert('Chọn ít nhất 1 giai đoạn QC'); return; }
+  goStep(act[0]);
+}
+function goStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.step-btn').forEach((b,i)=>{b.classList.remove('active');});
+  document.getElementById('panel-'+n).classList.add('active');
+  document.getElementById('sb-'+n).classList.add('active');
+  if (n===1 && !document.getElementById('ipi-content').innerHTML) renderPhase('ipi','ipi-content');
+  if (n===2 && !document.getElementById('dupro-content').innerHTML) renderPhase('dupro','dupro-content');
+  if (n===3 && !document.getElementById('fri-content').innerHTML) renderPhase('fri','fri-content');
+  if (n===4 && !document.getElementById('cli-content').innerHTML) renderPhase('cli','cli-content');
+  if (n===5 && !document.getElementById('post-content').innerHTML) renderPost();
+  window.scrollTo(0,0);
+}
+function getActivePhases() {
+  const map={1:'ipi',2:'dupro',3:'fri',4:'cli',5:'post'};
+  return [1,2,3,4,5].filter(i=>{ const cb=document.getElementById('do-'+map[i]); return cb?cb.checked:true; });
+}
+function applyPhaseToggle() {
+  const map={1:'ipi',2:'dupro',3:'fri',4:'cli',5:'post'};
+  for (let i=1;i<=5;i++) {
+    const active = document.getElementById('do-'+map[i])?.checked;
+    const btn = document.getElementById('sb-'+i);
+    if (btn) btn.style.display = active?'':'none';
+  }
+}
+function navBtns(cur) {
+  const act = getActivePhases();
+  const idx = act.indexOf(cur);
+  let prev='', next='';
+  if (idx===0) prev=`<button class="sec" onclick="goStep(0)">◀ Đơn hàng & AQL</button>`;
+  else if (idx>0) prev=`<button class="sec" onclick="goStep(${act[idx-1]})">◀ Giai đoạn trước</button>`;
+  else prev='<div></div>';
+  if (idx<act.length-1) next=`<button class="primary" onclick="goStep(${act[idx+1]})">Giai đoạn tiếp theo ▶</button>`;
+  else next=`<button class="primary" onclick="exportReport()">⬇ Export Report</button>`;
+  return `<div class="nav-btns">${prev||'<div></div>'}${next}</div>`;
+}
+
+// ── CHECKLIST DATA (simplified) ──
+const CL_COMMON = {
+  ipi: [
+    { lbl:'Nguyên vật liệu chính', lblEn:'Main Raw Materials', items:[
+      ['Vật liệu đúng chủng loại, nguồn gốc hợp pháp','Correct material type, legal origin','critical'],
+      ['Không có hóa chất cấm vượt ngưỡng EU/US REACH','No banned chemicals above EU/US REACH limits','critical'],
+      ['Màu sắc, kích thước đúng spec đã duyệt','Color and dimensions per approved spec','major'],
+      ['Không có lỗi bề mặt rõ ràng (mốc, nứt, bẩn)','No visible surface defects (mold, cracks, stains)','major'],
+      ['Số lượng nguyên liệu đủ cho lô + dự phòng 5%','Material qty sufficient for lot + 5% spare','minor'],
+    ]},
+    { lbl:'Phụ liệu & bao bì', lblEn:'Accessories & Packaging', items:[
+      ['Phụ liệu không chứa chì/nickel vượt ngưỡng','Accessories: lead/nickel within limits','critical'],
+      ['Phụ liệu đúng màu, chủng loại theo spec','Accessories correct color and type per spec','major'],
+      ['Bao bì sơ cấp đúng quy cách, đủ số lượng','Primary packaging per spec, sufficient qty','minor'],
+    ]},
+    { lbl:'Mẫu đầu dây chuyền', lblEn:'First-off Production Sample', items:[
+      ['Mẫu đầu khớp Golden Sample 100% về thiết kế','First-off 100% matches Golden Sample design','critical'],
+      ['Kích thước đúng spec, sai lệch trong tolerance','Dimensions per spec, within tolerance','major'],
+      ['Workmanship đạt yêu cầu thẩm mỹ','Workmanship meets aesthetic requirements','major'],
+      ['Logo/nhãn đúng vị trí và nội dung','Logo/label correct position and content','minor'],
+    ]},
+    { lbl:'Thiết bị & điều kiện xưởng', lblEn:'Equipment & Factory', items:[
+      ['Có hệ thống PCCC, lối thoát hiểm thông thoáng','Fire safety, clear emergency exits','critical'],
+      ['Không sử dụng lao động trẻ em','No child labor','critical'],
+      ['Máy móc an toàn, có che chắn đúng quy định','Machinery safe, proper guards','major'],
+      ['Ánh sáng và thông gió đạt yêu cầu','Adequate lighting and ventilation','minor'],
+    ]},
+  ],
+  dupro: [
+    { lbl:'Workmanship & gia công', lblEn:'Workmanship & Processing', items:[
+      ['Không có dị vật nguy hiểm trong sản phẩm','No dangerous foreign objects in product','critical'],
+      ['Kết cấu liên kết chắc, không lung lay','Structural joints secure, no wobble','critical'],
+      ['Kích thước WIP đúng spec, trong tolerance','WIP dimensions per spec, within tolerance','major'],
+      ['Bề mặt đúng yêu cầu: phẳng, không lỗi rõ','Surface meets requirements: flat, no visible defects','major'],
+      ['Màu sắc đồng đều, không chênh lệch lô','Color consistent, no lot shading','major'],
+      ['Chỉ/mối dán/mối ghép đúng kỹ thuật','Thread/adhesive/joints technically correct','major'],
+      ['Tỷ lệ rework ≤5%','Rework rate ≤5%','minor'],
+      ['WIP được kiểm soát, phân lô rõ ràng','WIP controlled, lots clearly identified','minor'],
+    ]},
+    { lbl:'Kiểm soát chất lượng nội bộ', lblEn:'Internal QC Control', items:[
+      ['Lô NG tách riêng, không trộn với good','NG lot separated, not mixed with good','critical'],
+      ['In-line QC có check sheet, ghi nhận đầy đủ','In-line QC has check sheet with full records','major'],
+      ['Tiến độ đúng kế hoạch (trễ ≤3 ngày OK)','Production on schedule (≤3 day delay OK)','major'],
+    ]},
+  ],
+  fri: [
+    { lbl:'Chất lượng thành phẩm', lblEn:'Finished Product Quality', items:[
+      ['Không có dị vật nguy hiểm trong sản phẩm','No dangerous foreign objects in product','critical'],
+      ['Không có lỗi chức năng nghiêm trọng','No critical functional defects','critical'],
+      ['Không có hóa chất cấm vượt ngưỡng','No banned chemicals above limits','critical'],
+      ['Màu sắc đúng mẫu, đồng đều toàn lô','Color matches sample, uniform across lot','major'],
+      ['Kích thước đúng spec, sai lệch trong tolerance','Dimensions per spec, within tolerance','major'],
+      ['Workmanship đạt tiêu chuẩn XK','Workmanship meets export standard','major'],
+      ['Logo/nhãn/label đúng nội dung và vị trí','Logo/label correct content and position','major'],
+      ['Chức năng (khóa, bản lề, kéo...) hoạt động OK','Function (lock, hinge, zipper...) operates OK','major'],
+      ['Không có chỉ thừa, vết bẩn, lỗi thẩm mỹ rõ','No loose threads, stains, visible defects','minor'],
+    ]},
+    { lbl:'Đóng gói & shipping mark', lblEn:'Packaging & Shipping Mark', items:[
+      ['Bao bì có warning suffocation (US/EU)','Packaging has suffocation warning (US/EU)','critical'],
+      ['Số lượng đúng từng thùng, khớp packing list','Qty per carton correct, matches packing list','major'],
+      ['Shipping mark đầy đủ: PO, SKU, qty, destination','Shipping mark complete: PO, SKU, qty, destination','major'],
+      ['Carton đủ chắc cho vận chuyển quốc tế','Carton strong enough for international shipping','major'],
+      ['Mép thùng dán băng đúng kiểu chữ H','Carton sealed in H-pattern','minor'],
+    ]},
+    { lbl:'Chứng từ xuất khẩu', lblEn:'Export Documents', items:[
+      ['Test report hóa chất còn hiệu lực nếu yêu cầu','Chemical test report valid if required','critical'],
+      ['C/O đúng form thị trường XK','C/O correct form for export market','major'],
+      ['Packing list khớp thực tế 100%','Packing list 100% matches actuals','major'],
+      ['Hóa đơn đúng quy định','Invoice compliant','major'],
+    ]},
+  ],
+  cli: [
+    { lbl:'Kiểm tra container trước khi xếp', lblEn:'Pre-loading Inspection', items:[
+      ['Container không lỗ thủng, không dột (light test)','Container no holes, no leaks (light test)','critical'],
+      ['Container sạch, khô, không mùi hóa chất','Container clean, dry, no chemical odor','critical'],
+      ['Số container và seal khớp booking confirmation','Container and seal match booking confirmation','critical'],
+      ['Cửa container hoạt động trơn tru, gasket kín','Container door smooth, gasket sealed','major'],
+    ]},
+    { lbl:'Xếp hàng vào container', lblEn:'Loading Process', items:[
+      ['Số thùng xếp khớp 100% packing list','Cartons loaded match packing list 100%','critical'],
+      ['Không trộn lẫn hàng đơn khác trong FCL','No mixing with other orders in FCL','critical'],
+      ['Hàng không vượt trọng tải container','Goods do not exceed container load limit','critical'],
+      ['Carton không bị móp/vỡ khi xếp','Cartons not crushed during loading','major'],
+      ['Hàng xếp đúng hướng (this side up, fragile...)','Goods loaded in correct orientation','major'],
+      ['Dunnage/airbag đủ, hàng không dịch chuyển','Dunnage/airbags sufficient, goods do not shift','major'],
+    ]},
+    { lbl:'Hoàn tất & niêm phong', lblEn:'Completion & Sealing', items:[
+      ['Container sealed, ghi nhận số seal vào báo cáo','Container sealed, seal number recorded','critical'],
+      ['Số seal khớp booking, không dấu hiệu đã mở','Seal matches booking, no signs of tampering','critical'],
+      ['Ảnh chụp container trước khi đóng cửa','Photos of container before closing','major'],
+      ['Tổng trọng lượng không vượt giới hạn','Total weight does not exceed limit','major'],
+    ]},
+  ],
+  post: [
+    { lbl:'Đánh giá sau giao hàng', lblEn:'Post-Delivery Assessment', items:[
+      ['Buyer xác nhận nhận đủ hàng, số lượng đúng','Buyer confirmed receipt, correct quantity','critical'],
+      ['Không có khiếu nại nghiêm trọng về an toàn','No critical safety complaints','critical'],
+      ['Không có sản phẩm trả về do lỗi chất lượng','No returns due to quality issues','critical'],
+      ['Không có hàng hư hỏng trong vận chuyển >5%','No transit damage exceeding 5%','major'],
+      ['Chứng từ giao hàng đầy đủ và đã ký xác nhận','Delivery documents complete and signed','major'],
+      ['Thanh toán thực hiện đúng điều khoản hợp đồng','Payment per contract terms','major'],
+      ['Khiếu nại nhỏ được supplier giải quyết kịp thời','Minor complaints resolved promptly','minor'],
+    ]},
+  ],
+};
+
+// ── RENDER PHASE ──
+function renderPhase(phaseKey, containerId) {
+  const secs = CL_COMMON[phaseKey] || [];
+  const w = document.getElementById(containerId);
+  if (!w) return;
+  w.innerHTML = '';
+  if (!phaseState[phaseKey]) phaseState[phaseKey] = { items:{}, custom:[], verdict:'', cap:'', remark:'' };
+  const st = phaseState[phaseKey];
+
+  // Score cards
+  const scDiv = document.createElement('div'); scDiv.className = 'sc-row';
+  scDiv.innerHTML = [
+    {l:'Tổng điểm',i:`${phaseKey}-tot`},{l:'% Đạt',i:`${phaseKey}-pct`},{l:'Đã chấm',i:`${phaseKey}-don`},{l:'Kết luận',i:`${phaseKey}-vrd`}
+  ].map(x=>`<div class="sc"><div class="lb">${x.l}</div><div class="vl" id="${x.i}" style="font-size:${x.i.endsWith('vrd')?'12px':'18px'}">—</div></div>`).join('');
+  w.appendChild(scDiv);
+
+  // Severity summary
+  const sevDiv = document.createElement('div'); sevDiv.className = 'sev-row';
+  sevDiv.innerHTML = `
+    <div class="sev-cell crit"><div class="sev-lb" style="color:#c0392b">Critical defects</div><div class="sev-vl" id="${phaseKey}-sev-crit" style="color:#c0392b">0</div></div>
+    <div class="sev-cell maj"><div class="sev-lb" style="color:#a06800">Major defects</div><div class="sev-vl" id="${phaseKey}-sev-maj" style="color:#a06800">0</div></div>
+    <div class="sev-cell min"><div class="sev-lb" style="color:#3a6a96">Minor defects</div><div class="sev-vl" id="${phaseKey}-sev-min" style="color:#3a6a96">0</div></div>`;
+  w.appendChild(sevDiv);
+
+  // Sections
+  secs.forEach((sec, si) => {
+    const tbodyId = `${phaseKey}_tbody_${si}`;
+    const sec_el = document.createElement('div'); sec_el.className = 'cl-section';
+
+    const baseRows = sec.items.map((it, ii) => {
+      const id = `${phaseKey}_s${si}_i${ii}`;
+      if (!st.items[id]) st.items[id] = { score: null, note: '' };
+      const cur = st.items[id];
+      return buildRow(phaseKey, id, it[0], it[1], it[2], false, cur);
+    }).join('');
+
+    const customRows = (st.custom || []).filter(c => c.si === si).map(c => {
+      if (!st.items[c.id]) st.items[c.id] = { score: null, note: '' };
+      return buildRow(phaseKey, c.id, c.lbl, c.lblEn, c.sev, true, st.items[c.id]);
+    }).join('');
+
+    sec_el.innerHTML = `
+      <div class="cl-section-hd" onclick="toggleSec('${phaseKey}_sec${si}')">
+        <h3>${esc(sec.lbl)}<span class="en">${esc(sec.lblEn)}</span></h3>
+        <span class="cl-badge" id="${phaseKey}_badge${si}">—</span>
+      </div>
+      <div class="cl-body open" id="${phaseKey}_sec${si}">
+        <table class="cl-table">
+          <thead><tr><th style="width:42%">Tiêu chí</th><th style="width:5%;text-align:center">Max</th><th style="width:22%;text-align:center">Điểm</th><th style="width:6%;text-align:center">Đ</th><th style="width:20%">Ghi chú</th><th style="width:5%"></th></tr></thead>
+          <tbody id="${tbodyId}">${baseRows}${customRows}</tbody>
+        </table>
+        <button class="add-row" onclick="openModal('${phaseKey}',${si},'${tbodyId}')">＋ Thêm tiêu chí</button>
+      </div>`;
+    w.appendChild(sec_el);
+  });
+
+  // Remark
+  const curRemark = st.remark || '';
+  const rb = document.createElement('div'); rb.className = 'remark-box'; rb.style.marginTop = '12px';
+  rb.innerHTML = `<label>💬 Nhận xét giai đoạn</label><textarea placeholder="Nhận xét tổng thể..." oninput="phaseState['${phaseKey}'].remark=this.value;debounceSave()">${esc(curRemark)}</textarea>`;
+  w.appendChild(rb);
+
+  // CAP box
+  const capBox = document.createElement('div'); capBox.className = 'cap-box'; capBox.id = `${phaseKey}-cap`;
+  const curCap = st.cap || '';
+  capBox.innerHTML = `<label>⚠ Corrective Action Plan (CAP)</label><textarea placeholder="Mô tả lỗi, hành động khắc phục, deadline..." oninput="phaseState['${phaseKey}'].cap=this.value;debounceSave()">${esc(curCap)}</textarea>`;
+  w.appendChild(capBox);
+
+  // Nav buttons
+  const stepMap = {ipi:1,dupro:2,fri:3,cli:4};
+  const nb = document.createElement('div');
+  nb.innerHTML = navBtns(stepMap[phaseKey] || 1);
+  w.appendChild(nb);
+
+  // Calc initial scores
+  calcScore(phaseKey);
+}
+
+function buildRow(phaseKey, id, lbl, lblEn, sev, isCustom, cur) {
+  const scoreVal = cur && cur.score !== null ? String(cur.score) : '';
+  const noteVal = cur ? (cur.note || '') : '';
+  const cpText = scoreVal !== '' ? scoreVal : '—';
+  const cpColor = scoreVal === '' ? '#aaa' : parseInt(scoreVal) >= 4 ? '#27760f' : parseInt(scoreVal) >= 2 ? '#7a4500' : '#a32d2d';
+  const delBtn = isCustom
+    ? `<button style="color:#ccc;cursor:pointer;font-size:16px;background:none;border:none" onclick="delCustom('${phaseKey}','${id}')">×</button>`
+    : `<button style="color:#ddd;cursor:pointer;font-size:16px;background:none;border:none" onclick="delBuiltin('${phaseKey}','${id}',this)">×</button>`;
+  function sel(v) { return scoreVal === v ? ' selected' : ''; }
+  return `<tr id="row-${id}">
+    <td><span class="lbl-vi">${esc(lbl)}<span class="sev-badge ${sev}">${sev.toUpperCase()}</span></span><span class="lbl-en">${esc(lblEn)}</span></td>
+    <td style="text-align:center;color:#999;font-size:11px">5</td>
+    <td><select class="score-sel" onchange="setScore('${phaseKey}','${id}',this.value)">
+      <option value=""${sel('')}>—</option>
+      <option value="5"${sel('5')}>5 — Pass</option>
+      <option value="4"${sel('4')}>4 — Lỗi nhỏ</option>
+      <option value="3"${sel('3')}>3 — Partial</option>
+      <option value="2"${sel('2')}>2 — Fail</option>
+      <option value="1"${sel('1')}>1 — Critical fail</option>
+      <option value="0"${sel('0')}>0 — N/A</option>
+    </select></td>
+    <td class="score-disp" id="cp-${id}" style="color:${cpColor}">${cpText}</td>
+    <td><textarea class="note-inp" rows="1" placeholder="Ghi chú..." oninput="phaseState['${phaseKey}'].items['${id}'].note=this.value;autoGrow(this);debounceSave()">${esc(noteVal)}</textarea></td>
+    <td style="text-align:center">${delBtn}</td>
+  </tr>`;
+}
+
+function setScore(phaseKey, id, val) {
+  if (!phaseState[phaseKey]) return;
+  if (!phaseState[phaseKey].items[id]) phaseState[phaseKey].items[id] = { score:null, note:'' };
+  phaseState[phaseKey].items[id].score = val === '' ? null : parseInt(val);
+  const cp = document.getElementById('cp-' + id);
+  if (cp) { cp.textContent = val===''?'—':val; cp.style.color = val===''?'#aaa':parseInt(val)>=4?'#27760f':parseInt(val)>=2?'#7a4500':'#a32d2d'; }
+  calcScore(phaseKey);
+  debounceSave();
+}
+
+function calcScore(phaseKey) {
+  const secs = CL_COMMON[phaseKey] || [];
+  const st = phaseState[phaseKey];
+  if (!st) return;
+  let te=0, tp=0, ta=0, tot=0, critFail=false;
+  let sevCrit=0, sevMaj=0, sevMin=0;
+
+  secs.forEach((sec, si) => {
+    let se=0, sp=0, sa=0;
+    sec.items.forEach((it, ii) => {
+      const id = `${phaseKey}_s${si}_i${ii}`;
+      const row = document.getElementById('row-'+id);
+      if (!row || row.style.display==='none') return;
+      tot++;
+      const s = st.items[id];
+      if (s && s.score !== null) {
+        se += s.score; sp += 5; sa++; ta++;
+        if (s.score <= 2) {
+          if (it[2]==='critical') { critFail=true; sevCrit++; }
+          else if (it[2]==='major') sevMaj++;
+          else sevMin++;
+        }
+      }
+    });
+    // custom for this section
+    (st.custom||[]).filter(c=>c.si===si).forEach(c => {
+      const row = document.getElementById('row-'+c.id);
+      if (!row || row.style.display==='none') return;
+      tot++;
+      const s = st.items[c.id];
+      if (s && s.score !== null) {
+        se += s.score; sp += 5; sa++; ta++;
+        if (s.score <= 2) {
+          if (c.sev==='critical') { critFail=true; sevCrit++; }
+          else if (c.sev==='major') sevMaj++;
+          else sevMin++;
+        }
+      }
+    });
+    const badge = document.getElementById(`${phaseKey}_badge${si}`);
+    if (badge) {
+      if (sa===0) { badge.textContent='—'; badge.style.background='#eee'; badge.style.color='#888'; }
+      else { const p=Math.round(se/sp*100); badge.textContent=p+'%'; badge.style.background=p>=80?'#d4edda':p>=60?'#fdf3cd':'#fce4e4'; badge.style.color=p>=80?'#1a5c28':p>=60?'#7a4500':'#a32d2d'; }
+    }
+    te+=se; tp+=sp;
+  });
+
+  const totEl=document.getElementById(`${phaseKey}-tot`);if(totEl)totEl.textContent=te+'/'+tp;
+  const donEl=document.getElementById(`${phaseKey}-don`);if(donEl)donEl.textContent=ta+'/'+tot;
+  const pctEl=document.getElementById(`${phaseKey}-pct`);
+  const vrdEl=document.getElementById(`${phaseKey}-vrd`);
+  const ce=document.getElementById(`${phaseKey}-sev-crit`);if(ce)ce.textContent=sevCrit;
+  const me=document.getElementById(`${phaseKey}-sev-maj`);if(me)me.textContent=sevMaj;
+  const ne=document.getElementById(`${phaseKey}-sev-min`);if(ne)ne.textContent=sevMin;
+
+  if (ta===0) { if(pctEl)pctEl.textContent='—';if(vrdEl){vrdEl.textContent='—';vrdEl.style.color='#888';} return; }
+  const pct = Math.round(te/tp*100);
+  if(pctEl)pctEl.textContent=pct+'%';
+  let v, vc;
+  if (critFail) { v='REJECT — Critical'; vc='#a32d2d'; }
+  else if (pct>=90) { v='✓ PASS'; vc='#1a5c28'; }
+  else if (pct>=75) { v='PASS — CPI'; vc='#7a4500'; }
+  else if (pct>=60) { v='HOLD'; vc='#8b5e00'; }
+  else { v='✗ REJECT'; vc='#a32d2d'; }
+  if(vrdEl){vrdEl.textContent=v;vrdEl.style.color=vc;}
+  st.verdict = v;
+  const capBox = document.getElementById(`${phaseKey}-cap`);
+  if (capBox) capBox.style.display = (critFail||pct<75)?'':'none';
+  debounceSave();
+}
+
+// ── POST ──
+const POST_RATINGS = [
+  {k:'pq',l:'Chất lượng sản phẩm'},
+  {k:'pkg',l:'Đóng gói'},
+  {k:'otd',l:'Giao hàng đúng hạn'},
+  {k:'doc',l:'Chứng từ đầy đủ'},
+  {k:'com',l:'Giao tiếp & hỗ trợ'},
+];
+function buildRatings() {
+  const c = document.getElementById('ratings-container');
+  if (!c) return;
+  c.innerHTML = POST_RATINGS.map(r => {
+    const cur = phaseState.post.rating?.[r.k] || 0;
+    return `<div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">${r.l}</div>
+      <div class="rating-row">${[1,2,3,4,5].map(i=>`<div class="rating-opt${i<=cur?' sel':''}" onclick="setRating('${r.k}',${i},this)">${i} ★</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+function setRating(key, val, el) {
+  if (!phaseState.post.rating) phaseState.post.rating = {};
+  phaseState.post.rating[key] = val;
+  el.parentElement.querySelectorAll('.rating-opt').forEach((o,i) => o.classList.toggle('sel', i < val));
+  debounceSave();
+}
+function renderPost() {
+  const w = document.getElementById('post-content');
+  if (!w) return;
+  const st = phaseState.post;
+  if (!st.items) st.items = {};
+  if (!st.custom) st.custom = [];
+  const sec = CL_COMMON.post[0];
+  const tbodyId = 'post_tbody_0';
+  const rows = sec.items.map((it, ii) => {
+    const id = `post_s0_i${ii}`;
+    if (!st.items[id]) st.items[id] = { score: null, note: '' };
+    const cur = st.items[id];
+    const scoreVal = cur.score || '';
+    const noteVal = cur.note || '';
+    function sel(v){return scoreVal===v?' selected':'';}
+    return `<tr id="row-${id}">
+      <td><span class="lbl-vi">${esc(it[0])}<span class="sev-badge ${it[2]}">${it[2].toUpperCase()}</span></span><span class="lbl-en">${esc(it[1])}</span></td>
+      <td style="text-align:center"><select class="score-sel" onchange="setPostScore('${id}',this.value)">
+        <option value=""${sel('')}>—</option>
+        <option value="pass"${sel('pass')}>✓ Pass</option>
+        <option value="fail"${sel('fail')}>✗ Fail</option>
+        <option value="na"${sel('na')}>N/A</option>
+      </select></td>
+      <td><textarea class="note-inp" rows="1" placeholder="Ghi chú..." oninput="phaseState.post.items['${id}'].note=this.value;autoGrow(this);debounceSave()">${esc(noteVal)}</textarea></td>
+      <td><button style="color:#ddd;cursor:pointer;font-size:16px;background:none;border:none" onclick="this.closest('tr').remove()">×</button></td>
+    </tr>`;
+  }).join('');
+  const customRows = (st.custom||[]).filter(c=>c.si===0).map(c => {
+    if (!st.items[c.id]) st.items[c.id] = { score:null, note:'' };
+    const cur = st.items[c.id];
+    const scoreVal = cur.score || '';
+    const noteVal = cur.note || '';
+    function sel(v){return scoreVal===v?' selected':'';}
+    return `<tr id="row-${c.id}">
+      <td><span class="lbl-vi">${esc(c.lbl)}<span class="sev-badge ${c.sev}">${c.sev.toUpperCase()}</span></span><span class="lbl-en">${esc(c.lblEn||'')}</span></td>
+      <td style="text-align:center"><select class="score-sel" onchange="setPostScore('${c.id}',this.value)">
+        <option value=""${sel('')}>—</option><option value="pass"${sel('pass')}>✓ Pass</option><option value="fail"${sel('fail')}>✗ Fail</option><option value="na"${sel('na')}>N/A</option>
+      </select></td>
+      <td><textarea class="note-inp" rows="1" placeholder="Ghi chú..." oninput="phaseState.post.items['${c.id}'].note=this.value;autoGrow(this);debounceSave()">${esc(noteVal)}</textarea></td>
+      <td><button style="color:#ccc;cursor:pointer;font-size:16px;background:none;border:none" onclick="delCustom('post','${c.id}')">×</button></td>
+    </tr>`;
+  }).join('');
+  w.innerHTML = `<div class="cl-section">
+    <div class="cl-section-hd" onclick="toggleSec('post_sec0')"><h3>${esc(sec.lbl)}<span class="en">${esc(sec.lblEn)}</span></h3><span class="cl-badge" id="post_badge0">—</span></div>
+    <div class="cl-body open" id="post_sec0">
+      <table class="cl-table">
+        <thead><tr><th style="width:55%">Hạng mục</th><th style="width:20%;text-align:center">Kết quả</th><th style="width:20%">Ghi chú</th><th style="width:5%"></th></tr></thead>
+        <tbody id="${tbodyId}">${rows}${customRows}</tbody>
+      </table>
+      <button class="add-row" onclick="openModal('post',0,'${tbodyId}')">＋ Thêm tiêu chí</button>
+    </div>
+  </div>`;
+}
+function setPostScore(id, val) {
+  if (!phaseState.post.items[id]) phaseState.post.items[id] = {};
+  phaseState.post.items[id].score = val;
+  debounceSave();
+}
+
+// ── MODAL ──
+function openModal(phaseKey, si, tbodyId) {
+  _modalCtx = { phaseKey, si, tbodyId };
+  document.getElementById('m-vi').value = '';
+  document.getElementById('m-en').value = '';
+  document.querySelector('input[name="m-sev"][value="major"]').checked = true;
+  document.getElementById('modal-ov').classList.add('show');
+  setTimeout(()=>document.getElementById('m-vi').focus(),100);
+}
+function closeModal() { document.getElementById('modal-ov').classList.remove('show'); _modalCtx=null; }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape')closeModal(); });
+
+function confirmAdd() {
+  const lbl = document.getElementById('m-vi').value.trim();
+  if (!lbl) { document.getElementById('m-vi').focus(); return; }
+  const lblEn = document.getElementById('m-en').value.trim();
+  const sev = document.querySelector('input[name="m-sev"]:checked')?.value || 'major';
+  const ctx = _modalCtx;
+  const id = ctx.phaseKey + '_c' + Date.now();
+  if (!phaseState[ctx.phaseKey].custom) phaseState[ctx.phaseKey].custom = [];
+  phaseState[ctx.phaseKey].custom.push({ id, si:ctx.si, lbl, lblEn, sev });
+  phaseState[ctx.phaseKey].items[id] = { score:null, note:'' };
+  const tbody = document.getElementById(ctx.tbodyId);
+  if (tbody) {
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + id;
+    if (ctx.phaseKey === 'post') {
+      tr.innerHTML = `<td><span class="lbl-vi">${esc(lbl)}<span class="sev-badge ${sev}">${sev.toUpperCase()}</span></span><span class="lbl-en">${esc(lblEn)}</span></td><td style="text-align:center"><select class="score-sel" onchange="setPostScore('${id}',this.value)"><option value="">—</option><option value="pass">✓ Pass</option><option value="fail">✗ Fail</option><option value="na">N/A</option></select></td><td><textarea class="note-inp" rows="1" oninput="phaseState.post.items['${id}'].note=this.value;autoGrow(this);debounceSave()"></textarea></td><td><button style="color:#ccc;cursor:pointer;font-size:16px;background:none;border:none" onclick="delCustom('post','${id}')">×</button></td>`;
+    } else {
+      tr.innerHTML = buildRow(ctx.phaseKey, id, lbl, lblEn, sev, true, { score:null, note:'' });
+    }
+    tbody.appendChild(tr);
+  }
+  closeModal();
+  if (ctx.phaseKey !== 'post') calcScore(ctx.phaseKey);
+  debounceSave();
+}
+
+function delBuiltin(phaseKey, id, btn) {
+  const tr = document.getElementById('row-' + id);
+  if (tr) tr.style.display = 'none';
+  calcScore(phaseKey);
+  debounceSave();
+}
+function delCustom(phaseKey, id) {
+  const tr = document.getElementById('row-' + id);
+  if (tr) tr.remove();
+  if (phaseState[phaseKey]) {
+    phaseState[phaseKey].custom = (phaseState[phaseKey].custom||[]).filter(c=>c.id!==id);
+    delete phaseState[phaseKey].items?.[id];
+  }
+  if (phaseKey !== 'post') calcScore(phaseKey);
+  debounceSave();
+}
+
+function toggleSec(id) { const el=document.getElementById(id); if(el) el.classList.toggle('open'); }
+function autoGrow(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+
+// ── EXPORT ──
+function exportReport() {
+  const lines = [];
+  lines.push('QC REPORT — VinaSources');
+  lines.push('='.repeat(50));
+  lines.push(`Supplier: ${gV('o-sup')} | PO: ${gV('o-po')} | Product: ${gV('o-prod')}`);
+  lines.push(`Lot Qty: ${gV('o-qty')} | Value: USD ${gV('o-val')} | Ship Date: ${gV('o-ship')}`);
+  lines.push('');
+  lines.push('PHASE SUMMARY');
+  lines.push('-'.repeat(30));
+  const phases = [{k:'ipi',l:'IPI',date:'ipi-date',aud:'ipi-auditor'},{k:'dupro',l:'DUPRO',date:'dup-date',aud:'dup-auditor'},{k:'fri',l:'FRI/PSI',date:'fri-date',aud:'fri-auditor'},{k:'cli',l:'CLI',date:'cli-date',aud:'cli-auditor'}];
+  phases.forEach(p => {
+    const cb = document.getElementById('do-'+p.k);
+    if (!cb || !cb.checked) return;
+    const st = phaseState[p.k];
+    lines.push(`${p.l}: Date=${gV(p.date)} | Auditor=${gV(p.aud)} | Verdict=${st?.verdict||'—'}`);
+  });
+  lines.push('');
+  lines.push(`FRI Defects: Critical=${gV('fri-crit')} | Major=${gV('fri-maj')} | Minor=${gV('fri-min')}`);
+  lines.push('');
+  lines.push('POST-DELIVERY');
+  lines.push(`Date: ${gV('post-date')} | On-time: ${gV('post-ontime')} | Defects: ${gV('post-defects')}`);
+  lines.push(`Proposed Supplier Tier: ${gV('post-tier') || 'Giữ nguyên'}`);
+  lines.push('');
+  lines.push(`Summary: ${gV('post-remark')}`);
+
+  const blob = new Blob([lines.join('\n')], { type:'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `QC_Report_${gV('o-po')||'Order'}_${new Date().toISOString().split('T')[0]}.txt`;
+  a.click();
+}
+</script>
+</body>
+</html>
