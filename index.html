@@ -170,18 +170,76 @@ const newR=()=>({id:Date.now()+"r",type:"rfq",code:"RFQ-"+Date.now().toString().
 const newINQ=()=>({id:Date.now()+"i",type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",notes:"",status:"inq_new",urgent:false,sids:[],ca:new Date().toISOString(),ua:new Date().toISOString()});
 
 function parseCSVRow(line){const res=[];let cur="";let inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){res.push(cur.trim());cur="";}else cur+=c;}res.push(cur.trim());return res;}
+function normalizeHeader(h){
+  return h.trim()
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/đ/g,"d").replace(/[^a-z0-9\/]/g,"");
+}
+const HEADER_MAP={
+  // Tên
+  "ten":         "Tên","name":        "Tên","company":     "Tên","cty":         "Tên",
+  // Ngành
+  "nganh":       "Ngành","industry":    "Ngành","sector":      "Ngành",
+  // Sản phẩm
+  "sanpham":     "Sản phẩm","product":     "Sản phẩm","products":    "Sản phẩm","sp":          "Sản phẩm",
+  // Tỉnh
+  "tinh/tp":     "Tỉnh/TP","tinh":        "Tỉnh/TP","province":    "Tỉnh/TP","city":        "Tỉnh/TP","tinhtp":      "Tỉnh/TP",
+  // Mô hình KD
+  "mohinkhd":    "Mô hình KD","bizmodel":    "Mô hình KD","mohinhkd":   "Mô hình KD",
+  // Loại hình DN
+  "loaihinhdn":  "Loại hình DN","legaltype":   "Loại hình DN",
+  // HT hợp tác
+  "hthoptacvns": "HT hợp tác VNS","partnertype": "HT hợp tác VNS","hthopac":    "HT hợp tác VNS",
+  // Website
+  "website":     "Website","web":         "Website",
+  // Contact
+  "contact":     "Contact","lienhe":      "Contact","nguoilienhe": "Contact",
+  // Zalo
+  "zalo":        "Zalo","phone":        "Zalo","sdt":         "Zalo","dienthoai":   "Zalo",
+  // Email
+  "email":       "Email",
+  // Stage
+  "stage":       "Stage","giadoan":     "Stage",
+  // Công suất
+  "conguat":     "Công suất","capacity":    "Công suất","congsuat":    "Công suất",
+  // MOQ
+  "moq":         "MOQ",
+  // Price Range
+  "pricerange":  "Price Range","giatham":     "Price Range","price":       "Price Range",
+  // Lead time
+  "leadtime":    "Lead time","thoigian":    "Lead time",
+  // Incoterm
+  "incoterm":    "Incoterm","incoterms":   "Incoterm",
+  // Mô hình SX
+  "mohinhsx":    "Mô hình SX","servicemodel":"Mô hình SX",
+  // Thanh toán
+  "thanhtoan":   "Thanh toán","payment":     "Thanh toán","paymentmethod":"Thanh toán",
+  // Lưu ý
+  "luuy":        "Lưu ý đặc biệt","luuydacbiet": "Lưu ý đặc biệt","specialnotes":"Lưu ý đặc biệt","note":        "Lưu ý đặc biệt","notes":       "Lưu ý đặc biệt",
+};
 function parseCSVFile(text){
+  // Strip BOM
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2)return{error:"File không có dữ liệu",rows:[]};
-  const headers=parseCSVRow(lines[0]);
-  if(!headers.includes("Tên"))return{error:"Không tìm thấy cột 'Tên' — vui lòng dùng đúng template",rows:[]};
+  const rawHeaders=parseCSVRow(lines[0]);
+  // Map headers
+  const headers=rawHeaders.map(h=>{
+    const n=normalizeHeader(h);
+    return HEADER_MAP[n]||h.trim();
+  });
+  // Find name col — fallback to first col
+  const nameCol=headers.includes("Tên")?"Tên":headers[0];
   const rows=[];
   for(let i=1;i<lines.length;i++){
     if(!lines[i].trim())continue;
     const cols=parseCSVRow(lines[i]);
     const get=h=>{const idx=headers.indexOf(h);return idx>=0?(cols[idx]||""):""};
-    rows.push({id:Date.now()+"_"+i+"s",name:get("Tên"),industry:get("Ngành"),products:get("Sản phẩm"),province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),partnerType:get("HT hợp tác VNS")||"Chưa xác định",website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),stage:STAGES.find(s=>s.id===get("Stage"))?get("Stage"):"B1",capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),leadTime:get("Lead time"),incoterm:get("Incoterm"),serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),specialNotes:get("Lưu ý đặc biệt"),certs:"",notes:"",channel:"",foundedYear:"",source:"import",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString(),_valid:!!get("Tên").trim(),_row:i+1});
+    const nm=get(nameCol)||get("Tên");
+    rows.push({id:Date.now()+"_"+i+"s",name:nm,industry:get("Ngành"),products:get("Sản phẩm"),province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),partnerType:get("HT hợp tác VNS")||"Chưa xác định",website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),stage:STAGES.find(s=>s.id===get("Stage"))?get("Stage"):"B1",capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),leadTime:get("Lead time"),incoterm:get("Incoterm"),serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),specialNotes:get("Lưu ý đặc biệt"),certs:"",notes:"",channel:"",foundedYear:"",source:"import",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString(),_valid:!!nm.trim(),_row:i+1});
   }
+  if(rows.length===0)return{error:"Không đọc được dữ liệu — kiểm tra lại file CSV",rows:[]};
   return{error:null,rows};
 }
 function downloadTemplate(){
