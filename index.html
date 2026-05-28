@@ -857,46 +857,67 @@ function EmailDraft({r,sups,onClose}){
   const [copied,setCopied]=useState(false);
   const asgn=sups.filter(s=>r.sids?.includes(s.id));
 
-  const generate=async()=>{
+  const generate=()=>{
     setLoading(true);
     const isInq=r.type==="inq";
-    const supplierInfo=asgn.length>0?asgn.map(s=>`- ${s.name} (${s.province||"Vietnam"}, ${s.products||""})`).join("\n"):"[Supplier name]";
-    const prompt=`You are a professional sourcing executive at VinaSources, a Vietnamese supply chain company. Write a professional outreach email to a supplier for the following ${isInq?"inquiry":"RFQ"}.
+    const supName=asgn.length>0?asgn[0].name:"[Supplier Name]";
+    const supNames=asgn.length>0?asgn.map(s=>s.name).join(", "):"[Supplier Name]";
+    const today=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
 
-Details:
-- Type: ${isInq?"Inquiry (early stage, no confirmed spec yet)":"RFQ (formal request for quotation)"}
-- Product/Request: ${r.desc||"N/A"}
-- Target markets: ${r.markets?.join(", ")||"N/A"}
-- ${r.qty?"Quantity: "+r.qty:""}
-- ${r.price?"Target price: "+r.price:""}
-- ${r.incoterm?"Incoterm: "+r.incoterm:""}
-- ${r.deadline?"Deadline: "+r.deadline:""}
-- ${r.certs?"Required certifications: "+r.certs:""}
-- ${r.notes?"Additional notes: "+r.notes:""}
-- Supplier(s): ${supplierInfo}
+    let subject,body;
+    if(isInq){
+      subject=`Subject: Product Inquiry — ${r.desc||"[Product]"} | VinaSources`;
+      body=`Dear ${supName} Team,
 
-Write a concise, professional email in English. Include:
-1. Brief intro of VinaSources
-2. Clear product requirement
-3. What you need from the supplier (quotation / capability confirmation)
-4. Response deadline
-5. Professional closing
+My name is [Your Name] from VinaSources, a supply chain company based in Vietnam. We connect Vietnamese manufacturers with international buyers across markets including ${r.markets?.join(", ")||"global markets"}.
 
-Keep it under 250 words. Output only the email (subject line first, then body). No explanations.`;
+We are currently exploring sourcing options for the following product and would like to understand your capabilities:
 
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
-      });
-      const d=await res.json();
-      const txt=d.content?.map(b=>b.text||"").join("")||"";
-      setEmail(txt);
-    }catch(e){
-      setEmail("Lỗi khi tạo email. Vui lòng thử lại.");
+Product: ${r.desc||"[Product description]"}
+Target Market(s): ${r.markets?.join(", ")||"TBC"}${r.deadline?`\nResponse needed by: ${r.deadline}`:""}
+
+At this stage, we are looking to understand:
+• Whether this product falls within your production scope
+• General capacity and lead time
+• Whether you have experience exporting to our target markets
+• Any relevant certifications you hold${r.notes?`\n\nAdditional context:\n${r.notes}`:""}
+
+This is an initial inquiry — a formal RFQ with detailed specifications will follow if there is a mutual fit.
+
+Please feel free to reply to this email or reach out via [Phone/Zalo]. We look forward to hearing from you.
+
+Best regards,
+[Your Name]
+Sourcing Team | VinaSources
+Email: [your@email.com] | Zalo: [number]`;
+    } else {
+      subject=`Subject: Request for Quotation — ${r.desc||"[Product]"} (${r.code}) | VinaSources`;
+      body=`Dear ${supName} Team,
+
+My name is [Your Name] from VinaSources, a Vietnamese supply chain company specializing in connecting local manufacturers with international buyers. We are currently working with a buyer targeting ${r.markets?.join(", ")||"international markets"} and would like to request a formal quotation from your company.
+
+— RFQ DETAILS —
+RFQ Code: ${r.code}
+Product: ${r.desc||"[Product description]"}
+Target Market(s): ${r.markets?.join(", ")||"TBC"}${r.qty?`\nOrder Quantity: ${r.qty}`:""}${r.price?`\nTarget Price: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nRequired Certifications: ${r.certs}`:""}${r.deadline?`\nQuotation Deadline: ${r.deadline}`:""}
+
+Please provide a quotation including:
+• Unit price (with cost breakdown if possible: materials / production / packaging / freight)
+• MOQ and lead time
+• Payment terms
+• Any product limitations or special notes${r.notes?`\n\nAdditional requirements:\n${r.notes}`:""}
+
+Kindly send your quotation to this email by ${r.deadline||"[deadline]"}. If you have any questions, please do not hesitate to contact us.
+
+We look forward to your prompt response.
+
+Best regards,
+[Your Name]
+Sourcing Team | VinaSources
+Email: [your@email.com] | Zalo: [number]
+Date: ${today}`;
     }
-    setLoading(false);
+    setTimeout(()=>{setEmail(subject+"\n\n"+body);setLoading(false);},400);
   };
 
   useEffect(()=>{generate();},[]);
