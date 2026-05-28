@@ -22,14 +22,8 @@ const API_URL="https://script.google.com/macros/s/AKfycbyy-RFrjZLoOL5hz7BQikRlkb
 const EDIT_PW="vinasources2026";
 const AUTH_KEY="vns_auth_v1";
 
-async function apiGet(sheet){
-  const r=await fetch(`${API_URL}?action=getAll&sheet=${sheet}`);
-  const d=await r.json();
-  return d.data||[];
-}
-async function apiSave(sheet,data){
-  await fetch(API_URL,{method:"POST",body:JSON.stringify({action:"saveAll",sheet,data})});
-}
+async function apiGet(sheet){const r=await fetch(`${API_URL}?action=getAll&sheet=${sheet}`);const d=await r.json();return d.data||[];}
+async function apiSave(sheet,data){await fetch(API_URL,{method:"POST",body:JSON.stringify({action:"saveAll",sheet,data})});}
 
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
@@ -56,98 +50,40 @@ const INQ_ST=[
   {id:"inq_converted",label:"Chuyển → RFQ",c:"#1D9E75",bg:"#EAF3DE"},
   {id:"inq_closed",label:"Closed",c:"#888",bg:"#F0F0F0"},
 ];
+const ORDER_STAGES=[
+  {id:"po_issued",label:"PO Issued",c:"#185FA5",bg:"#E6F1FB",icon:"📋"},
+  {id:"pre_prod",label:"Pre-Production",c:"#854F0B",bg:"#FAEEDA",icon:"🔧"},
+  {id:"in_prod",label:"In Production",c:"#534AB7",bg:"#EEEDFE",icon:"🏭"},
+  {id:"qc",label:"QC",c:"#BA7517",bg:"#FFF3DC",icon:"🔍"},
+  {id:"shipment",label:"Shipment",c:"#1D9E75",bg:"#EAF3DE",icon:"🚢"},
+  {id:"payment",label:"Payment",c:"#0F6E56",bg:"#E1F5EE",icon:"💰"},
+  {id:"closed",label:"Closed",c:"#555",bg:"#F0F0F0",icon:"✅"},
+];
+const QC_TYPES=["Tự audit","SGS","Bureau Veritas","Intertek","QIMA","Khác"];
+const QC_RESULTS=["Pass","Fail","Conditional Pass"];
 const KRALJIC_QUADRANTS=[
-  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",x:"high",y:"high",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cung ứng cao",strategy:"Quan hệ đối tác dài hạn, phát triển cùng nhau, chia sẻ thông tin chiến lược"},
-  {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",x:"low",y:"high",icon:"💪",desc:"Tác động tài chính cao · Rủi ro cung ứng thấp",strategy:"Tận dụng sức mua, thương lượng giá tốt, so sánh nhiều nhà cung cấp"},
-  {id:"bottleneck",label:"Bottleneck",labelVi:"Nút thắt",c:"#854F0B",bg:"#FAEEDA",x:"high",y:"low",icon:"⚠️",desc:"Tác động tài chính thấp · Rủi ro cung ứng cao",strategy:"Dự trữ hàng tồn kho, tìm nguồn thay thế, giảm phụ thuộc"},
-  {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",x:"low",y:"low",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro cung ứng thấp",strategy:"Tự động hóa quy trình mua, tối ưu chi phí giao dịch"},
+  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cung ứng cao",strategy:"Quan hệ đối tác dài hạn, phát triển cùng nhau, chia sẻ thông tin chiến lược"},
+  {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",icon:"💪",desc:"Tác động tài chính cao · Rủi ro cung ứng thấp",strategy:"Tận dụng sức mua, thương lượng giá tốt, so sánh nhiều nhà cung cấp"},
+  {id:"bottleneck",label:"Bottleneck",labelVi:"Nút thắt",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️",desc:"Tác động tài chính thấp · Rủi ro cung ứng cao",strategy:"Dự trữ hàng tồn kho, tìm nguồn thay thế, giảm phụ thuộc"},
+  {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro cung ứng thấp",strategy:"Tự động hóa quy trình mua, tối ưu chi phí giao dịch"},
 ];
 const VCOLS=[
-  {id:"phap_ly",l:"01 Pháp lý",d:"Giấy phép KD, MST, hồ sơ ngành nghề XK đầy đủ"},
-  {id:"san_xuat",l:"02 Sản xuất",d:"Nhà xưởng riêng, công suất ≥ MOQ buyer, máy móc đủ"},
-  {id:"chat_luong",l:"03 Chất lượng",d:"ISO 9001 hoặc tương đương, QC nội bộ 3 lớp"},
-  {id:"xuat_khau",l:"04 Xuất khẩu",d:"Đã XK ≥ 2 năm, thông thạo Incoterms FOB/CIF"},
-  {id:"chung_tu",l:"05 Chứng từ",d:"Tự lập CO, packing list, invoice EN; HS code đúng"},
-  {id:"rfq",l:"06 Phản hồi RFQ",d:"Trả lời ≤24h; báo giá có cost breakdown rõ"},
-  {id:"oem_odm",l:"07 OEM/ODM",d:"Có R&D; làm mẫu 7–10 ngày; tùy chỉnh theo buyer"},
-  {id:"giao_tiep",l:"08 Giao tiếp",d:"Sales tiếng Anh B2+; email/Zoom không cần phiên dịch"},
-  {id:"minh_bach",l:"09 Minh bạch",d:"Sẵn sàng buyer visit, factory audit, factory video"},
+  {id:"phap_ly",l:"01 Pháp lý"},{id:"san_xuat",l:"02 Sản xuất"},{id:"chat_luong",l:"03 Chất lượng"},
+  {id:"xuat_khau",l:"04 Xuất khẩu"},{id:"chung_tu",l:"05 Chứng từ"},{id:"rfq",l:"06 Phản hồi RFQ"},
+  {id:"oem_odm",l:"07 OEM/ODM"},{id:"giao_tiep",l:"08 Giao tiếp"},{id:"minh_bach",l:"09 Minh bạch"},
 ];
 const CSV_COLS=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","HT hợp tác VNS","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
 
 const vserfCriteria=[
-  {id:1,label:"Pháp lý",icon:"⚖️",desc:"Giấy phép kinh doanh, MST, giấy phép chuyên ngành",hint:"Tra MST tại tracuunnt.mst.gov.vn — nếu hiện 'đang hoạt động' là hợp lệ.",opts:[
-    {pts:0,text:"Không tìm thấy thông tin pháp lý, hoặc đã ngừng hoạt động / giải thể"},
-    {pts:1,text:"Có ĐKKD nhưng MST 'ngừng hoạt động' hoặc thông tin không khớp"},
-    {pts:2,text:"GP và MST hợp lệ nhưng không cung cấp được khi hỏi — phải tự tra"},
-    {pts:3,text:"GP và MST hợp lệ, cung cấp được — chưa có GP chuyên ngành (nếu hàng cần)"},
-    {pts:4,text:"Hồ sơ đầy đủ, chủ động cung cấp — có GP chuyên ngành nhưng chưa cập nhật mới nhất"},
-    {pts:5,text:"Hồ sơ đầy đủ, MST đang hoạt động, chủ động cung cấp — có đủ GP chuyên ngành còn hiệu lực"},
-  ]},
-  {id:2,label:"Sản xuất",icon:"🏭",desc:"Nhà xưởng, máy móc, công suất thực tế",hint:"Hỏi: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu?'",opts:[
-    {pts:0,text:"Không có xưởng, toàn bộ đặt gia công ngoài — thực chất là trading"},
-    {pts:1,text:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài"},
-    {pts:2,text:"Có xưởng nhưng máy móc thiếu, công suất thấp — chỉ đơn hàng nhỏ"},
-    {pts:3,text:"Có xưởng riêng, máy móc cơ bản, đáp ứng MOQ buyer — còn 1–2 công đoạn thuê ngoài"},
-    {pts:4,text:"Xưởng riêng, máy móc đầy đủ, công suất ổn định — ít phụ thuộc ngoài"},
-    {pts:5,text:"Nhà xưởng riêng, máy móc đủ toàn bộ quy trình, công suất ≥ MOQ buyer, không thuê ngoài công đoạn chính"},
-  ]},
-  {id:3,label:"Chất lượng",icon:"✅",desc:"Hệ thống QC, chứng nhận quốc tế",hint:"Hỏi: 'Ai kiểm tra hàng trước khi xuất? Có checklist QC không?'",opts:[
-    {pts:0,text:"Không có quy trình QC — hàng làm xong là đóng gói"},
-    {pts:1,text:"Kiểm tra theo cảm tính, không có tiêu chuẩn hay checklist"},
-    {pts:2,text:"Có checklist QC cơ bản, kiểm tra đầu ra (FQC) — chưa IPQC"},
-    {pts:3,text:"Có IPQC và FQC, chưa có chứng nhận quốc tế"},
-    {pts:4,text:"Có QC 3 lớp, đang lấy ISO hoặc có chứng nhận tương đương"},
-    {pts:5,text:"Có ISO 9001 hoặc tương đương còn hiệu lực, QC 3 lớp đầy đủ (IPQC/FQC/OQC)"},
-  ]},
-  {id:4,label:"Kinh nghiệm XK",icon:"🚢",desc:"Số năm XK, thị trường, thành thạo Incoterms",hint:"Hỏi: 'Đã XK sang thị trường nào? Giao FOB hay CIF?' — Không biết FOB là dấu hiệu xếp mức thấp.",opts:[
-    {pts:0,text:"Chưa từng xuất khẩu, chỉ bán nội địa"},
-    {pts:1,text:"Đã XK 1–2 lần nhưng qua trung gian hoàn toàn"},
-    {pts:2,text:"Có XK trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},
-    {pts:3,text:"XK 1–2 năm, biết FOB/CIF, đã có ít nhất 1 thị trường ổn định"},
-    {pts:4,text:"XK ≥ 2 năm, thành thạo Incoterms, đã bán 2–3 thị trường"},
-    {pts:5,text:"XK ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm nhiều thị trường"},
-  ]},
-  {id:5,label:"Chứng từ XK",icon:"📄",desc:"Tự chuẩn bị CO, packing list, invoice, HS code",hint:"Hỏi thẳng: 'Bên mình tự làm chứng từ hay nhờ logistics làm hộ?'",opts:[
-    {pts:0,text:"Không biết chứng từ XK là gì, chưa bao giờ làm"},
-    {pts:1,text:"Biết các loại nhưng hoàn toàn nhờ logistics làm hộ"},
-    {pts:2,text:"Tự làm packing list và invoice đơn giản, không biết HS code"},
-    {pts:3,text:"Tự làm hầu hết chứng từ, biết HS code — đôi khi cần hỗ trợ CO"},
-    {pts:4,text:"Tự làm đầy đủ tiếng Anh, HS code chính xác — quy trình chưa hoàn toàn chuẩn hóa"},
-    {pts:5,text:"Tự lập hoàn toàn: CO, packing list, commercial invoice EN chuẩn, HS code đúng"},
-  ]},
-  {id:6,label:"Phản hồi RFQ",icon:"⚡",desc:"Tốc độ phản hồi, chất lượng báo giá",hint:"Gửi thử 1 RFQ và đo thời gian phản hồi. Báo giá có rõ MOQ, lead time, Incoterms không?",opts:[
-    {pts:0,text:"Không phản hồi RFQ, hoặc sau hơn 3 ngày"},
-    {pts:1,text:"Phản hồi sau 48–72 giờ, báo giá 1 con số, không có thông tin kèm"},
-    {pts:2,text:"Phản hồi 24–48 giờ, có báo giá nhưng thiếu MOQ, lead time"},
-    {pts:3,text:"Phản hồi trong 24 giờ, có đủ thông tin cơ bản — chưa cost breakdown"},
-    {pts:4,text:"Phản hồi nhanh (<24h), báo giá chi tiết — đôi khi còn gộp chi phí"},
-    {pts:5,text:"Phản hồi <24h, cost breakdown rõ: đơn giá, MOQ, lead time, Incoterms, thanh toán"},
-  ]},
-  {id:7,label:"OEM / ODM",icon:"🔧",desc:"Làm theo yêu cầu buyer: mẫu, thiết kế, tùy chỉnh",hint:"Hỏi: 'Nếu buyer muốn thay đổi kích thước/màu/logo, mất bao lâu để có mẫu?'",opts:[
-    {pts:0,text:"Chỉ bán hàng có sẵn, không nhận tùy chỉnh bất kỳ"},
-    {pts:1,text:"Có thể in logo hoặc thay bao bì — không tùy chỉnh sản phẩm"},
-    {pts:2,text:"Nhận OEM cơ bản, thời gian làm mẫu >3 tuần"},
-    {pts:3,text:"Có OEM/ODM, làm mẫu 2–3 tuần, tùy chỉnh mức trung bình"},
-    {pts:4,text:"Có R&D, làm mẫu 10–14 ngày, đáp ứng hầu hết yêu cầu buyer"},
-    {pts:5,text:"Có team R&D, làm mẫu 7–10 ngày, tùy chỉnh sâu theo spec buyer"},
-  ]},
-  {id:8,label:"Giao tiếp Anh",icon:"🌐",desc:"Giao tiếp trực tiếp với buyer, không cần phiên dịch",hint:"Gửi 1 email tiếng Anh và đánh giá câu trả lời — hiểu đúng không? Diễn đạt rõ không?",opts:[
-    {pts:0,text:"Không ai giao tiếp được tiếng Anh, mọi liên lạc cần phiên dịch"},
-    {pts:1,text:"Đọc hiểu email đơn giản nhưng không tự viết — dùng Google Dịch là chính"},
-    {pts:2,text:"Viết được email cơ bản nhưng nhiều lỗi, dễ gây hiểu nhầm"},
-    {pts:3,text:"Giao tiếp được qua email/chat, hiểu và trả lời đúng ý — chưa tự tin trên Zoom"},
-    {pts:4,text:"Giao tiếp tốt qua email/chat/Zoom, đủ để thương lượng — đôi khi cần xác nhận lại"},
-    {pts:5,text:"Thành thạo mọi kênh, không cần phiên dịch, ít hiểu nhầm"},
-  ]},
-  {id:9,label:"Minh bạch",icon:"👁️",desc:"Sẵn sàng cung cấp thông tin, audit, factory visit",hint:"Thái độ khi được hỏi về xưởng là chỉ báo quan trọng. Né tránh liên tục = rủi ro cao.",opts:[
-    {pts:0,text:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi về năng lực"},
-    {pts:1,text:"Cung cấp thông tin nhỏ giọt, không nhất quán — khó xác minh"},
-    {pts:2,text:"Trả lời khi được hỏi nhưng không chủ động, chưa sẵn sàng buyer visit"},
-    {pts:3,text:"Cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit có biên bản"},
-    {pts:4,text:"Chấp nhận buyer visit và audit, có thể cung cấp ảnh/video xưởng"},
-    {pts:5,text:"Chủ động minh bạch, sẵn sàng buyer visit, factory audit chính thức, cung cấp video khi cần"},
-  ]},
+  {id:1,label:"Pháp lý",icon:"⚖️",desc:"Giấy phép kinh doanh, MST, giấy phép chuyên ngành",hint:"Tra MST tại tracuunnt.mst.gov.vn",opts:[{pts:0,text:"Không tìm thấy thông tin pháp lý"},{pts:1,text:"Có ĐKKD nhưng MST ngừng hoạt động"},{pts:2,text:"GP và MST hợp lệ nhưng không cung cấp được"},{pts:3,text:"GP và MST hợp lệ, cung cấp được"},{pts:4,text:"Hồ sơ đầy đủ, chủ động cung cấp"},{pts:5,text:"Hồ sơ đầy đủ, MST đang hoạt động, có đủ GP chuyên ngành"}]},
+  {id:2,label:"Sản xuất",icon:"🏭",desc:"Nhà xưởng, máy móc, công suất thực tế",hint:"Hỏi: Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu?",opts:[{pts:0,text:"Không có xưởng, toàn bộ đặt gia công ngoài"},{pts:1,text:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài"},{pts:2,text:"Có xưởng nhưng máy móc thiếu, công suất thấp"},{pts:3,text:"Có xưởng riêng, máy móc cơ bản"},{pts:4,text:"Xưởng riêng, máy móc đầy đủ, công suất ổn định"},{pts:5,text:"Nhà xưởng riêng, máy móc đủ toàn bộ quy trình"}]},
+  {id:3,label:"Chất lượng",icon:"✅",desc:"Hệ thống QC, chứng nhận quốc tế",hint:"Hỏi: Ai kiểm tra hàng trước khi xuất?",opts:[{pts:0,text:"Không có quy trình QC"},{pts:1,text:"Kiểm tra theo cảm tính"},{pts:2,text:"Có checklist QC cơ bản"},{pts:3,text:"Có IPQC và FQC, chưa có chứng nhận"},{pts:4,text:"Có QC 3 lớp, đang lấy ISO"},{pts:5,text:"Có ISO 9001 hoặc tương đương, QC 3 lớp đầy đủ"}]},
+  {id:4,label:"Kinh nghiệm XK",icon:"🚢",desc:"Số năm XK, thị trường, Incoterms",hint:"Hỏi: Đã XK sang thị trường nào? Giao FOB hay CIF?",opts:[{pts:0,text:"Chưa từng xuất khẩu"},{pts:1,text:"Đã XK 1–2 lần qua trung gian"},{pts:2,text:"Có XK trực tiếp nhưng dưới 1 năm"},{pts:3,text:"XK 1–2 năm, biết FOB/CIF"},{pts:4,text:"XK ≥ 2 năm, thành thạo Incoterms"},{pts:5,text:"XK ≥ 2 năm liên tục, kinh nghiệm nhiều thị trường"}]},
+  {id:5,label:"Chứng từ XK",icon:"📄",desc:"Tự chuẩn bị CO, packing list, invoice, HS code",hint:"Hỏi: Bên mình tự làm chứng từ hay nhờ logistics?",opts:[{pts:0,text:"Không biết chứng từ XK"},{pts:1,text:"Hoàn toàn nhờ logistics làm hộ"},{pts:2,text:"Tự làm packing list và invoice đơn giản"},{pts:3,text:"Tự làm hầu hết chứng từ"},{pts:4,text:"Tự làm đầy đủ tiếng Anh"},{pts:5,text:"Tự lập hoàn toàn: CO, packing list, invoice EN chuẩn"}]},
+  {id:6,label:"Phản hồi RFQ",icon:"⚡",desc:"Tốc độ phản hồi, chất lượng báo giá",hint:"Gửi thử 1 RFQ và đo thời gian phản hồi",opts:[{pts:0,text:"Không phản hồi RFQ"},{pts:1,text:"Phản hồi sau 48–72 giờ, báo giá sơ sài"},{pts:2,text:"Phản hồi 24–48 giờ, thiếu MOQ/lead time"},{pts:3,text:"Phản hồi trong 24 giờ, đủ thông tin cơ bản"},{pts:4,text:"Phản hồi nhanh <24h, báo giá chi tiết"},{pts:5,text:"Phản hồi <24h, cost breakdown rõ"}]},
+  {id:7,label:"OEM / ODM",icon:"🔧",desc:"Làm theo yêu cầu buyer",hint:"Hỏi: Nếu buyer muốn thay đổi, mất bao lâu để có mẫu?",opts:[{pts:0,text:"Chỉ bán hàng có sẵn"},{pts:1,text:"Có thể in logo hoặc thay bao bì"},{pts:2,text:"Nhận OEM cơ bản, thời gian làm mẫu >3 tuần"},{pts:3,text:"Có OEM/ODM, làm mẫu 2–3 tuần"},{pts:4,text:"Có R&D, làm mẫu 10–14 ngày"},{pts:5,text:"Có team R&D, làm mẫu 7–10 ngày"}]},
+  {id:8,label:"Giao tiếp Anh",icon:"🌐",desc:"Giao tiếp trực tiếp với buyer",hint:"Gửi 1 email tiếng Anh và đánh giá câu trả lời",opts:[{pts:0,text:"Không ai giao tiếp được tiếng Anh"},{pts:1,text:"Đọc hiểu email đơn giản nhưng không tự viết"},{pts:2,text:"Viết được email cơ bản nhưng nhiều lỗi"},{pts:3,text:"Giao tiếp được qua email/chat"},{pts:4,text:"Giao tiếp tốt qua email/chat/Zoom"},{pts:5,text:"Thành thạo mọi kênh, không cần phiên dịch"}]},
+  {id:9,label:"Minh bạch",icon:"👁️",desc:"Sẵn sàng cung cấp thông tin, audit",hint:"Thái độ khi được hỏi về xưởng là chỉ báo quan trọng",opts:[{pts:0,text:"Từ chối cung cấp thông tin cơ bản"},{pts:1,text:"Cung cấp thông tin nhỏ giọt"},{pts:2,text:"Trả lời khi được hỏi nhưng không chủ động"},{pts:3,text:"Cởi mở, sẵn sàng buyer visit không chính thức"},{pts:4,text:"Chấp nhận buyer visit và audit"},{pts:5,text:"Chủ động minh bạch, sẵn sàng factory audit chính thức"}]},
 ];
 const vserfTiers=[
   {min:38,max:45,label:"Tier 1 — Export-Ready",c:"#0F6E56",bg:"#E1F5EE",badge:"🥇",action:"Onboard ngay, ưu tiên nhận đơn hàng lớn"},
@@ -157,6 +93,7 @@ const vserfTiers=[
 ];
 const getTier=score=>vserfTiers.find(t=>score>=t.min&&score<=t.max)||vserfTiers[3];
 
+// ── helpers ──
 const calcTier=v=>{
   const t=Object.values(v||{}).reduce((a,b)=>a+(b||0),0);
   if((v.phap_ly||0)<3||(v.san_xuat||0)<3)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
@@ -165,71 +102,32 @@ const calcTier=v=>{
   if(t>=18)return{label:"Tier 3",c:"#854F0B",bg:"#FAEEDA",t};
   return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
 };
-const newS=()=>({id:Date.now()+"s",name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString()});
+const calcSupPerf=(supId,orders)=>{
+  const closed=(orders||[]).filter(o=>o.supId===supId&&o.stage==="closed");
+  if(!closed.length)return null;
+  const ratings=closed.map(o=>o.rating).filter(Boolean);
+  const avgRating=ratings.length?Math.round(ratings.reduce((a,b)=>a+b,0)/ratings.length*10)/10:0;
+  const onTime=closed.map(o=>parseFloat(o.onTimeRate)).filter(v=>!isNaN(v));
+  const avgOnTime=onTime.length?Math.round(onTime.reduce((a,b)=>a+b,0)/onTime.length):null;
+  const quality=closed.map(o=>parseFloat(o.qualityRate)).filter(v=>!isNaN(v));
+  const avgQuality=quality.length?Math.round(quality.reduce((a,b)=>a+b,0)/quality.length):null;
+  return{orders:closed.length,rating:avgRating,onTime:avgOnTime,quality:avgQuality};
+};
+const newS=()=>({id:Date.now()+"s",name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
 const newR=()=>({id:Date.now()+"r",type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:[],snotes:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
 const newINQ=()=>({id:Date.now()+"i",type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",notes:"",status:"inq_new",urgent:false,sids:[],ca:new Date().toISOString(),ua:new Date().toISOString()});
+const newO=()=>({id:Date.now()+"o",code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",poDate:new Date().toISOString().slice(0,10),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:new Date().toISOString(),ua:new Date().toISOString()});
 
+// ── CSV helpers ──
+function normalizeHeader(h){return h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9\/]/g,"");}
+const HEADER_MAP={"ten":"Tên","name":"Tên","company":"Tên","nganh":"Ngành","industry":"Ngành","sanpham":"Sản phẩm","product":"Sản phẩm","products":"Sản phẩm","sp":"Sản phẩm","tinh/tp":"Tỉnh/TP","tinh":"Tỉnh/TP","province":"Tỉnh/TP","tinhtp":"Tỉnh/TP","mohinhkd":"Mô hình KD","bizmodel":"Mô hình KD","loaihinhdn":"Loại hình DN","legaltype":"Loại hình DN","hthoptacvns":"HT hợp tác VNS","partnertype":"HT hợp tác VNS","website":"Website","web":"Website","contact":"Contact","lienhe":"Contact","nguoilienhe":"Contact","zalo":"Zalo","phone":"Zalo","sdt":"Zalo","email":"Email","stage":"Stage","congsuat":"Công suất","capacity":"Công suất","moq":"MOQ","pricerange":"Price Range","price":"Price Range","leadtime":"Lead time","incoterm":"Incoterm","incoterms":"Incoterm","mohinhsx":"Mô hình SX","servicemodel":"Mô hình SX","thanhtoan":"Thanh toán","payment":"Thanh toán","luuydacbiet":"Lưu ý đặc biệt","specialnotes":"Lưu ý đặc biệt","notes":"Lưu ý đặc biệt"};
 function parseCSVRow(line){const res=[];let cur="";let inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){res.push(cur.trim());cur="";}else cur+=c;}res.push(cur.trim());return res;}
-function normalizeHeader(h){
-  return h.trim()
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/đ/g,"d").replace(/[^a-z0-9\/]/g,"");
-}
-const HEADER_MAP={
-  // Tên
-  "ten":         "Tên","name":        "Tên","company":     "Tên","cty":         "Tên",
-  // Ngành
-  "nganh":       "Ngành","industry":    "Ngành","sector":      "Ngành",
-  // Sản phẩm
-  "sanpham":     "Sản phẩm","product":     "Sản phẩm","products":    "Sản phẩm","sp":          "Sản phẩm",
-  // Tỉnh
-  "tinh/tp":     "Tỉnh/TP","tinh":        "Tỉnh/TP","province":    "Tỉnh/TP","city":        "Tỉnh/TP","tinhtp":      "Tỉnh/TP",
-  // Mô hình KD
-  "mohinkhd":    "Mô hình KD","bizmodel":    "Mô hình KD","mohinhkd":   "Mô hình KD",
-  // Loại hình DN
-  "loaihinhdn":  "Loại hình DN","legaltype":   "Loại hình DN",
-  // HT hợp tác
-  "hthoptacvns": "HT hợp tác VNS","partnertype": "HT hợp tác VNS","hthopac":    "HT hợp tác VNS",
-  // Website
-  "website":     "Website","web":         "Website",
-  // Contact
-  "contact":     "Contact","lienhe":      "Contact","nguoilienhe": "Contact",
-  // Zalo
-  "zalo":        "Zalo","phone":        "Zalo","sdt":         "Zalo","dienthoai":   "Zalo",
-  // Email
-  "email":       "Email",
-  // Stage
-  "stage":       "Stage","giadoan":     "Stage",
-  // Công suất
-  "conguat":     "Công suất","capacity":    "Công suất","congsuat":    "Công suất",
-  // MOQ
-  "moq":         "MOQ",
-  // Price Range
-  "pricerange":  "Price Range","giatham":     "Price Range","price":       "Price Range",
-  // Lead time
-  "leadtime":    "Lead time","thoigian":    "Lead time",
-  // Incoterm
-  "incoterm":    "Incoterm","incoterms":   "Incoterm",
-  // Mô hình SX
-  "mohinhsx":    "Mô hình SX","servicemodel":"Mô hình SX",
-  // Thanh toán
-  "thanhtoan":   "Thanh toán","payment":     "Thanh toán","paymentmethod":"Thanh toán",
-  // Lưu ý
-  "luuy":        "Lưu ý đặc biệt","luuydacbiet": "Lưu ý đặc biệt","specialnotes":"Lưu ý đặc biệt","note":        "Lưu ý đặc biệt","notes":       "Lưu ý đặc biệt",
-};
 function parseCSVFile(text){
-  // Strip BOM
   if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2)return{error:"File không có dữ liệu",rows:[]};
   const rawHeaders=parseCSVRow(lines[0]);
-  // Map headers
-  const headers=rawHeaders.map(h=>{
-    const n=normalizeHeader(h);
-    return HEADER_MAP[n]||h.trim();
-  });
-  // Find name col — fallback to first col
+  const headers=rawHeaders.map(h=>{const n=normalizeHeader(h);return HEADER_MAP[n]||h.trim();});
   const nameCol=headers.includes("Tên")?"Tên":headers[0];
   const rows=[];
   for(let i=1;i<lines.length;i++){
@@ -237,9 +135,9 @@ function parseCSVFile(text){
     const cols=parseCSVRow(lines[i]);
     const get=h=>{const idx=headers.indexOf(h);return idx>=0?(cols[idx]||""):""};
     const nm=get(nameCol)||get("Tên");
-    rows.push({id:Date.now()+"_"+i+"s",name:nm,industry:get("Ngành"),products:get("Sản phẩm"),province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),partnerType:get("HT hợp tác VNS")||"Chưa xác định",website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),stage:STAGES.find(s=>s.id===get("Stage"))?get("Stage"):"B1",capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),leadTime:get("Lead time"),incoterm:get("Incoterm"),serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),specialNotes:get("Lưu ý đặc biệt"),certs:"",notes:"",channel:"",foundedYear:"",source:"import",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString(),_valid:!!nm.trim(),_row:i+1});
+    rows.push({id:Date.now()+"_"+i+"s",name:nm,industry:get("Ngành"),products:get("Sản phẩm"),province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),partnerType:get("HT hợp tác VNS")||"Chưa xác định",website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),stage:STAGES.find(s=>s.id===get("Stage"))?get("Stage"):"B1",capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),leadTime:get("Lead time"),incoterm:get("Incoterm"),serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),specialNotes:get("Lưu ý đặc biệt"),certs:"",notes:"",channel:"",foundedYear:"",source:"import",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{},ca:new Date().toISOString(),ua:new Date().toISOString(),_valid:!!nm.trim(),_row:i+1});
   }
-  if(rows.length===0)return{error:"Không đọc được dữ liệu — kiểm tra lại file CSV",rows:[]};
+  if(!rows.length)return{error:"Không đọc được dữ liệu",rows:[]};
   return{error:null,rows};
 }
 function downloadTemplate(){
@@ -248,6 +146,7 @@ function downloadTemplate(){
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_Import_Template.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 
+// ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
 const gBtn={padding:"7px 14px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",fontSize:13,color:"#555"};
 const pBtn={padding:"7px 18px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500};
@@ -260,110 +159,385 @@ function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChang
 function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
 function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 
-function App(){
-  const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
-  const [sups,setSups]=useState([]);
-  const [rfqs,setRfqs]=useState([]);
-  const [orders,setOrders]=useState([]);
-  const [tab,setTab]=useState("list");
-  const [modal,setModal]=useState(null);
-  const [toast,setToast]=useState(null);
-  const [loading,setLoading]=useState(true);
-  const [saving,setSaving]=useState(false);
-  const [syncErr,setSyncErr]=useState(false);
-
-  useEffect(()=>{
-    Promise.all([apiGet("Suppliers"),apiGet("RFQs"),apiGet("Orders")])
-      .then(([s,r,o])=>{setSups(s);setRfqs(r);setOrders(o);setLoading(false);})
-      .catch(()=>{setSyncErr(true);setLoading(false);});
-  },[]);
-
-  const toast2=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
-
-  const saveSups=useCallback(async l=>{setSups(l);setSaving(true);try{await apiSave("Suppliers",l);}finally{setSaving(false);};},[]);
-  const saveRfqs=useCallback(async l=>{setRfqs(l);setSaving(true);try{await apiSave("RFQs",l);}finally{setSaving(false);};},[]);
-
-  const saveOrders=useCallback(async l=>{setOrders(l);setSaving(true);try{await apiSave("Orders",l);}finally{setSaving(false);};},[]);
-  const upsO=async o=>{const u={...o,ua:new Date().toISOString()};const i=orders.findIndex(x=>x.id===u.id);await saveOrders(i>=0?orders.map((x,j)=>j===i?u:x):[u,...orders]);toast2(i>=0?"Đã cập nhật order":"Đã tạo order");setModal(null);};
-  const delO=async id=>{if(!confirm("Xóa order này?"))return;await saveOrders(orders.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
-  const upsS=async s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);await saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
-  const delS=async id=>{if(!confirm("Xóa supplier này?"))return;await saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
-  const upsR=async r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);await saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ");setModal(null);};
-  const delR=async id=>{if(!confirm("Xóa RFQ?"))return;await saveRfqs(rfqs.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
-  const logout=()=>{localStorage.removeItem(AUTH_KEY);setCanEdit(false);};
-  const batchImport=async list=>{
-    const cur=[...sups];
-    list.forEach(s=>{const i=cur.findIndex(x=>x.name.toLowerCase()===s.name.toLowerCase());if(i>=0)cur[i]={...cur[i],...s,id:cur[i].id};else cur.unshift(s);});
-    await saveSups(cur);toast2("Đã import "+list.length+" supplier");setModal(null);
+// ── EMAIL DRAFT ──
+function EmailDraft({r,sups,onClose}){
+  const [email,setEmail]=useState("");const [loading,setLoading]=useState(false);const [copied,setCopied]=useState(false);
+  const asgn=(sups||[]).filter(s=>r.sids?.includes(s.id));
+  const generate=()=>{
+    setLoading(true);
+    const isInq=r.type==="inq";
+    const supName=asgn.length>0?asgn[0].name:"[Supplier Name]";
+    const today=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+    let subject,body;
+    if(isInq){
+      subject=`Subject: Hỏi thăm sản phẩm / Product Inquiry — ${r.desc||"[Sản phẩm]"} | VinaSources`;
+      body=`Kính gửi đội ngũ ${supName},\n\nTôi là [Tên] từ VinaSources, công ty chuỗi cung ứng tại Việt Nam chuyên kết nối nhà sản xuất trong nước với buyer quốc tế tại ${r.markets?.join(", ")||"các thị trường quốc tế"}.\n\nChúng tôi đang tìm hiểu nguồn cung cho:\nSản phẩm: ${r.desc||"[Mô tả]"}\nThị trường: ${r.markets?.join(", ")||"Chưa xác định"}${r.deadline?`\nCần phản hồi trước: ${r.deadline}`:""}\n\nChúng tôi muốn xác nhận:\n• Sản phẩm có nằm trong danh mục sản xuất không\n• Công suất và lead time dự kiến\n• Kinh nghiệm xuất khẩu sang thị trường mục tiêu\n• Các chứng nhận hiện có${r.notes?`\n\nThông tin thêm:\n${r.notes}`:""}\n\nTrân trọng,\n[Tên của bạn] | Sourcing Team | VinaSources\nEmail: [your@email.com] | Zalo: [số]\n\n────────────────────────────────\n\nDear ${supName} Team,\n\nMy name is [Your Name] from VinaSources, a supply chain company based in Vietnam connecting Vietnamese manufacturers with international buyers in ${r.markets?.join(", ")||"global markets"}.\n\nWe are exploring sourcing options for:\nProduct: ${r.desc||"[Product description]"}\nTarget Market(s): ${r.markets?.join(", ")||"TBC"}${r.deadline?`\nResponse needed by: ${r.deadline}`:""}\n\nAt this stage, we'd like to understand:\n• Whether this product is within your production scope\n• General capacity and lead time\n• Export experience to our target markets\n• Relevant certifications${r.notes?`\n\nAdditional context:\n${r.notes}`:""}\n\nBest regards,\n[Your Name] | Sourcing Team | VinaSources\nEmail: [your@email.com] | Zalo: [number]`;
+    }else{
+      subject=`Subject: Yêu cầu báo giá / RFQ — ${r.desc||"[Sản phẩm]"} (${r.code}) | VinaSources`;
+      body=`Kính gửi đội ngũ ${supName},\n\nTôi là [Tên] từ VinaSources. Chúng tôi đang làm việc với buyer tại ${r.markets?.join(", ")||"thị trường quốc tế"} và muốn gửi yêu cầu báo giá chính thức.\n\n— THÔNG TIN RFQ —\nMã RFQ: ${r.code}\nSản phẩm: ${r.desc||"[Mô tả]"}\nThị trường: ${r.markets?.join(", ")||"TBC"}${r.qty?`\nSố lượng: ${r.qty}`:""}${r.price?`\nGiá mục tiêu: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nChứng nhận yêu cầu: ${r.certs}`:""}${r.deadline?`\nHạn báo giá: ${r.deadline}`:""}\n\nVui lòng cung cấp:\n• Đơn giá (kèm breakdown: nguyên liệu / gia công / bao bì / vận chuyển)\n• MOQ và lead time\n• Điều khoản thanh toán${r.notes?`\n\nYêu cầu bổ sung:\n${r.notes}`:""}\n\nTrân trọng,\n[Tên của bạn] | Sourcing Team | VinaSources\nEmail: [your@email.com] | Zalo: [số] | Ngày: ${today}\n\n────────────────────────────────\n\nDear ${supName} Team,\n\nMy name is [Your Name] from VinaSources. We are working with a buyer targeting ${r.markets?.join(", ")||"international markets"} and would like to request a formal quotation.\n\n— RFQ DETAILS —\nRFQ Code: ${r.code}\nProduct: ${r.desc||"[Product description]"}\nTarget Market(s): ${r.markets?.join(", ")||"TBC"}${r.qty?`\nOrder Quantity: ${r.qty}`:""}${r.price?`\nTarget Price: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nRequired Certifications: ${r.certs}`:""}${r.deadline?`\nQuotation Deadline: ${r.deadline}`:""}\n\nPlease provide:\n• Unit price (with cost breakdown: materials / production / packaging / freight)\n• MOQ and lead time\n• Payment terms${r.notes?`\n\nAdditional requirements:\n${r.notes}`:""}\n\nBest regards,\n[Your Name] | Sourcing Team | VinaSources\nEmail: [your@email.com] | Zalo: [number] | Date: ${today}`;
+    }
+    setTimeout(()=>{setEmail(subject+"\n\n"+body);setLoading(false);},300);
   };
-
-  if(loading)return<div style={{padding:"2rem",color:"#666",display:"flex",alignItems:"center",gap:12}}><div style={{width:20,height:20,border:"3px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span>Đang kết nối Google Sheets...</span><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
-
-  const ctx={sups,rfqs,upsS,delS,upsR,delR,orders,upsO,delO,setModal,toast2,canEdit,batchImport,saveSups};
-
+  useEffect(()=>{generate();},[]);
+  const copy=()=>{navigator.clipboard.writeText(email);setCopied(true);setTimeout(()=>setCopied(false),2000);};
   return(
-    <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
-      {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"10px 20px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500,boxShadow:"0 2px 12px rgba(0,0,0,0.15)"}}>{toast}</div>}
-      {saving&&<div style={{position:"fixed",bottom:14,right:14,background:"#185FA5",color:"#fff",padding:"7px 14px",borderRadius:6,fontSize:12,zIndex:9999}}>💾 Đang lưu...</div>}
-      {syncErr&&<div style={{background:"#FCEBEB",borderBottom:"1px solid #E24B4A",padding:"8px 1rem",fontSize:13,color:"#A32D2D",textAlign:"center"}}>⚠ Không kết nối được Google Sheets — kiểm tra lại Apps Script URL</div>}
-      {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
-      <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
-        <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
-          <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
-          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"orders",l:"Orders"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
-              {t.l}
-              {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
-              {t.id==="orders"&&orders.filter(o=>o.stage!=="closed").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#534AB7",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{orders.filter(o=>o.stage!=="closed").length}</span>}
-            </button>
-          ))}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1100,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{width:"100%",maxWidth:620,marginTop:"2rem",marginBottom:"2rem",background:"#fff",borderRadius:12,border:"1px solid #e5e5e5",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:15,fontWeight:600}}>✉ Email soạn thảo</span>
+          <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:600}}>{r.code}</span>
           <div style={{flex:1}}/>
-          {canEdit?(<>
-            <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
-            <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ</button>
-            <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
-            <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
-          </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
+          <button onClick={generate} disabled={loading} style={{fontSize:12,padding:"5px 12px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#555"}}>🔄 Soạn lại</button>
+          <button onClick={copy} disabled={!email} style={{fontSize:12,padding:"5px 14px",borderRadius:6,border:"none",background:copied?"#1D9E75":"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>{copied?"✓ Đã copy":"Copy"}</button>
+          <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa",lineHeight:1}}>×</button>
+        </div>
+        <div style={{padding:"14px 18px"}}>
+          {loading?<div style={{display:"flex",alignItems:"center",gap:10,padding:"2rem",color:"#aaa",justifyContent:"center"}}><div style={{width:18,height:18,border:"2px solid #534AB7",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span style={{fontSize:13}}>Đang soạn...</span><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>
+          :<textarea value={email} onChange={e=>setEmail(e.target.value)} style={{width:"100%",minHeight:340,border:"1px solid #e5e5e5",borderRadius:8,padding:"12px 14px",fontSize:13,lineHeight:1.7,resize:"vertical",fontFamily:"inherit",color:"#1a1a1a",boxSizing:"border-box"}}/>}
+          <div style={{fontSize:11,color:"#aaa",marginTop:6}}>✏️ Có thể chỉnh sửa trực tiếp trước khi copy</div>
         </div>
       </div>
-      <div style={{maxWidth:940,margin:"0 auto",padding:"1rem"}}>
-        {tab==="list"&&<SupList ctx={ctx}/>}
-        {tab==="rfq"&&<RFQList ctx={ctx}/>}
-        {tab==="orders"&&<OrderList ctx={ctx}/>}
-        {tab==="kraljic"&&<Kraljic ctx={ctx}/>}
-        {tab==="dash"&&<Dash ctx={ctx}/>}
-      </div>
-      {modal?.t==="order-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><OrderForm o={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="order-detail"&&<Modal onClose={()=>setModal(null)}><OrderDetail o={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
-      {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="rfq-assign"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQAssign r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="inq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><INQForm r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="inq-detail"&&<Modal onClose={()=>setModal(null)}><INQDetail r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="import-csv"&&canEdit&&<Modal onClose={()=>setModal(null)}><ImportCSV ctx={ctx}/></Modal>}
-      {modal?.t==="kraljic-edit"&&canEdit&&<Modal onClose={()=>setModal(null)}><KraljicEdit s={modal.d} ctx={ctx}/></Modal>}
     </div>
   );
 }
 
-function LoginBanner({onLogin}){
-  const [pw,setPw]=useState("");const [err,setErr]=useState(false);
-  const try_=()=>{if(pw===EDIT_PW){localStorage.setItem(AUTH_KEY,"1");onLogin();}else{setErr(true);setTimeout(()=>setErr(false),2000);}};
+// ── ORDER LIST ──
+function OrderList({ctx}){
+  const {orders,sups,rfqs,setModal,canEdit}=ctx;
+  const [fStage,setFStage]=useState("all");
+  const fl=(orders||[]).filter(o=>fStage==="all"||o.stage===fStage);
   return(
-    <div style={{background:"#FAEEDA",borderBottom:"1px solid #EF9F27",padding:"9px 1rem"}}>
-      <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        <span style={{fontSize:13,color:"#633806"}}>👁 Chế độ xem — Nhập mật khẩu để chỉnh sửa</span>
-        <div style={{display:"flex",gap:6,marginLeft:"auto",alignItems:"center"}}>
-          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&try_()} placeholder="Mật khẩu..." style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${err?"#E24B4A":"#EF9F27"}`,fontSize:13,width:160}}/>
-          <button onClick={try_} style={{padding:"5px 14px",borderRadius:6,border:"none",background:"#EF9F27",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>OK</button>
-          {err&&<span style={{fontSize:12,color:"#A32D2D",fontWeight:500}}>Sai mật khẩu</span>}
-        </div>
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:14,fontWeight:600}}>Orders</span>
+        <div style={{flex:1}}/>
+        <Sel val={fStage} onChange={setFStage} opts={[["all","Tất cả stage"],...ORDER_STAGES.map(s=>[s.id,s.icon+" "+s.label])]}/>
+        {canEdit&&<button onClick={()=>setModal({t:"order-form",d:newO()})} style={{...pBtn,fontSize:12}}>+ Order</button>}
+      </div>
+      {fl.length===0&&<Empty text="Chưa có order. Nhấn + Order để tạo."/>}
+      <div style={{display:"flex",flexDirection:"column",gap:7}}>
+        {fl.map(o=>{
+          const sup=(sups||[]).find(s=>s.id===o.supId);
+          const rfq=(rfqs||[]).find(r=>r.id===o.rfqId);
+          const st=ORDER_STAGES.find(s=>s.id===o.stage)||ORDER_STAGES[0];
+          const overdue=o.etd&&new Date(o.etd)<new Date()&&!["shipment","payment","closed"].includes(o.stage);
+          return(
+            <div key={o.id} onClick={()=>setModal({t:"order-detail",d:o})} style={{background:"#fff",border:`1px solid ${overdue?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"11px 14px",cursor:"pointer",display:"flex",gap:10,alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <div style={{fontSize:22,flexShrink:0}}>{st.icon}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,fontSize:13}}>{o.code}{sup?<span style={{fontWeight:400,color:"#777"}}> · {sup.name}</span>:""}</div>
+                <div style={{fontSize:12,color:"#777",marginTop:2}}>{rfq?rfq.desc:""}{o.poValue?` · ${o.currency} ${o.poValue}`:""}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}}>
+                <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
+                {o.etd&&<span style={{fontSize:11,color:overdue?"#E24B4A":"#aaa"}}>ETD {o.etd}</span>}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
+  );
+}
+
+// ── ORDER FORM ──
+function OrderForm({o,ctx}){
+  const {sups,rfqs,upsO,setModal}=ctx;
+  const [f,setF]=useState({...o});
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  return(
+    <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
+      <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.code?"Order: "+f.code:"Tạo Order mới"}</h2>
+      <Sec title="Thông tin cơ bản">
+        <Rw l="Mã PO"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Gắn với RFQ"><select value={f.rfqId||""} onChange={e=>set("rfqId",e.target.value)} style={iSt}><option value="">-- Chọn RFQ --</option>{(rfqs||[]).filter(r=>r.type!=="inq").map(r=><option key={r.id} value={r.id}>{r.code} — {r.desc?.slice(0,40)}</option>)}</select></Rw>
+        <Rw l="Supplier"><select value={f.supId||""} onChange={e=>set("supId",e.target.value)} style={iSt}><option value="">-- Chọn Supplier --</option>{(sups||[]).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></Rw>
+        <Rw l="Ngày PO"><input type="date" value={f.poDate} onChange={e=>set("poDate",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Giá trị PO"><div style={{display:"flex",gap:6}}><select value={f.currency} onChange={e=>set("currency",e.target.value)} style={{...iSt,width:80}}><option>USD</option><option>VND</option><option>EUR</option></select><input value={f.poValue} onChange={e=>set("poValue",e.target.value)} placeholder="10,000" style={iSt}/></div></Rw>
+        <Rw l="Stage"><select value={f.stage} onChange={e=>set("stage",e.target.value)} style={iSt}>{ORDER_STAGES.map(s=><option key={s.id} value={s.id}>{s.icon} {s.label}</option>)}</select></Rw>
+      </Sec>
+      <Sec title="Production">
+        <Rw l="Bắt đầu SX"><input type="date" value={f.prodStart||""} onChange={e=>set("prodStart",e.target.value)} style={iSt}/></Rw>
+        <Rw l="ETD (dự kiến)"><input type="date" value={f.etd||""} onChange={e=>set("etd",e.target.value)} style={iSt}/></Rw>
+      </Sec>
+      <Sec title="QC">
+        <Rw l="Loại QC"><select value={f.qcType||""} onChange={e=>set("qcType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{QC_TYPES.map(t=><option key={t}>{t}</option>)}</select></Rw>
+        <Rw l="Kết quả"><select value={f.qcResult||""} onChange={e=>set("qcResult",e.target.value)} style={iSt}><option value="">-- Chưa có --</option>{QC_RESULTS.map(r=><option key={r}>{r}</option>)}</select></Rw>
+        <Rw l="Ngày QC"><input type="date" value={f.qcDate||""} onChange={e=>set("qcDate",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Ghi chú QC"><textarea value={f.qcNotes||""} onChange={e=>set("qcNotes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+      </Sec>
+      <Sec title="Shipment">
+        <Rw l="Booking No."><input value={f.booking||""} onChange={e=>set("booking",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Cảng xuất"><input value={f.portLoad||""} onChange={e=>set("portLoad",e.target.value)} placeholder="HCMC / Hai Phong" style={iSt}/></Rw>
+        <Rw l="Cảng đến"><input value={f.portDest||""} onChange={e=>set("portDest",e.target.value)} placeholder="Long Beach, US" style={iSt}/></Rw>
+        <Rw l="ETA"><input type="date" value={f.eta||""} onChange={e=>set("eta",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Tracking No."><input value={f.trackingNo||""} onChange={e=>set("trackingNo",e.target.value)} style={iSt}/></Rw>
+      </Sec>
+      <Sec title="Payment">
+        <Rw l="Deposit %"><input type="number" value={f.depositPct} onChange={e=>set("depositPct",+e.target.value)} min={0} max={100} style={iSt}/></Rw>
+        <Rw l="Deposit đã TT"><div style={{display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" checked={!!f.depositPaid} onChange={e=>set("depositPaid",e.target.checked)} style={{accentColor:"#1D9E75"}}/>{f.depositPaid&&<input type="date" value={f.depositDate||""} onChange={e=>set("depositDate",e.target.value)} style={{...iSt,width:"auto"}}/>}</div></Rw>
+        <Rw l="Balance đã TT"><div style={{display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" checked={!!f.balancePaid} onChange={e=>set("balancePaid",e.target.checked)} style={{accentColor:"#1D9E75"}}/>{f.balancePaid&&<input type="date" value={f.balanceDate||""} onChange={e=>set("balanceDate",e.target.value)} style={{...iSt,width:"auto"}}/>}</div></Rw>
+      </Sec>
+      {f.stage==="closed"&&<Sec title="Đánh giá Supplier">
+        <Rw l="Overall Rating"><div style={{display:"flex",gap:6}}>{[1,2,3,4,5].map(n=><button key={n} onClick={()=>set("rating",n)} style={{fontSize:22,background:"none",border:"none",cursor:"pointer",opacity:f.rating>=n?1:0.25}}>⭐</button>)}</div></Rw>
+        <Rw l="On-time rate %"><input type="number" value={f.onTimeRate||""} onChange={e=>set("onTimeRate",e.target.value)} min={0} max={100} placeholder="85" style={iSt}/></Rw>
+        <Rw l="Quality pass %"><input type="number" value={f.qualityRate||""} onChange={e=>set("qualityRate",e.target.value)} min={0} max={100} placeholder="98" style={iSt}/></Rw>
+        <Rw l="Nhận xét"><textarea value={f.perfNotes||""} onChange={e=>set("perfNotes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+      </Sec>}
+      <Sec title="Ghi chú nội bộ"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsO(f)} style={pBtn}>Lưu Order</button></div>
+    </Card>
+  );
+}
+
+// ── ORDER DETAIL ──
+function OrderDetail({o,ctx}){
+  const {sups,rfqs,upsO,delO,setModal,canEdit}=ctx;
+  const sup=(sups||[]).find(s=>s.id===o.supId);
+  const rfq=(rfqs||[]).find(r=>r.id===o.rfqId);
+  const st=ORDER_STAGES.find(s=>s.id===o.stage)||ORDER_STAGES[0];
+  const stageIdx=ORDER_STAGES.findIndex(s=>s.id===o.stage);
+  const qcColor=o.qcResult==="Pass"?"#1D9E75":o.qcResult==="Fail"?"#E24B4A":"#854F0B";
+  const qcBg=o.qcResult==="Pass"?"#EAF3DE":o.qcResult==="Fail"?"#FCEBEB":"#FAEEDA";
+  const numVal=o.poValue?parseFloat(o.poValue.replace(/,/g,"")):0;
+  const depositAmt=numVal?`${o.currency} ${(numVal*o.depositPct/100).toLocaleString()}`:"—";
+  const balanceAmt=numVal?`${o.currency} ${(numVal*(100-o.depositPct)/100).toLocaleString()}`:"—";
+  return(
+    <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:12,color:"#aaa",marginBottom:2}}>{rfq?rfq.code+" · ":""}{sup?.name||"—"}</div>
+          <h2 style={{margin:0,fontSize:17,fontWeight:700}}>{o.code}</h2>
+          {rfq&&<div style={{fontSize:13,color:"#555",marginTop:3}}>{rfq.desc}</div>}
+        </div>
+        <span style={{fontSize:13,padding:"5px 14px",borderRadius:6,background:st.bg,color:st.c,fontWeight:700}}>{st.icon} {st.label}</span>
+      </div>
+      {/* Progress */}
+      <div style={{display:"flex",gap:0,marginBottom:16,borderRadius:8,overflow:"hidden",border:"1px solid #eee"}}>
+        {ORDER_STAGES.map((s,i)=>(
+          <div key={s.id} title={s.label} style={{flex:1,padding:"7px 4px",textAlign:"center",fontSize:13,background:i<=stageIdx?s.bg:"#fafafa",color:i<=stageIdx?s.c:"#ccc",borderRight:i<ORDER_STAGES.length-1?"1px solid #eee":"none"}}>{s.icon}</div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
+        <IB title="Thông tin PO"><IR l="Ngày PO" v={o.poDate}/><IR l="Giá trị" v={o.poValue?`${o.currency} ${o.poValue}`:"—"}/><IR l="Bắt đầu SX" v={o.prodStart}/><IR l="ETD" v={o.etd}/><IR l="ETA" v={o.eta}/></IB>
+        <IB title="Payment">
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",borderBottom:"1px solid #f5f5f5"}}>
+            <span style={{color:"#777"}}>Deposit ({o.depositPct}%)</span>
+            <div style={{textAlign:"right"}}><div style={{fontWeight:600}}>{depositAmt}</div><div style={{fontSize:11,color:o.depositPaid?"#1D9E75":"#E24B4A",fontWeight:600}}>{o.depositPaid?`✓ ${o.depositDate||""}`:"⏳ Chưa TT"}</div></div>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0"}}>
+            <span style={{color:"#777"}}>Balance ({100-o.depositPct}%)</span>
+            <div style={{textAlign:"right"}}><div style={{fontWeight:600}}>{balanceAmt}</div><div style={{fontSize:11,color:o.balancePaid?"#1D9E75":"#E24B4A",fontWeight:600}}>{o.balancePaid?`✓ ${o.balanceDate||""}`:"⏳ Chưa TT"}</div></div>
+          </div>
+        </IB>
+      </div>
+      {(o.qcType||o.qcResult)&&<div style={{background:o.qcResult?qcBg:"#f8f8f8",border:`1px solid ${o.qcResult?qcColor:"#eee"}`,borderRadius:8,padding:"10px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>🔍 QC</div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13}}>
+          {o.qcType&&<span><span style={{color:"#777"}}>Loại: </span>{o.qcType}</span>}
+          {o.qcDate&&<span><span style={{color:"#777"}}>Ngày: </span>{o.qcDate}</span>}
+          {o.qcResult&&<span style={{fontWeight:700,color:qcColor}}>{o.qcResult==="Pass"?"✅":o.qcResult==="Fail"?"❌":"⚠"} {o.qcResult}</span>}
+        </div>
+        {o.qcNotes&&<div style={{fontSize:12,color:"#555",marginTop:6}}>{o.qcNotes}</div>}
+      </div>}
+      {(o.booking||o.portLoad||o.trackingNo)&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>🚢 Shipment</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:13}}>
+          {o.booking&&<div><span style={{color:"#777"}}>Booking: </span>{o.booking}</div>}
+          {o.portLoad&&<div><span style={{color:"#777"}}>Cảng xuất: </span>{o.portLoad}</div>}
+          {o.portDest&&<div><span style={{color:"#777"}}>Cảng đến: </span>{o.portDest}</div>}
+          {o.trackingNo&&<div><span style={{color:"#777"}}>Tracking: </span>{o.trackingNo}</div>}
+        </div>
+      </div>}
+      {o.stage==="closed"&&o.rating>0&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#0F6E56",textTransform:"uppercase",marginBottom:6}}>Đánh giá Supplier</div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{fontSize:18}}>{[1,2,3,4,5].map(n=><span key={n} style={{opacity:o.rating>=n?1:0.2}}>⭐</span>)}</div>
+          {o.onTimeRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>On-time: </span><b>{o.onTimeRate}%</b></span>}
+          {o.qualityRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>Quality: </span><b>{o.qualityRate}%</b></span>}
+        </div>
+        {o.perfNotes&&<div style={{fontSize:12,color:"#555",marginTop:6}}>{o.perfNotes}</div>}
+      </div>}
+      {o.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú</div><div style={{fontSize:13,color:"#555"}}>{o.notes}</div></div>}
+      {canEdit&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,color:"#aaa",marginBottom:8,fontWeight:600,textTransform:"uppercase"}}>Cập nhật nhanh stage</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {ORDER_STAGES.map(s=><button key={s.id} onClick={()=>upsO({...o,stage:s.id})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:`1px solid ${o.stage===s.id?s.c:"#ddd"}`,background:o.stage===s.id?s.bg:"#fff",color:o.stage===s.id?s.c:"#777",cursor:"pointer",fontWeight:o.stage===s.id?700:400}}>{s.icon} {s.label}</button>)}
+        </div>
+      </div>}
+      <div style={{display:"flex",gap:8}}>
+        {canEdit&&<button onClick={()=>setModal({t:"order-form",d:o})} style={gBtn}>✏️ Sửa</button>}
+        {canEdit&&<button onClick={()=>delO(o.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
+      </div>
+    </Card>
+  );
+}
+
+// ── VSERF ──
+function VSERFChecklist({supplier,ctx}){
+  const {upsS,setModal,toast2}=ctx;
+  const [answers,setAnswers]=useState(()=>{const init={};VCOLS.forEach((c,i)=>{const v=supplier.vserf[c.id]||0;if(v>0)init[i+1]={pts:v,text:vserfCriteria[i]?.opts[v]?.text||""};});return init;});
+  const [hints,setHints]=useState({});const [saved,setSaved]=useState(false);
+  const total=Object.values(answers).reduce((s,v)=>s+v.pts,0);
+  const answered=Object.keys(answers).length;const complete=answered===9;
+  const tier=complete?getTier(total):null;
+  const selectOpt=(cid,opt)=>{setSaved(false);setAnswers(p=>({...p,[cid]:opt}));};
+  const handleSave=async()=>{if(!complete)return;const vserf={};vserfCriteria.forEach((c,i)=>{vserf[VCOLS[i].id]=answers[c.id]?.pts||0;});await upsS({...supplier,vserf});setSaved(true);toast2&&toast2("Đã lưu VSERF");};
+  return(
+    <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
+      <div style={{marginBottom:14}}><h2 style={{fontSize:16,fontWeight:600,margin:0}}>📋 VSERF — {supplier.name}</h2><div style={{fontSize:12,color:"#777",marginTop:4}}>Tổng tối đa 45 điểm</div></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>{[{l:"Tổng điểm",v:`${total}/45`},{l:"Đã trả lời",v:`${answered}/9`},{l:"TB/tiêu chí",v:answered>0?(total/answered).toFixed(1):"—"}].map(m=><div key={m.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}><div style={{fontSize:11,color:"#aaa",marginBottom:3}}>{m.l}</div><div style={{fontSize:18,fontWeight:700}}>{m.v}</div></div>)}</div>
+      <div style={{height:8,background:"#f0f0f0",borderRadius:4,marginBottom:14}}><div style={{height:8,borderRadius:4,background:"#1D9E75",width:`${Math.round(total/45*100)}%`,transition:"width .3s"}}/></div>
+      {tier&&<div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:8,background:tier.bg,border:`1.5px solid ${tier.c}`,marginBottom:14}}><span style={{fontSize:22}}>{tier.badge}</span><div><div style={{fontSize:14,fontWeight:700,color:tier.c}}>{tier.label}</div><div style={{fontSize:12,color:"#555",marginTop:2}}>{tier.action}</div></div><div style={{marginLeft:"auto",fontSize:24,fontWeight:800,color:tier.c}}>{total}</div></div>}
+      {vserfCriteria.map(cr=>{
+        const sel=answers[cr.id];const warn=cr.id<=2&&sel?.pts<3;
+        return(
+          <div key={cr.id} style={{border:`1px solid ${warn?"#E24B4A":"#eee"}`,borderRadius:10,padding:"12px 14px",marginBottom:10,background:sel?"#fafffe":"#fff"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:8}}>
+              <span style={{fontSize:11,fontWeight:700,minWidth:26,height:26,borderRadius:"50%",background:sel?"#E1F5EE":"#f3f4f6",color:sel?"#0F6E56":"#6b7280",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{String(cr.id).padStart(2,"0")}</span>
+              <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600}}>{cr.icon} {cr.label}{sel&&<span style={{marginLeft:8,fontSize:11,fontWeight:600,color:"#0F6E56",background:"#E1F5EE",padding:"1px 8px",borderRadius:20}}>{sel.pts} điểm</span>}</div><div style={{fontSize:12,color:"#777",marginTop:2}}>{cr.desc}</div></div>
+              <button onClick={()=>setHints(p=>({...p,[cr.id]:!p[cr.id]}))} style={{fontSize:11,color:"#9ca3af",background:"none",border:"none",cursor:"pointer",flexShrink:0}}>💡</button>
+            </div>
+            {hints[cr.id]&&<div style={{fontSize:12,color:"#374151",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:6,padding:"8px 10px",marginBottom:8}}>{cr.hint}</div>}
+            {warn&&<div style={{fontSize:11,color:"#A32D2D",marginBottom:6}}>⚠ Tiêu chí bắt buộc — dưới 3 điểm → Not Qualified</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              {cr.opts.map((opt,i)=>{const isSel=sel?.pts===opt.pts&&sel?.text===opt.text;return(
+                <label key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",borderRadius:7,cursor:"pointer",border:isSel?"1.5px solid #1D9E75":"1px solid #eee",background:isSel?"#E1F5EE":"#fff"}}>
+                  <input type="radio" name={`vserf_${cr.id}`} checked={isSel} onChange={()=>selectOpt(cr.id,opt)} style={{marginTop:3,accentColor:"#1D9E75",flexShrink:0}}/>
+                  <span style={{fontSize:13,lineHeight:1.45,flex:1}}>{opt.text}</span>
+                  <span style={{fontSize:11,fontWeight:600,minWidth:44,textAlign:"right",flexShrink:0,color:isSel?"#0F6E56":"#aaa"}}>{opt.pts} điểm</span>
+                </label>
+              );})}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{display:"flex",gap:8,marginTop:8,position:"sticky",bottom:0,background:"#fff",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        <button onClick={handleSave} disabled={!complete||saved} style={{flex:1,padding:"9px 0",borderRadius:8,fontWeight:600,fontSize:13,cursor:complete&&!saved?"pointer":"not-allowed",background:saved?"#E1F5EE":complete?"#1D9E75":"#e5e7eb",color:saved?"#0F6E56":complete?"#fff":"#aaa",border:"none"}}>{saved?"✓ Đã lưu":"Lưu kết quả VSERF"}</button>
+        <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
+      </div>
+    </Card>
+  );
+}
+
+function Brief({s}){
+  const ti=calcTier(s.vserf);const today=new Date().toLocaleDateString("vi-VN");
+  return(
+    <div>
+      <div style={{display:"flex",marginBottom:10}}><button onClick={()=>window.print()} style={{...gBtn,marginLeft:"auto"}}>🖨 In / PDF</button></div>
+      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:12,padding:"2rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2.5px solid #1D9E75",paddingBottom:14,marginBottom:16}}>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#1D9E75",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>VinaSources — Supplier Brief</div><h1 style={{margin:0,fontSize:22,fontWeight:700}}>{s.name}</h1><div style={{fontSize:12,color:"#777",marginTop:4}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:17,fontWeight:700,padding:"6px 14px",borderRadius:7,background:ti.bg,color:ti.c}}>{ti.label}</div><div style={{fontSize:11,color:ti.c,marginTop:4}}>{ti.t}/45 VSERF</div><div style={{fontSize:10,color:"#bbb",marginTop:3}}>{today}</div></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.7}}>{s.products||"—"}</div></div>
+          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Năng lực thương mại</div>
+            <div style={{fontSize:12,lineHeight:2,color:"#333"}}>
+              {s.moq&&<div><span style={{color:"#aaa"}}>MOQ: </span>{s.moq}</div>}
+              {s.capacity&&<div><span style={{color:"#aaa"}}>Công suất: </span>{s.capacity}</div>}
+              {s.priceRange&&<div><span style={{color:"#aaa"}}>Price range: </span>{s.priceRange}</div>}
+              {s.leadTime&&<div><span style={{color:"#aaa"}}>Lead time: </span>{s.leadTime}</div>}
+              {s.incoterm&&<div><span style={{color:"#aaa"}}>Incoterm: </span>{s.incoterm}</div>}
+              {s.paymentMethod&&<div><span style={{color:"#aaa"}}>Thanh toán: </span>{s.paymentMethod}</div>}
+              {s.certs&&<div><span style={{color:"#aaa"}}>Chứng nhận: </span>{s.certs}</div>}
+            </div>
+          </div>
+        </div>
+        {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",marginBottom:5}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
+        <div style={{background:"#F0F9F5",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#0F6E56",textTransform:"uppercase",marginBottom:7}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Tên</div><div style={{fontWeight:600}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Zalo/SĐT</div><div style={{fontWeight:600}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Email</div><div style={{fontWeight:600,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>{VCOLS.map(c=>{const v=s.vserf[c.id]||0;return(<div key={c.id} style={{background:"#f8f8f8",borderRadius:7,padding:"8px 10px"}}><div style={{fontSize:9,color:"#aaa",marginBottom:4}}>{c.l}</div><div style={{height:5,borderRadius:3,background:"#e5e5e5",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A",borderRadius:3}}/></div><div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:3}}>{v}/5</div></div>);})}</div>
+        <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid #f0f0f0",fontSize:10,color:"#ccc",display:"flex",justifyContent:"space-between"}}><span>VinaSources Supply Chain · Confidential</span><span>Xuất {today}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function ImportCSV({ctx}){
+  const {sups,batchImport,setModal}=ctx;
+  const [rows,setRows]=useState([]);const [err,setErr]=useState("");const [step,setStep]=useState(1);const [sel,setSel]=useState({});const [drag,setDrag]=useState(false);
+  const fileRef=useRef();
+  const processText=text=>{
+    const {error,rows:parsed}=parseCSVFile(text);
+    if(error){setErr(error);return;}
+    setErr("");const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
+    setRows(parsed);setSel(initSel);setStep(2);
+  };
+  const processFile=f=>{
+    if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      let t=ev.target.result;
+      const {error,rows:parsed}=parseCSVFile(t);
+      if(error){
+        const r2=new FileReader();
+        r2.onload=ev2=>{processText(ev2.target.result);};
+        r2.onerror=()=>setErr("Không đọc được file.");
+        r2.readAsText(f,"windows-1252");return;
+      }
+      setErr("");const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
+      setRows(parsed);setSel(initSel);setStep(2);
+    };
+    r.onerror=()=>{const r2=new FileReader();r2.onload=ev2=>{processText(ev2.target.result);};r2.onerror=()=>setErr("Không đọc được file.");r2.readAsText(f,"windows-1252");};
+    r.readAsText(f,"UTF-8");
+  };
+  const doImport=()=>{const toImport=rows.filter((_,i)=>sel[i]&&rows[i]._valid);if(!toImport.length)return;batchImport(toImport);};
+  const validCount=rows.filter((_,i)=>sel[i]&&rows[i]._valid).length;
+  const dupCount=rows.filter(r=>sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase())).length;
+  return(
+    <Card>
+      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Import Supplier từ CSV</h2>
+      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file hoặc paste nội dung CSV</div>
+      {step===1&&(<div>
+        <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+          <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Bước 1 — Tải template CSV</div>
+          <div style={{fontSize:12,color:"#555",marginBottom:10}}><b>Cột bắt buộc:</b> Tên · Ngành · Sản phẩm</div>
+          <button onClick={downloadTemplate} style={{...pBtn,background:"#3B6D11",fontSize:12}}>⬇ Download Template CSV</button>
+        </div>
+        <div onDrop={e=>{e.preventDefault();setDrag(false);if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);}} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onClick={()=>fileRef.current.click()} style={{border:`2px dashed ${drag?"#1D9E75":"#ddd"}`,borderRadius:10,padding:"1.5rem",textAlign:"center",cursor:"pointer",background:drag?"#F0F9F5":"#fafafa",marginBottom:10}}>
+          <div style={{fontSize:24,marginBottom:6}}>{drag?"📥":"📂"}</div>
+          <div style={{fontSize:13,fontWeight:600,color:drag?"#1D9E75":"#555"}}>{drag?"Thả file vào đây":"Click để chọn file CSV"}</div>
+          <div style={{fontSize:11,color:"#aaa"}}>hoặc kéo thả · hỗ trợ UTF-8 và Windows encoding</div>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={e=>{if(e.target.files[0])processFile(e.target.files[0]);}} style={{display:"none"}}/>
+        </div>
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginBottom:6}}>— hoặc paste nội dung CSV trực tiếp —</div>
+          <textarea onChange={e=>{if(e.target.value.trim())processText(e.target.value);}} placeholder={"Tên,Ngành,Sản phẩm,...\nCông ty A,Footwear,Giày da,..."} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box",fontSize:11,fontFamily:"monospace"}}/>
+        </div>
+        {err&&<div style={{padding:"8px 12px",background:"#FCEBEB",borderRadius:6,fontSize:13,color:"#A32D2D"}}>{err}</div>}
+      </div>)}
+      {step===2&&(<div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+          {[{l:"Tổng dòng",v:rows.length,c:"#185FA5"},{l:"Sẽ import",v:validCount,c:"#1D9E75"},{l:"Trùng (cập nhật)",v:dupCount,c:"#854F0B"}].map(x=><div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>{x.l}</div></div>)}
+        </div>
+        <div style={{maxHeight:300,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:14}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+            <thead style={{background:"#f8f8f8",position:"sticky",top:0}}>
+              <tr><th style={{padding:"8px 10px",width:30,borderBottom:"1px solid #eee"}}><input type="checkbox" checked={rows.length>0&&rows.every((_,i)=>sel[i])} onChange={e=>{const s={};rows.forEach((_,i)=>s[i]=e.target.checked);setSel(s);}}/></th>{["#","Tên","Ngành","Sản phẩm","Status"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((r,i)=>{const isDup=sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase());return(
+                <tr key={i} style={{background:sel[i]?"#f0faf6":"#fff",borderBottom:"1px solid #f5f5f5"}}>
+                  <td style={{padding:"7px 10px"}}><input type="checkbox" checked={!!sel[i]} onChange={e=>setSel(p=>({...p,[i]:e.target.checked}))}/></td>
+                  <td style={{padding:"7px 10px",color:"#aaa"}}>{r._row}</td>
+                  <td style={{padding:"7px 10px",fontWeight:500}}>{r.name||<span style={{color:"#E24B4A"}}>⚠ Trống</span>}</td>
+                  <td style={{padding:"7px 10px",color:"#555"}}>{r.industry||"—"}</td>
+                  <td style={{padding:"7px 10px",color:"#555",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.products||"—"}</td>
+                  <td style={{padding:"7px 10px"}}>{!r._valid?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>Thiếu tên</span>:isDup?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>Cập nhật</span>:<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#EAF3DE",color:"#3B6D11",fontWeight:600}}>Mới</span>}</td>
+                </tr>
+              );})}
+            </tbody>
+          </table>
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+          <button onClick={()=>{setStep(1);setRows([]);}} style={gBtn}>← Upload lại</button>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
+            <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5}}>⬆ Import {validCount} supplier</button>
+          </div>
+        </div>
+      </div>)}
+    </Card>
   );
 }
 
@@ -371,17 +545,8 @@ function SupList({ctx}){
   const {sups,setModal,canEdit}=ctx;
   const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
   const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))];
-  const fl=sups.filter(s=>{
-    const ti=calcTier(s.vserf);
-    return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
-  });
-  const csv=()=>{
-    try{
-      const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.partnerType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(String(v||"")).replace(/"/g,'""')}"`).join(",");});
-      const blob=new Blob(["\uFEFF"+[CSV_COLS.join(","),...rows].join("\r\n")],{type:"text/csv;charset=utf-8"});
-      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
-    }catch(e){alert("Lỗi CSV: "+e.message);}
-  };
+  const fl=sups.filter(s=>{const ti=calcTier(s.vserf);return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));});
+  const csv=()=>{try{const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.partnerType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(String(v||"")).replace(/"/g,'""')}"`).join(",");});const blob=new Blob(["\uFEFF"+[CSV_COLS.join(","),...rows].join("\r\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);}catch(e){alert("Lỗi CSV: "+e.message);}};
   return(
     <div>
       <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
@@ -392,26 +557,20 @@ function SupList({ctx}){
         <button onClick={csv} style={gBtn}>⬇ CSV</button>
         {canEdit&&<button onClick={()=>setModal({t:"import-csv"})} style={{...gBtn,color:"#185FA5",borderColor:"#185FA5"}}>⬆ Import</button>}
       </div>
-      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>{fl.length} supplier · dữ liệu từ Google Sheets</div>
+      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>{fl.length} supplier</div>
       {fl.length===0&&<Empty text="Chưa có supplier. Nhấn + Supplier để thêm."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
-        {fl.map(s=>{
-          const ti=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);
-          return(
-            <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div>
-                <div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
-              </div>
-              {s.partnerType&&s.partnerType!=="Chưa xác định"&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":"#E6F1FB",color:s.partnerType==="Đối tác trực tiếp"?"#3B6D11":"#185FA5",fontWeight:600,flexShrink:0}}>{s.partnerType==="Đối tác trực tiếp"?"Trực tiếp":"Nền tảng"}</span>}
-              {s.source==="import"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#f0f0f0",color:"#888",fontWeight:600,flexShrink:0}}>CSV</span>}
-              <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-              <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
-              <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
-            </div>
-          );
-        })}
+        {fl.map(s=>{const ti=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);return(
+          <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
+            <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div><div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div></div>
+            {s.partnerType&&s.partnerType!=="Chưa xác định"&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":"#E6F1FB",color:s.partnerType==="Đối tác trực tiếp"?"#3B6D11":"#185FA5",fontWeight:600,flexShrink:0}}>{s.partnerType==="Đối tác trực tiếp"?"Trực tiếp":"Nền tảng"}</span>}
+            {s.source==="import"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#f0f0f0",color:"#888",fontWeight:600,flexShrink:0}}>CSV</span>}
+            <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+            <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
+            <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
+          </div>
+        );})}
       </div>
     </div>
   );
@@ -432,26 +591,26 @@ function SupDetail({s,ctx}){
           <span style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:ptBg,color:ptColor,fontWeight:600}}>{s.partnerType||"Chưa xác định"}</span>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
-        <IB title="Thông tin cơ bản"><IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/><IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/><IR l="Website" v={s.website}/><IR l="Kênh" v={s.channel}/><IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/></IB>
-        <IB title="Đầu mối liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
-        <IB title="Năng lực & thương mại"><IR l="Chứng nhận" v={s.certs}/><IR l="Công suất/tháng" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Mô hình SX" v={s.serviceModel}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
-        <IB title="VSERF (9 trụ cột)">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
-      </div>
-      {perf&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+      {perf&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <div style={{fontSize:12,fontWeight:600,color:"#0F6E56",marginBottom:6}}>📦 Supplier Performance ({perf.orders} orders)</div>
-        <div style={{display:"flex",gap:20,flexWrap:"wrap",fontSize:13}}>
-          <div><div style={{fontSize:18}}>{[1,2,3,4,5].map(n=><span key={n} style={{opacity:perf.rating>=n?1:0.2}}>⭐</span>)}</div><div style={{fontSize:11,color:"#777"}}>Overall {perf.rating}/5</div></div>
+        <div style={{display:"flex",gap:20,flexWrap:"wrap",fontSize:13,alignItems:"center"}}>
+          <div><div style={{fontSize:16}}>{[1,2,3,4,5].map(n=><span key={n} style={{opacity:perf.rating>=n?1:0.2}}>⭐</span>)}</div><div style={{fontSize:11,color:"#777"}}>Overall {perf.rating}/5</div></div>
           {perf.onTime!=null&&<div><div style={{fontSize:18,fontWeight:700,color:perf.onTime>=80?"#1D9E75":"#E24B4A"}}>{perf.onTime}%</div><div style={{fontSize:11,color:"#777"}}>On-time</div></div>}
           {perf.quality!=null&&<div><div style={{fontSize:18,fontWeight:700,color:perf.quality>=95?"#1D9E75":"#854F0B"}}>{perf.quality}%</div><div style={{fontSize:11,color:"#777"}}>Quality pass</div></div>}
         </div>
       </div>}
-      {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
+        <IB title="Thông tin cơ bản"><IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/><IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/><IR l="Website" v={s.website}/><IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/></IB>
+        <IB title="Liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
+        <IB title="Năng lực"><IR l="Chứng nhận" v={s.certs}/><IR l="Công suất" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
+        <IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
+      </div>
+      {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         {canEdit&&<button onClick={()=>setModal({t:"sup-form",d:s})} style={gBtn}>Sửa</button>}
         {canEdit&&<button onClick={()=>setModal({t:"vserf",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>📋 Chấm VSERF</button>}
-        <button onClick={()=>setModal({t:"brief",d:s})} style={{padding:"7px 14px",borderRadius:6,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>Xuất Brief</button>
+        <button onClick={()=>setModal({t:"brief",d:s})} style={{...pBtn,background:"#185FA5"}}>Xuất Brief</button>
         {canEdit&&<button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
       </div>
     </Card>
@@ -459,9 +618,7 @@ function SupDetail({s,ctx}){
 }
 
 function SupForm({s,ctx}){
-  const {upsS,setModal}=ctx;
-  const [f,setF]=useState({...s});
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const {upsS,setModal}=ctx;const [f,setF]=useState({...s});const set=(k,v)=>setF(p=>({...p,[k]:v}));
   return(
     <Card>
       <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
@@ -471,322 +628,34 @@ function SupForm({s,ctx}){
         <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="HT hợp tác VNS"><select value={f.partnerType||"Chưa xác định"} onChange={e=>set("partnerType",e.target.value)} style={{...iSt,borderColor:f.partnerType==="Đối tác trực tiếp"?"#1D9E75":f.partnerType==="Đối tác nền tảng"?"#185FA5":"#ddd"}}>{PARTNER_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Ngành hàng"><select value={f.industry||""} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
-        <Rw l="Sản phẩm chủ lực *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="Áo thun cotton, quần kaki export" style={iSt}/></Rw>
-        <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} placeholder="VD: 2010" style={iSt}/></Rw>
-        <Rw l="Tỉnh / Thành phố"><select value={f.province||""} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
+        <Rw l="Sản phẩm *"><input value={f.products} onChange={e=>set("products",e.target.value)} placeholder="Áo thun cotton" style={iSt}/></Rw>
+        <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} placeholder="2010" style={iSt}/></Rw>
+        <Rw l="Tỉnh / TP"><select value={f.province||""} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
         <Rw l="Website"><input value={f.website||""} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/></Rw>
         <Rw l="Kênh tìm kiếm"><select value={f.channel||""} onChange={e=>set("channel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{CHANNELS.map(c=><option key={c}>{c}</option>)}</select></Rw>
       </Sec>
-      <Sec title="Đầu mối liên hệ">
-        <Rw l="Họ tên"><input value={f.contactName||""} onChange={e=>set("contactName",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Zalo / SĐT ★"><input value={f.zalo||""} onChange={e=>set("zalo",e.target.value)} placeholder="0901 234 567" style={iSt}/></Rw>
-        <Rw l="Email"><input value={f.email||""} onChange={e=>set("email",e.target.value)} style={iSt}/></Rw>
-      </Sec>
-      <Sec title="Năng lực & thương mại">
-        <Rw l="Chứng nhận"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="ISO 9001, BSCI, WRAP..." style={iSt}/></Rw>
-        <Rw l="Công suất / tháng"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} placeholder="50,000 pcs/tháng" style={iSt}/></Rw>
+      <Sec title="Liên hệ"><Rw l="Họ tên"><input value={f.contactName||""} onChange={e=>set("contactName",e.target.value)} style={iSt}/></Rw><Rw l="Zalo / SĐT"><input value={f.zalo||""} onChange={e=>set("zalo",e.target.value)} placeholder="0901 234 567" style={iSt}/></Rw><Rw l="Email"><input value={f.email||""} onChange={e=>set("email",e.target.value)} style={iSt}/></Rw></Sec>
+      <Sec title="Năng lực">
+        <Rw l="Chứng nhận"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="ISO 9001, BSCI..." style={iSt}/></Rw>
+        <Rw l="Công suất / tháng"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} placeholder="50,000 pcs" style={iSt}/></Rw>
         <Rw l="MOQ"><input value={f.moq||""} onChange={e=>set("moq",e.target.value)} placeholder="500 pcs/SKU" style={iSt}/></Rw>
         <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} placeholder="FOB $3–5/pcs" style={iSt}/></Rw>
         <Rw l="Lead time"><input value={f.leadTime||""} onChange={e=>set("leadTime",e.target.value)} placeholder="30–45 ngày" style={iSt}/></Rw>
-        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF, EXW" style={iSt}/></Rw>
-        <Rw l="Mô hình SX"><input value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} placeholder="OEM + ODM, CMT..." style={iSt}/></Rw>
-        <Rw l="Thanh toán"><input value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} placeholder="T/T 30%+70%, L/C..." style={iSt}/></Rw>
+        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB, CIF" style={iSt}/></Rw>
+        <Rw l="Mô hình SX"><input value={f.serviceModel||""} onChange={e=>set("serviceModel",e.target.value)} placeholder="OEM + ODM" style={iSt}/></Rw>
+        <Rw l="Thanh toán"><input value={f.paymentMethod||""} onChange={e=>set("paymentMethod",e.target.value)} placeholder="T/T 30%+70%" style={iSt}/></Rw>
       </Sec>
-      <Sec title="Lưu ý đặc biệt về sản phẩm">
-        <textarea value={f.specialNotes||""} onChange={e=>set("specialNotes",e.target.value)} placeholder="Chỉ làm cotton 100%..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/>
-      </Sec>
-      <Sec title="Pipeline & nội bộ">
-        <Rw l="Stage"><select value={f.stage} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
-        <Rw l="Ghi chú nội bộ"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-      </Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-        <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-        <button onClick={()=>upsS(f)} style={pBtn}>Lưu</button>
-      </div>
-    </Card>
-  );
-}
-
-function VSERFChecklist({supplier,ctx}){
-  const {upsS,setModal,toast2}=ctx;
-  const [answers,setAnswers]=useState(()=>{
-    const init={};
-    VCOLS.forEach((c,i)=>{
-      const v=supplier.vserf[c.id]||0;
-      if(v>0)init[i+1]={pts:v,text:vserfCriteria[i]?.opts[v]?.text||""};
-    });
-    return init;
-  });
-  const [hints,setHints]=useState({});
-  const [saved,setSaved]=useState(false);
-
-  const total=Object.values(answers).reduce((s,v)=>s+v.pts,0);
-  const answered=Object.keys(answers).length;
-  const complete=answered===9;
-  const tier=complete?getTier(total):null;
-
-  const selectOpt=(cid,opt)=>{setSaved(false);setAnswers(p=>({...p,[cid]:opt}));};
-  const toggleHint=id=>setHints(p=>({...p,[id]:!p[id]}));
-
-  const handleSave=async()=>{
-    if(!complete)return;
-    const vserf={};
-    vserfCriteria.forEach((c,i)=>{vserf[VCOLS[i].id]=answers[c.id]?.pts||0;});
-    await upsS({...supplier,vserf});
-    setSaved(true);
-    toast2&&toast2("Đã lưu VSERF");
-  };
-
-  return(
-    <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
-      <div style={{marginBottom:14}}>
-        <h2 style={{fontSize:16,fontWeight:600,margin:0}}>📋 VSERF Checklist — {supplier.name}</h2>
-        <div style={{fontSize:12,color:"#777",marginTop:4}}>Chọn mức mô tả đúng nhất · Tổng tối đa 45 điểm</div>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
-        {[{l:"Tổng điểm",v:`${total}/45`},{l:"Đã trả lời",v:`${answered}/9`},{l:"TB/tiêu chí",v:answered>0?(total/answered).toFixed(1):"—"}].map(m=>(
-          <div key={m.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}>
-            <div style={{fontSize:11,color:"#aaa",marginBottom:3}}>{m.l}</div>
-            <div style={{fontSize:18,fontWeight:700}}>{m.v}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{height:8,background:"#f0f0f0",borderRadius:4,marginBottom:14}}>
-        <div style={{height:8,borderRadius:4,background:"#1D9E75",width:`${Math.round(total/45*100)}%`,transition:"width .3s"}}/>
-      </div>
-      {tier&&<div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:8,background:tier.bg,border:`1.5px solid ${tier.c}`,marginBottom:14}}>
-        <span style={{fontSize:22}}>{tier.badge}</span>
-        <div><div style={{fontSize:14,fontWeight:700,color:tier.c}}>{tier.label}</div><div style={{fontSize:12,color:"#555",marginTop:2}}>{tier.action}</div></div>
-        <div style={{marginLeft:"auto",fontSize:24,fontWeight:800,color:tier.c}}>{total}</div>
-      </div>}
-      {vserfCriteria.map(cr=>{
-        const sel=answers[cr.id];
-        const warn=cr.id<=2&&sel?.pts<3;
-        return(
-          <div key={cr.id} style={{border:`1px solid ${warn?"#E24B4A":"#eee"}`,borderRadius:10,padding:"12px 14px",marginBottom:10,background:sel?"#fafffe":"#fff"}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:8}}>
-              <span style={{fontSize:11,fontWeight:700,minWidth:26,height:26,borderRadius:"50%",background:sel?"#E1F5EE":"#f3f4f6",color:sel?"#0F6E56":"#6b7280",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{String(cr.id).padStart(2,"0")}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:600}}>{cr.icon} {cr.label}{sel&&<span style={{marginLeft:8,fontSize:11,fontWeight:600,color:"#0F6E56",background:"#E1F5EE",padding:"1px 8px",borderRadius:20}}>{sel.pts} điểm</span>}</div>
-                <div style={{fontSize:12,color:"#777",marginTop:2}}>{cr.desc}</div>
-              </div>
-              <button onClick={()=>toggleHint(cr.id)} style={{fontSize:11,color:"#9ca3af",background:"none",border:"none",cursor:"pointer",padding:"2px 6px",borderRadius:4,flexShrink:0}}>💡 gợi ý</button>
-            </div>
-            {hints[cr.id]&&<div style={{fontSize:12,color:"#374151",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:6,padding:"8px 10px",marginBottom:8,lineHeight:1.5}}>{cr.hint}</div>}
-            {warn&&<div style={{fontSize:11,color:"#A32D2D",marginBottom:6}}>⚠ Tiêu chí bắt buộc — dưới 3 điểm → tự động Not Qualified</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-              {cr.opts.map((opt,i)=>{
-                const isSel=sel?.pts===opt.pts&&sel?.text===opt.text;
-                return(
-                  <label key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",borderRadius:7,cursor:"pointer",border:isSel?"1.5px solid #1D9E75":"1px solid #eee",background:isSel?"#E1F5EE":"#fff"}}>
-                    <input type="radio" name={`vserf_${cr.id}`} checked={isSel} onChange={()=>selectOpt(cr.id,opt)} style={{marginTop:3,accentColor:"#1D9E75",flexShrink:0}}/>
-                    <span style={{fontSize:13,lineHeight:1.45,flex:1}}>{opt.text}</span>
-                    <span style={{fontSize:11,fontWeight:600,minWidth:44,textAlign:"right",flexShrink:0,color:isSel?"#0F6E56":"#aaa"}}>{opt.pts} điểm</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-      <div style={{display:"flex",gap:8,marginTop:8,position:"sticky",bottom:0,background:"#fff",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
-        <button onClick={handleSave} disabled={!complete||saved} style={{flex:1,padding:"9px 0",borderRadius:8,fontWeight:600,fontSize:13,cursor:complete&&!saved?"pointer":"not-allowed",background:saved?"#E1F5EE":complete?"#1D9E75":"#e5e7eb",color:saved?"#0F6E56":complete?"#fff":"#aaa",border:"none"}}>
-          {saved?"✓ Đã lưu":"Lưu kết quả VSERF"}
-        </button>
-        <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
-      </div>
-    </Card>
-  );
-}
-
-function Brief({s}){
-  const ti=calcTier(s.vserf);const today=new Date().toLocaleDateString("vi-VN");
-  return(
-    <div>
-      <div style={{display:"flex",marginBottom:10}}><button onClick={()=>window.print()} style={{...gBtn,marginLeft:"auto"}}>🖨 In / PDF</button></div>
-      <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:12,padding:"2rem",color:"#1a1a1a"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2.5px solid #1D9E75",paddingBottom:14,marginBottom:16}}>
-          <div><div style={{fontSize:10,fontWeight:700,color:"#1D9E75",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>VinaSources — Supplier Brief</div><h1 style={{margin:0,fontSize:22,fontWeight:700}}>{s.name}</h1><div style={{fontSize:12,color:"#777",marginTop:4}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:17,fontWeight:700,padding:"6px 14px",borderRadius:7,background:ti.bg,color:ti.c}}>{ti.label}</div><div style={{fontSize:11,color:ti.c,marginTop:4}}>{ti.t}/45 VSERF</div><div style={{fontSize:10,color:"#bbb",marginTop:3}}>{today}</div></div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
-          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Sản phẩm chủ lực</div><div style={{fontSize:13,lineHeight:1.7}}>{s.products||"—"}</div></div>
-          <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Năng lực thương mại</div>
-            <div style={{fontSize:12,lineHeight:2,color:"#333"}}>
-              {s.moq&&<div><span style={{color:"#aaa"}}>MOQ: </span>{s.moq}</div>}
-              {s.capacity&&<div><span style={{color:"#aaa"}}>Công suất: </span>{s.capacity}</div>}
-              {s.priceRange&&<div><span style={{color:"#aaa"}}>Price range: </span>{s.priceRange}</div>}
-              {s.leadTime&&<div><span style={{color:"#aaa"}}>Lead time: </span>{s.leadTime}</div>}
-              {s.incoterm&&<div><span style={{color:"#aaa"}}>Incoterm: </span>{s.incoterm}</div>}
-              {s.serviceModel&&<div><span style={{color:"#aaa"}}>Mô hình SX: </span>{s.serviceModel}</div>}
-              {s.paymentMethod&&<div><span style={{color:"#aaa"}}>Thanh toán: </span>{s.paymentMethod}</div>}
-              {s.certs&&<div><span style={{color:"#aaa"}}>Chứng nhận: </span>{s.certs}</div>}
-            </div>
-          </div>
-        </div>
-        {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1.5px solid #F0C040",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
-        <div style={{background:"#F0F9F5",borderRadius:8,padding:"11px 15px",marginBottom:14}}><div style={{fontSize:10,fontWeight:700,color:"#0F6E56",textTransform:"uppercase",letterSpacing:1,marginBottom:7}}>Đầu mối liên hệ</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,fontSize:12}}><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Tên</div><div style={{fontWeight:600}}>{s.contactName||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Zalo/SĐT</div><div style={{fontWeight:600}}>{s.zalo||"—"}</div></div><div><div style={{color:"#0F6E56",fontSize:10,marginBottom:2}}>Email</div><div style={{fontWeight:600,wordBreak:"break-all"}}>{s.email||"—"}</div></div></div></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>{VCOLS.map(c=>{const v=s.vserf[c.id]||0;return(<div key={c.id} style={{background:"#f8f8f8",borderRadius:7,padding:"8px 10px"}}><div style={{fontSize:9,color:"#aaa",marginBottom:4}}>{c.l}</div><div style={{height:5,borderRadius:3,background:"#e5e5e5",overflow:"hidden"}}><div style={{height:"100%",width:(v/5*100)+"%",background:v>=4?"#1D9E75":v>=3?"#378ADD":v>=2?"#BA7517":"#E24B4A",borderRadius:3}}/></div><div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:3}}>{v}/5</div></div>);})}</div>
-        {s.website&&<div style={{marginTop:12,fontSize:11,color:"#aaa"}}>🌐 {s.website}</div>}
-        <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid #f0f0f0",fontSize:10,color:"#ccc",display:"flex",justifyContent:"space-between"}}><span>VinaSources Supply Chain · Confidential</span><span>Xuất {today}</span></div>
-      </div>
-    </div>
-  );
-}
-
-function ImportCSV({ctx}){
-  const {sups,batchImport,setModal}=ctx;
-  const [rows,setRows]=useState([]);
-  const [err,setErr]=useState("");
-  const [step,setStep]=useState(1);
-  const [sel,setSel]=useState({});
-  const [drag,setDrag]=useState(false);
-  const fileRef=useRef();
-
-  const processFile=f=>{
-    if(!f)return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      let text=ev.target.result;
-      // Strip BOM if present
-      if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
-      const {error,rows:parsed}=parseCSVFile(text);
-      if(error){
-        // Retry with windows-1252
-        const r2=new FileReader();
-        r2.onload=ev2=>{
-          let t2=ev2.target.result;
-          if(t2.charCodeAt(0)===0xFEFF)t2=t2.slice(1);
-          const {error:e2,rows:p2}=parseCSVFile(t2);
-          if(e2){setErr(e2);return;}
-          setErr("");
-          const initSel={};p2.forEach((_,i)=>{initSel[i]=true;});
-          setRows(p2);setSel(initSel);setStep(2);
-        };
-        r2.onerror=()=>setErr("Không đọc được file.");
-        r2.readAsText(f,"windows-1252");
-        return;
-      }
-      setErr("");
-      const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
-      setRows(parsed);setSel(initSel);setStep(2);
-    };
-    reader.onerror=()=>{
-      // Retry with cp1252
-      const r2=new FileReader();
-      r2.onload=ev2=>{
-        const {error,rows:parsed}=parseCSVFile(ev2.target.result);
-        if(error){setErr(error);return;}
-        setErr("");
-        const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
-        setRows(parsed);setSel(initSel);setStep(2);
-      };
-      r2.onerror=()=>setErr("Không đọc được file.");
-      r2.readAsText(f,"windows-1252");
-    };
-    reader.readAsText(f,"UTF-8");
-  };
-  const onFile=e=>{if(e.target.files[0])processFile(e.target.files[0]);};
-  const onDrop=e=>{e.preventDefault();setDrag(false);if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);};
-  const onPaste=e=>{
-    const text=e.target.value;
-    if(!text.trim())return;
-    const {error,rows:parsed}=parseCSVFile(text);
-    if(error){setErr(error);return;}
-    setErr("");
-    const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
-    setRows(parsed);setSel(initSel);setStep(2);
-  };
-
-  const doImport=()=>{
-    const toImport=rows.filter((_,i)=>sel[i]&&rows[i]._valid);
-    if(!toImport.length)return;
-    batchImport(toImport);
-  };
-  const validCount=rows.filter((_,i)=>sel[i]&&rows[i]._valid).length;
-  const dupCount=rows.filter(r=>sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase())).length;
-
-  return(
-    <Card>
-      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Import Supplier từ CSV</h2>
-      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file hoặc paste nội dung CSV · Preview trước khi lưu</div>
-      {step===1&&(
-        <div>
-          <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Bước 1 — Tải template CSV</div>
-            <div style={{fontSize:12,color:"#555",marginBottom:10,lineHeight:1.6}}>Download file mẫu → điền thông tin → save → upload lên.<br/><b>Cột bắt buộc:</b> Tên · Ngành · Sản phẩm</div>
-            <button onClick={downloadTemplate} style={{...pBtn,background:"#3B6D11",fontSize:12}}>⬇ Download Template CSV</button>
-          </div>
-          <div onDrop={onDrop} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onClick={()=>fileRef.current.click()} style={{border:`2px dashed ${drag?"#1D9E75":"#ddd"}`,borderRadius:10,padding:"1.5rem",textAlign:"center",cursor:"pointer",background:drag?"#F0F9F5":"#fafafa",marginBottom:10}}>
-            <div style={{fontSize:24,marginBottom:6}}>{drag?"📥":"📂"}</div>
-            <div style={{fontSize:13,fontWeight:600,color:drag?"#1D9E75":"#555",marginBottom:2}}>{drag?"Thả file vào đây":"Click để chọn file CSV"}</div>
-            <div style={{fontSize:11,color:"#aaa"}}>hoặc kéo thả file vào đây</div>
-            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} style={{display:"none"}}/>
-          </div>
-          <div style={{marginBottom:10}}>
-            <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginBottom:6}}>— hoặc paste nội dung CSV trực tiếp —</div>
-            <textarea onChange={onPaste} placeholder={"Tên,Ngành,Sản phẩm,...\nCông ty A,Footwear,Giày da,..."} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box",fontSize:11,fontFamily:"monospace"}}/>
-          </div>
-          {err&&<div style={{padding:"8px 12px",background:"#FCEBEB",borderRadius:6,fontSize:13,color:"#A32D2D",marginBottom:10}}>{err}</div>}
-        </div>
-      )}
-      {step===2&&(
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
-            {[{l:"Tổng dòng",v:rows.length,c:"#185FA5"},{l:"Sẽ import",v:validCount,c:"#1D9E75"},{l:"Trùng (cập nhật)",v:dupCount,c:"#854F0B"}].map(x=>(
-              <div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>{x.l}</div></div>
-            ))}
-          </div>
-          {dupCount>0&&<div style={{padding:"8px 12px",background:"#FAEEDA",borderRadius:6,fontSize:12,color:"#854F0B",marginBottom:10}}>⚠ Supplier trùng tên sẽ được cập nhật nếu được chọn</div>}
-          <div style={{maxHeight:300,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:14}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-              <thead style={{background:"#f8f8f8",position:"sticky",top:0}}>
-                <tr>
-                  <th style={{padding:"8px 10px",textAlign:"left",width:30,borderBottom:"1px solid #eee"}}><input type="checkbox" checked={rows.length>0&&rows.every((_,i)=>sel[i])} onChange={e=>{const s={};rows.forEach((_,i)=>s[i]=e.target.checked);setSel(s);}}/></th>
-                  {["#","Tên công ty","Ngành","Sản phẩm","Trạng thái"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r,i)=>{
-                  const isDup=sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase());
-                  return(
-                    <tr key={i} style={{background:sel[i]?"#f0faf6":"#fff",borderBottom:"1px solid #f5f5f5"}}>
-                      <td style={{padding:"7px 10px"}}><input type="checkbox" checked={!!sel[i]} onChange={e=>setSel(p=>({...p,[i]:e.target.checked}))}/></td>
-                      <td style={{padding:"7px 10px",color:"#aaa"}}>{r._row}</td>
-                      <td style={{padding:"7px 10px",fontWeight:500}}>{r.name||<span style={{color:"#E24B4A"}}>⚠ Trống</span>}</td>
-                      <td style={{padding:"7px 10px",color:"#555"}}>{r.industry||"—"}</td>
-                      <td style={{padding:"7px 10px",color:"#555",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.products||"—"}</td>
-                      <td style={{padding:"7px 10px"}}>
-                        {!r._valid?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>Thiếu tên</span>
-                        :isDup?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>Cập nhật</span>
-                        :<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#EAF3DE",color:"#3B6D11",fontWeight:600}}>Mới</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
-            <button onClick={()=>{setStep(1);setRows([]);}} style={gBtn}>← Upload lại</button>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-              <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5}}>⬆ Import {validCount} supplier</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Sec title="Lưu ý đặc biệt"><textarea value={f.specialNotes||""} onChange={e=>set("specialNotes",e.target.value)} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></Sec>
+      <Sec title="Pipeline"><Rw l="Stage"><select value={f.stage} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw><Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsS(f)} style={pBtn}>Lưu</button></div>
     </Card>
   );
 }
 
 function RFQList({ctx}){
   const {rfqs,setModal,canEdit}=ctx;
-  const [fType,setFType]=useState("all");
-  const [fUrgent,setFUrgent]=useState("all");
-  const [fStatus,setFStatus]=useState("all");
-
-  const urgentCount=rfqs.filter(r=>r.urgent&&r.status!=="closed"&&r.status!=="inq_closed"&&r.status!=="inq_converted").length;
+  const [fType,setFType]=useState("all");const [fUrgent,setFUrgent]=useState("all");const [fStatus,setFStatus]=useState("all");
+  const urgentCount=rfqs.filter(r=>r.urgent&&!["closed","inq_closed","inq_converted"].includes(r.status)).length;
   const fl=rfqs.filter(r=>{
     const typeOk=fType==="all"||(fType==="rfq"&&r.type!=="inq")||(fType==="inq"&&r.type==="inq");
     const urgentOk=fUrgent==="all"||(fUrgent==="urgent"&&r.urgent)||(fUrgent==="normal"&&!r.urgent);
@@ -794,7 +663,6 @@ function RFQList({ctx}){
     return typeOk&&urgentOk&&statusOk;
   });
   const allStatuses=[...RFQ_ST,...INQ_ST];
-
   return(
     <div>
       <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
@@ -805,22 +673,19 @@ function RFQList({ctx}){
         <Sel val={fUrgent} onChange={setFUrgent} opts={[["all","Tất cả"],["urgent","🔴 Gấp"],["normal","Không gấp"]]}/>
         <Sel val={fStatus} onChange={setFStatus} opts={[["all","Tất cả trạng thái"],...allStatuses.map(s=>[s.id,s.label])]}/>
       </div>
-      {fl.length===0&&<Empty text="Chưa có RFQ/INQ. Nhấn + INQ hoặc + RFQ để tạo."/>}
+      {fl.length===0&&<Empty text="Chưa có RFQ/INQ."/>}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {fl.map(r=>{
-          const isInq=r.type==="inq";
-          const statusList=isInq?INQ_ST:RFQ_ST;
-          const st=statusList.find(x=>x.id===r.status)||statusList[0];
+          const isInq=r.type==="inq";const statusList=isInq?INQ_ST:RFQ_ST;const st=statusList.find(x=>x.id===r.status)||statusList[0];
           const deadlineUrgent=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);
           return(
-            <div key={r.id} onClick={()=>setModal({t:isInq?"inq-detail":"rfq-detail",d:r})} style={{background:"#fff",border:`1px solid ${(r.urgent||deadlineUrgent)&&r.status!=="closed"&&r.status!=="inq_closed"?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <div key={r.id} onClick={()=>setModal({t:isInq?"inq-detail":"rfq-detail",d:r})} style={{background:"#fff",border:`1px solid ${(r.urgent||deadlineUrgent)&&!["closed","inq_closed"].includes(r.status)?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:isInq?"#EEEDFE":"#E6F1FB",color:isInq?"#534AB7":"#185FA5"}}>{isInq?"INQ":"RFQ"}</span>
-                <span style={{fontWeight:600,fontSize:12,color:"#aaa",minWidth:70}}>{r.code}</span>
+                <span style={{fontWeight:600,fontSize:12,color:"#aaa"}}>{r.code}</span>
                 <span style={{fontWeight:600,fontSize:14,flex:1}}>{r.desc||"(Chưa mô tả)"}</span>
                 <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
                 {r.urgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
-                {!r.urgent&&deadlineUrgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>⏰ Sắp hết hạn</span>}
               </div>
               <div style={{fontSize:12,color:"#777",marginTop:5,display:"flex",gap:14,flexWrap:"wrap"}}>
                 {r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}
@@ -837,33 +702,23 @@ function RFQList({ctx}){
 }
 
 function RFQForm({r,ctx}){
-  const {upsR,setModal}=ctx;
-  const [f,setF]=useState({...r});
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const {upsR,setModal}=ctx;const [f,setF]=useState({...r});const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const tog=m=>set("markets",f.markets?.includes(m)?f.markets.filter(x=>x!==m):[...(f.markets||[]),m]);
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
         <h2 style={{margin:0,fontSize:15,fontWeight:600}}>RFQ từ Sales</h2>
-        <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}>
-          <input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/>
-          <span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span>
-        </label>
+        <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}><input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/><span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span></label>
       </div>
-      <Sec title="Thông tin RFQ">
-        <Rw l="Mã RFQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Sales phụ trách"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} placeholder="Nguyễn Văn B" style={iSt}/></Rw>
-        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Deadline báo giá"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
-      </Sec>
+      <Sec title="Thông tin RFQ"><Rw l="Mã RFQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw><Rw l="Sales phụ trách"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} style={iSt}/></Rw><Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw><Rw l="Deadline"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw></Sec>
       <Sec title="Yêu cầu sản phẩm">
-        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Áo polo cotton 220gsm..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-        <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
-        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs" style={iSt}/></Rw>
-        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5/pcs" style={iSt}/></Rw>
-        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
-        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Mô tả *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Thị trường"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
+        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Chứng chỉ"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu RFQ</button></div>
@@ -872,30 +727,20 @@ function RFQForm({r,ctx}){
 }
 
 function INQForm({r,ctx}){
-  const {upsR,setModal}=ctx;
-  const [f,setF]=useState({...r});
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const {upsR,setModal}=ctx;const [f,setF]=useState({...r});const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const tog=m=>set("markets",f.markets?.includes(m)?f.markets.filter(x=>x!==m):[...(f.markets||[]),m]);
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
-        <h2 style={{margin:0,fontSize:15,fontWeight:600}}>📩 Inquiry từ Sales / Buyer</h2>
-        <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}>
-          <input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/>
-          <span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span>
-        </label>
+        <h2 style={{margin:0,fontSize:15,fontWeight:600}}>📩 Inquiry</h2>
+        <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}><input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/><span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span></label>
       </div>
-      <div style={{padding:"8px 12px",background:"#EEEDFE",borderRadius:6,marginBottom:14,fontSize:12,color:"#534AB7"}}>INQ = Buyer hỏi thăm chưa có spec cụ thể. Sau khi xác nhận yêu cầu sẽ chuyển thành RFQ.</div>
-      <Sec title="Thông tin Inquiry">
-        <Rw l="Mã INQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Sales / Nguồn"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} placeholder="Nguyễn Văn B / Email buyer" style={iSt}/></Rw>
-        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Phản hồi trước"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
-      </Sec>
-      <Sec title="Nội dung Inquiry">
-        <Rw l="Mô tả yêu cầu *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Buyer hỏi về sản phẩm gì, số lượng ước tính, thị trường..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+      <div style={{padding:"8px 12px",background:"#EEEDFE",borderRadius:6,marginBottom:14,fontSize:12,color:"#534AB7"}}>INQ = Buyer hỏi thăm chưa có spec cụ thể.</div>
+      <Sec title="Thông tin"><Rw l="Mã INQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw><Rw l="Sales / Nguồn"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} style={iSt}/></Rw><Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw><Rw l="Phản hồi trước"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw></Sec>
+      <Sec title="Nội dung">
+        <Rw l="Mô tả *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Thị trường"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#534AB7":"#ddd"}`,background:f.markets?.includes(m)?"#EEEDFE":"none",color:f.markets?.includes(m)?"#534AB7":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
-        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Thông tin thêm từ buyer..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu INQ</button></div>
@@ -907,206 +752,29 @@ function INQDetail({r,ctx}){
   const {upsR,delR,setModal,canEdit,sups}=ctx;
   const [showEmail,setShowEmail]=useState(false);
   const st=INQ_ST.find(x=>x.id===r.status)||INQ_ST[0];
-  const convertToRFQ=()=>{
-    const rfq={...newR(),id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:r.sales,desc:r.desc,markets:r.markets,deadline:r.deadline,notes:r.notes,urgent:r.urgent};
-    upsR({...r,status:"inq_converted"});
-    upsR(rfq);
-    setModal({t:"rfq-detail",d:rfq});
-  };
+  const convertToRFQ=()=>{const rfq={...newR(),id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:r.sales,desc:r.desc,markets:r.markets,deadline:r.deadline,notes:r.notes,urgent:r.urgent};upsR({...r,status:"inq_converted"});upsR(rfq);setModal({t:"rfq-detail",d:rfq});};
   return(
     <Card>
+      {showEmail&&<EmailDraft r={r} sups={sups||[]} onClose={()=>setShowEmail(false)}/>}
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
-          <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:"#EEEDFE",color:"#534AB7"}}>INQ</span>
-            <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
-          </div>
-          <div style={{display:"flex",gap:6}}>
-            <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
-            {r.urgent&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
-          </div>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:"#EEEDFE",color:"#534AB7"}}>INQ</span><span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span></div>
+          <div style={{display:"flex",gap:6}}><span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{r.urgent&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}</div>
         </div>
-        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5}}>{r.desc||"(Chưa mô tả)"}</h2>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>
-          {r.sales&&<span>👤 {r.sales}</span>}
-          {r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}
-          {r.date&&<span>📥 {r.date}</span>}
-          {r.deadline&&<span>📅 Phản hồi trước: {r.deadline}</span>}
-        </div>
+        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600}}>{r.desc||"(Chưa mô tả)"}</h2>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>{r.sales&&<span>👤 {r.sales}</span>}{r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}{r.deadline&&<span>📅 {r.deadline}</span>}</div>
       </div>
-      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8}}>Ghi chú</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
-      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&(
-        <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:14}}>
-          <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div>
-          <div style={{fontSize:12,color:"#555",marginBottom:8}}>Khi buyer đã xác nhận yêu cầu cụ thể, convert INQ này thành RFQ để tiến hành sourcing.</div>
-          <button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button>
-        </div>
-      )}
+      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
+      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:14}}><div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div><button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
-        {showEmail&&<EmailDraft r={r} sups={sups||[]} onClose={()=>setShowEmail(false)}/>}
         <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email NCC</button>
         {canEdit&&<button onClick={()=>setModal({t:"inq-form",d:r})} style={gBtn}>✏️ Sửa INQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
-          <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
           {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
         </div>
         {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
       </div>
     </Card>
-  );
-}
-
-function EmailDraft({r,sups,onClose}){
-  const [email,setEmail]=useState("");
-  const [loading,setLoading]=useState(false);
-  const [copied,setCopied]=useState(false);
-  const asgn=sups.filter(s=>r.sids?.includes(s.id));
-
-  const generate=()=>{
-    setLoading(true);
-    const isInq=r.type==="inq";
-    const supName=asgn.length>0?asgn[0].name:"[Supplier Name]";
-    const supNames=asgn.length>0?asgn.map(s=>s.name).join(", "):"[Supplier Name]";
-    const today=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
-
-    let subject,body;
-    if(isInq){
-      subject=`Subject: Hỏi thăm sản phẩm / Product Inquiry — ${r.desc||"[Sản phẩm]"} | VinaSources`;
-      body=`Kính gửi đội ngũ ${supName},
-
-Tôi là [Tên của bạn] từ VinaSources, công ty chuỗi cung ứng tại Việt Nam chuyên kết nối nhà sản xuất trong nước với các buyer quốc tế tại ${r.markets?.join(", ")||"các thị trường quốc tế"}.
-
-Chúng tôi đang tìm hiểu nguồn cung cho sản phẩm dưới đây và muốn tìm hiểu năng lực sản xuất của quý công ty:
-
-Sản phẩm: ${r.desc||"[Mô tả sản phẩm]"}
-Thị trường mục tiêu: ${r.markets?.join(", ")||"Chưa xác định"}${r.deadline?`\nCần phản hồi trước: ${r.deadline}`:""}
-
-Ở giai đoạn này, chúng tôi muốn xác nhận:
-• Sản phẩm có nằm trong danh mục sản xuất của quý công ty không
-• Công suất tổng thể và lead time dự kiến
-• Kinh nghiệm xuất khẩu sang thị trường mục tiêu
-• Các chứng nhận hiện có${r.notes?`\n\nThông tin thêm:\n${r.notes}`:""}
-
-Đây là bước hỏi thăm ban đầu — RFQ chính thức với thông số kỹ thuật đầy đủ sẽ được gửi sau nếu hai bên phù hợp.
-
-Trân trọng,
-[Tên của bạn]
-Sourcing Team | VinaSources
-Email: [your@email.com] | Zalo: [số]
-
-────────────────────────────────
-
-Dear ${supName} Team,
-
-My name is [Your Name] from VinaSources, a supply chain company based in Vietnam. We connect Vietnamese manufacturers with international buyers across markets including ${r.markets?.join(", ")||"global markets"}.
-
-We are currently exploring sourcing options for the following product and would like to understand your capabilities:
-
-Product: ${r.desc||"[Product description]"}
-Target Market(s): ${r.markets?.join(", ")||"TBC"}${r.deadline?`\nResponse needed by: ${r.deadline}`:""}
-
-At this stage, we are looking to understand:
-• Whether this product falls within your production scope
-• General capacity and lead time
-• Whether you have experience exporting to our target markets
-• Any relevant certifications you hold${r.notes?`\n\nAdditional context:\n${r.notes}`:""}
-
-This is an initial inquiry — a formal RFQ with detailed specifications will follow if there is a mutual fit.
-
-Best regards,
-[Your Name]
-Sourcing Team | VinaSources
-Email: [your@email.com] | Zalo: [number]`;
-    } else {
-      subject=`Subject: Yêu cầu báo giá / Request for Quotation — ${r.desc||"[Sản phẩm]"} (${r.code}) | VinaSources`;
-      body=`Kính gửi đội ngũ ${supName},
-
-Tôi là [Tên của bạn] từ VinaSources, công ty chuỗi cung ứng tại Việt Nam chuyên kết nối nhà sản xuất trong nước với buyer quốc tế. Chúng tôi đang làm việc với một buyer tại ${r.markets?.join(", ")||"thị trường quốc tế"} và muốn gửi yêu cầu báo giá chính thức đến quý công ty.
-
-— THÔNG TIN RFQ —
-Mã RFQ: ${r.code}
-Sản phẩm: ${r.desc||"[Mô tả sản phẩm]"}
-Thị trường mục tiêu: ${r.markets?.join(", ")||"Chưa xác định"}${r.qty?`\nSố lượng: ${r.qty}`:""}${r.price?`\nGiá mục tiêu: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nChứng nhận yêu cầu: ${r.certs}`:""}${r.deadline?`\nHạn báo giá: ${r.deadline}`:""}
-
-Vui lòng cung cấp báo giá bao gồm:
-• Đơn giá (nếu có thể, kèm breakdown: nguyên liệu / gia công / bao bì / vận chuyển)
-• MOQ và lead time
-• Điều khoản thanh toán
-• Lưu ý đặc biệt về sản phẩm (nếu có)${r.notes?`\n\nYêu cầu bổ sung:\n${r.notes}`:""}
-
-Kính mong nhận được phản hồi trước ${r.deadline||"[ngày hạn]"}.
-
-Trân trọng,
-[Tên của bạn]
-Sourcing Team | VinaSources
-Email: [your@email.com] | Zalo: [số]
-Ngày: ${today}
-
-────────────────────────────────
-
-Dear ${supName} Team,
-
-My name is [Your Name] from VinaSources, a Vietnamese supply chain company. We are working with a buyer targeting ${r.markets?.join(", ")||"international markets"} and would like to request a formal quotation.
-
-— RFQ DETAILS —
-RFQ Code: ${r.code}
-Product: ${r.desc||"[Product description]"}
-Target Market(s): ${r.markets?.join(", ")||"TBC"}${r.qty?`\nOrder Quantity: ${r.qty}`:""}${r.price?`\nTarget Price: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nRequired Certifications: ${r.certs}`:""}${r.deadline?`\nQuotation Deadline: ${r.deadline}`:""}
-
-Please provide a quotation including:
-• Unit price (with cost breakdown if possible: materials / production / packaging / freight)
-• MOQ and lead time
-• Payment terms
-• Any product limitations or special notes${r.notes?`\n\nAdditional requirements:\n${r.notes}`:""}
-
-Kindly send your quotation by ${r.deadline||"[deadline]"}.
-
-Best regards,
-[Your Name]
-Sourcing Team | VinaSources
-Email: [your@email.com] | Zalo: [number]
-Date: ${today}`;
-    }
-    setTimeout(()=>{setEmail(subject+"\n\n"+body);setLoading(false);},400);
-  };
-
-  useEffect(()=>{generate();},[]);
-
-  const copy=()=>{navigator.clipboard.writeText(email);setCopied(true);setTimeout(()=>setCopied(false),2000);};
-
-  return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1100,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{width:"100%",maxWidth:620,marginTop:"2rem",marginBottom:"2rem",background:"#fff",borderRadius:12,border:"1px solid #e5e5e5",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
-        <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:15,fontWeight:600}}>✉ Email soạn thảo</span>
-          <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:600}}>{r.code}</span>
-          <div style={{flex:1}}/>
-          <button onClick={generate} disabled={loading} style={{fontSize:12,padding:"5px 12px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:loading?"not-allowed":"pointer",color:"#555"}}>
-            {loading?"⏳ Đang soạn...":"🔄 Soạn lại"}
-          </button>
-          <button onClick={copy} disabled={!email||loading} style={{fontSize:12,padding:"5px 14px",borderRadius:6,border:"none",background:copied?"#1D9E75":"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>
-            {copied?"✓ Đã copy":"Copy"}
-          </button>
-          <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa",lineHeight:1}}>×</button>
-        </div>
-        <div style={{padding:"14px 18px"}}>
-          {loading?(
-            <div style={{display:"flex",alignItems:"center",gap:10,padding:"2rem",color:"#aaa",justifyContent:"center"}}>
-              <div style={{width:18,height:18,border:"2px solid #534AB7",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
-              <span style={{fontSize:13}}>Claude đang soạn email...</span>
-              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-            </div>
-          ):(
-            <textarea
-              value={email}
-              onChange={e=>setEmail(e.target.value)}
-              style={{width:"100%",minHeight:340,border:"1px solid #e5e5e5",borderRadius:8,padding:"12px 14px",fontSize:13,lineHeight:1.7,resize:"vertical",fontFamily:"inherit",color:"#1a1a1a",boxSizing:"border-box"}}
-            />
-          )}
-          <div style={{fontSize:11,color:"#aaa",marginTop:6}}>✏️ Có thể chỉnh sửa trực tiếp trước khi copy</div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1119,19 +787,15 @@ function RFQDetail({r,ctx}){
   const certTags=(r.certs||"").split(/[,;•\n]+/).map(c=>c.trim()).filter(Boolean);
   return(
     <Card>
+      {showEmail&&<EmailDraft r={r} sups={sups} onClose={()=>setShowEmail(false)}/>}
       <div style={{marginBottom:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
-          <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
-          <div style={{display:"flex",gap:6}}><span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}</div>
-        </div>
-        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5}}>{r.desc||"(Chưa mô tả)"}</h2>
+        <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}><span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span><div style={{display:"flex",gap:6}}><span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}</div></div>
+        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600}}>{r.desc||"(Chưa mô tả)"}</h2>
         <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>{r.sales&&<span>👤 {r.sales}</span>}{r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}{r.date&&<span>📥 {r.date}</span>}{r.deadline&&<span style={{color:urg?"#A32D2D":"#777",fontWeight:urg?600:400}}>📅 {r.deadline}</span>}</div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
-        {[{l:"MOQ",v:r.qty},{l:"Giá mục tiêu",v:r.price},{l:"Incoterm",v:r.incoterm}].map(x=>x.v?(<div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>{x.l}</div><div style={{fontSize:13,fontWeight:500}}>{x.v}</div></div>):null)}
-      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>{[{l:"MOQ",v:r.qty},{l:"Giá mục tiêu",v:r.price},{l:"Incoterm",v:r.incoterm}].map(x=>x.v?<div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>{x.l}</div><div style={{fontSize:13,fontWeight:500}}>{x.v}</div></div>:null)}</div>
       {certTags.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:7}}>Chứng chỉ yêu cầu</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{certTags.map((c,i)=><span key={i} style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:"#EAF3DE",color:"#3B6D11",fontWeight:500,border:"1px solid #C5DFA8"}}>{c}</span>)}</div></div>}
-      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8}}>Ghi chú & Yêu cầu kỹ thuật</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
+      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8}}>Ghi chú</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
       <div style={{marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>NCC được gán ({asgn.length})</span>
@@ -1141,26 +805,16 @@ function RFQDetail({r,ctx}){
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {asgn.map(s=>{const ti=calcTier(s.vserf);const note=r.snotes?.[s.id]||"";return(
             <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start"}}>
-              <div style={{flex:1}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span></div>
-                <div style={{fontSize:12,color:"#777"}}>{[s.products,s.province].filter(Boolean).join(" · ")}</div>
-                {s.zalo&&<div style={{fontSize:12,color:"#777",marginTop:2}}>📱 {s.zalo}</div>}
-                {canEdit?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>:note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>}
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
-                <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
-                {canEdit&&<button onClick={()=>upsR({...r,sids:r.sids.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
-              </div>
+              <div style={{flex:1}}><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span></div><div style={{fontSize:12,color:"#777"}}>{[s.products,s.province].filter(Boolean).join(" · ")}</div>{s.zalo&&<div style={{fontSize:12,color:"#777",marginTop:2}}>📱 {s.zalo}</div>}{canEdit?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>:note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}><button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>{canEdit&&<button onClick={()=>upsR({...r,sids:r.sids.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}</div>
             </div>
           );})}
         </div>
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
-        {showEmail&&<EmailDraft r={r} sups={sups} onClose={()=>setShowEmail(false)}/>}
         <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email NCC</button>
         {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>✏️ Sửa RFQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
-          <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
           {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
         </div>
         {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
@@ -1170,15 +824,12 @@ function RFQDetail({r,ctx}){
 }
 
 function RFQAssign({r,ctx}){
-  const {sups,upsR,setModal}=ctx;
-  const [sel,setSel]=useState(r.sids||[]);
-  const [q,setQ]=useState("");
+  const {sups,upsR,setModal}=ctx;const [sel,setSel]=useState(r.sids||[]);const [q,setQ]=useState("");
   const fl=sups.filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   return(
     <Card>
       <h2 style={{margin:"0 0 10px",fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
-      <div style={{fontSize:13,color:"#555",marginBottom:12,padding:"8px 12px",background:"#E6F1FB",borderRadius:6}}>📋 {r.desc||"—"} · {r.markets?.join(", ")||"—"}</div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10,boxSizing:"border-box"}}/>
       <div style={{maxHeight:360,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
         {fl.map(s=>{const ti=calcTier(s.vserf);const chk=sel.includes(s.id);return(
@@ -1198,130 +849,182 @@ function RFQAssign({r,ctx}){
 }
 
 function Kraljic({ctx}){
-  const {sups,upsS,setModal,canEdit}=ctx;
+  const {sups,setModal,canEdit}=ctx;
   const grouped={strategic:[],leverage:[],bottleneck:[],routine:[],unclassified:[]};
-  sups.forEach(s=>{
-    if(s.kraljic&&grouped[s.kraljic])grouped[s.kraljic].push(s);
-    else grouped.unclassified.push(s);
-  });
+  sups.forEach(s=>{if(s.kraljic&&grouped[s.kraljic])grouped[s.kraljic].push(s);else grouped.unclassified.push(s);});
   return(
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div>
-          <div style={{fontSize:15,fontWeight:600}}>Ma trận Kraljic — Phân loại NCC</div>
-          <div style={{fontSize:12,color:"#777",marginTop:2}}>Phân loại nhà cung cấp theo tác động tài chính và rủi ro cung ứng</div>
-        </div>
+        <div><div style={{fontSize:15,fontWeight:600}}>Ma trận Kraljic</div><div style={{fontSize:12,color:"#777",marginTop:2}}>Phân loại NCC theo tác động tài chính và rủi ro cung ứng</div></div>
         {grouped.unclassified.length>0&&<div style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:"#FAEEDA",color:"#854F0B",fontWeight:500}}>{grouped.unclassified.length} NCC chưa phân loại</div>}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
         {KRALJIC_QUADRANTS.map(q=>(
           <div key={q.id} style={{background:q.bg,border:`1.5px solid ${q.c}`,borderRadius:12,padding:"1rem"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-              <span style={{fontSize:20}}>{q.icon}</span>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div>
-                <div style={{fontSize:11,color:"#666"}}>{q.desc}</div>
-              </div>
-              <span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[q.id].length}</span>
-            </div>
-            <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8,lineHeight:1.5}}>💡 {q.strategy}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:20}}>{q.icon}</span><div><div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div><div style={{fontSize:11,color:"#666"}}>{q.desc}</div></div><span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[q.id].length}</span></div>
+            <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8}}>💡 {q.strategy}</div>
             <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {grouped[q.id].map(s=>{
-                const ti=calcTier(s.vserf);
-                return(
-                  <div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-                      <div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div>
-                    </div>
-                    <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-                    {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}
-                  </div>
-                );
-              })}
+              {grouped[q.id].map(s=>{const ti=calcTier(s.vserf);return(
+                <div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div></div>
+                  <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+                  {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}
+                </div>
+              );})}
               {grouped[q.id].length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:"8px 0"}}>Chưa có NCC</div>}
             </div>
           </div>
         ))}
       </div>
-      {grouped.unclassified.length>0&&(
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length} NCC)</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
-            {grouped.unclassified.map(s=>{
-              const ti=calcTier(s.vserf);
-              return(
-                <div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-                    <div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label} · {ti.t}/45</div>
-                  </div>
-                  {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}
-                </div>
-              );
-            })}
-          </div>
+      {grouped.unclassified.length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem",marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length})</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
+          {grouped.unclassified.map(s=>{const ti=calcTier(s.vserf);return(
+            <div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label}</div></div>
+              {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}
+            </div>
+          );})}
         </div>
-      )}
-      <div style={{marginTop:12,padding:"10px 14px",background:"#f8f8f8",borderRadius:8,fontSize:12,color:"#666"}}>
-        <div style={{fontWeight:600,marginBottom:6}}>Hướng dẫn phân loại:</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-          <div><b style={{color:"#A32D2D"}}>⭐ Strategic:</b> NCC độc quyền, khó thay thế, ảnh hưởng lớn đến doanh thu</div>
-          <div><b style={{color:"#3B6D11"}}>💪 Leverage:</b> Nhiều NCC thay thế, giá trị mua lớn — có thể thương lượng mạnh</div>
-          <div><b style={{color:"#854F0B"}}>⚠️ Bottleneck:</b> Khó tìm thay thế nhưng giá trị không cao — cần dự phòng</div>
-          <div><b style={{color:"#185FA5"}}>📦 Routine:</b> Dễ mua, giá trị thấp — tối ưu quy trình và chi phí giao dịch</div>
-        </div>
-      </div>
+      </div>}
     </div>
   );
 }
 
 function KraljicEdit({s,ctx}){
-  const {upsS,setModal}=ctx;
-  const [selected,setSelected]=useState(s.kraljic||"");
+  const {upsS,setModal}=ctx;const [selected,setSelected]=useState(s.kraljic||"");
   return(
     <Card>
       <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Phân loại Kraljic — {s.name}</h2>
-      <div style={{fontSize:12,color:"#777",marginBottom:16}}>Chọn nhóm phù hợp với vai trò của NCC này trong chuỗi cung ứng</div>
+      <div style={{fontSize:12,color:"#777",marginBottom:16}}>Chọn nhóm phù hợp</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-        {KRALJIC_QUADRANTS.map(q=>(
-          <div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff",transition:"all .15s"}}>
-            <div style={{fontSize:18,marginBottom:4}}>{q.icon}</div>
-            <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div>
-            <div style={{fontSize:11,color:"#777",marginBottom:6}}>{q.labelVi} · {q.desc}</div>
-            <div style={{fontSize:11,color:"#555",lineHeight:1.5}}>→ {q.strategy}</div>
-          </div>
-        ))}
+        {KRALJIC_QUADRANTS.map(q=><div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff"}}><div style={{fontSize:18,marginBottom:4}}>{q.icon}</div><div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div><div style={{fontSize:11,color:"#777",marginBottom:6}}>{q.desc}</div><div style={{fontSize:11,color:"#555"}}>→ {q.strategy}</div></div>)}
       </div>
-      <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
         {s.kraljic&&<button onClick={()=>{upsS({...s,kraljic:""});setModal(null);}} style={{...gBtn,color:"#E24B4A"}}>Bỏ phân loại</button>}
-        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
-          <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-          <button onClick={()=>{upsS({...s,kraljic:selected});setModal(null);}} disabled={!selected} style={{...pBtn,background:"#534AB7",opacity:selected?1:.5}}>Lưu phân loại</button>
-        </div>
+        <div style={{display:"flex",gap:8,marginLeft:"auto"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>{upsS({...s,kraljic:selected});setModal(null);}} disabled={!selected} style={{...pBtn,background:"#534AB7",opacity:selected?1:.5}}>Lưu</button></div>
       </div>
     </Card>
   );
 }
 
 function Dash({ctx}){
-  const {sups,rfqs}=ctx;
+  const {sups,rfqs,orders}=ctx;
   const ti={t1:0,t2:0,t3:0,nq:0};let tv=0,vc=0;
   sups.forEach(s=>{const t=calcTier(s.vserf);if(t.label==="Tier 1")ti.t1++;else if(t.label==="Tier 2")ti.t2++;else if(t.label==="Tier 3")ti.t3++;else ti.nq++;if(t.t>0){tv+=t.t;vc++;}});
   const av=vc?Math.round(tv/vc):0;const t12=sups.length?Math.round((ti.t1+ti.t2)/sups.length*100):0;
   const sc={};sups.forEach(s=>{sc[s.stage]=(sc[s.stage]||0)+1;});
   const ind={};sups.forEach(s=>{if(s.industry)ind[s.industry]=(ind[s.industry]||0)+1;});
-  const kpis=[{l:"Tổng supplier",v:sups.length,t:"—",c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,t:"≥40%",c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",t:"≥40%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",t:"≥32/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"RFQ đang mở",v:rfqs.filter(r=>r.status!=="closed").length,t:"—",c:"#534AB7"},{l:"RFQ đã gửi Sales",v:rfqs.filter(r=>r.status==="sent").length,t:"—",c:"#854F0B"}];
+  const activeOrders=(orders||[]).filter(o=>o.stage!=="closed").length;
+  const kpis=[{l:"Tổng supplier",v:sups.length,t:"—",c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,t:"≥40%",c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",t:"≥40%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",t:"≥32",c:av>=32?"#1D9E75":"#E24B4A"},{l:"Orders active",v:activeOrders,t:"—",c:"#534AB7"},{l:"RFQ đang mở",v:rfqs.filter(r=>!["closed","inq_closed","inq_converted"].includes(r.status)).length,t:"—",c:"#854F0B"}];
   return(
     <div>
-      <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard · dữ liệu từ Google Sheets</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>{kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div><div style={{fontSize:10,color:"#ccc",marginTop:2}}>Mục tiêu: {k.t}</div></div>)}</div>
+      <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>{kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div><div style={{fontSize:10,color:"#ccc",marginTop:2}}>Target: {k.t}</div></div>)}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1 Export-Ready",v:ti.t1,c:"#1D9E75"},{l:"Tier 2 Nearly Ready",v:ti.t2,c:"#185FA5"},{l:"Tier 3 Developing",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>RFQ theo trạng thái</div>{RFQ_ST.map(st=>{const cnt=rfqs.filter(r=>r.status===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:st.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}</div>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1",v:ti.t1,c:"#1D9E75"},{l:"Tier 2",v:ti.t2,c:"#185FA5"},{l:"Tier 3",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Orders theo stage</div>{ORDER_STAGES.map(st=>{const cnt=(orders||[]).filter(o=>o.stage===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:13}}>{st.icon}</span><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}</div>
       </div>
-      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}</div>
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline Supplier</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}</div>
       {Object.keys(ind).length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Ngành hàng</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{Object.entries(ind).sort((a,b)=>b[1]-a[1]).map(([i,c])=><div key={i} style={{padding:"4px 12px",borderRadius:20,background:"#f5f5f5",fontSize:12,color:"#555"}}>{i} <b style={{color:"#1a1a1a"}}>{c}</b></div>)}</div></div>}
+    </div>
+  );
+}
+
+// ── APP ──
+function App(){
+  const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
+  const [sups,setSups]=useState([]);const [rfqs,setRfqs]=useState([]);const [orders,setOrders]=useState([]);
+  const [tab,setTab]=useState("list");const [modal,setModal]=useState(null);const [toast,setToast]=useState(null);
+  const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);const [syncErr,setSyncErr]=useState(false);
+
+  useEffect(()=>{
+    Promise.all([apiGet("Suppliers"),apiGet("RFQs"),apiGet("Orders")])
+      .then(([s,r,o])=>{setSups(s);setRfqs(r);setOrders(o||[]);setLoading(false);})
+      .catch(()=>{setSyncErr(true);setLoading(false);});
+  },[]);
+
+  const toast2=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
+  const saveSups=useCallback(async l=>{setSups(l);setSaving(true);try{await apiSave("Suppliers",l);}finally{setSaving(false);};},[]);
+  const saveRfqs=useCallback(async l=>{setRfqs(l);setSaving(true);try{await apiSave("RFQs",l);}finally{setSaving(false);};},[]);
+  const saveOrders=useCallback(async l=>{setOrders(l);setSaving(true);try{await apiSave("Orders",l);}finally{setSaving(false);};},[]);
+
+  const upsS=async s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);await saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
+  const delS=async id=>{if(!confirm("Xóa supplier này?"))return;await saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const upsR=async r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);await saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật":"Đã tạo");setModal(null);};
+  const delR=async id=>{if(!confirm("Xóa?"))return;await saveRfqs(rfqs.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const upsO=async o=>{const u={...o,ua:new Date().toISOString()};const i=orders.findIndex(x=>x.id===u.id);await saveOrders(i>=0?orders.map((x,j)=>j===i?u:x):[u,...orders]);toast2(i>=0?"Đã cập nhật order":"Đã tạo order");setModal(null);};
+  const delO=async id=>{if(!confirm("Xóa order?"))return;await saveOrders(orders.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const logout=()=>{localStorage.removeItem(AUTH_KEY);setCanEdit(false);};
+  const batchImport=async list=>{const cur=[...sups];list.forEach(s=>{const i=cur.findIndex(x=>x.name.toLowerCase()===s.name.toLowerCase());if(i>=0)cur[i]={...cur[i],...s,id:cur[i].id};else cur.unshift(s);});await saveSups(cur);toast2("Đã import "+list.length+" supplier");setModal(null);};
+
+  if(loading)return<div style={{padding:"2rem",color:"#666",display:"flex",alignItems:"center",gap:12}}><div style={{width:20,height:20,border:"3px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span>Đang kết nối Google Sheets...</span><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
+
+  const ctx={sups,rfqs,orders,upsS,delS,upsR,delR,upsO,delO,setModal,toast2,canEdit,batchImport,saveSups};
+
+  return(
+    <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
+      {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"10px 20px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500,boxShadow:"0 2px 12px rgba(0,0,0,0.15)"}}>{toast}</div>}
+      {saving&&<div style={{position:"fixed",bottom:14,right:14,background:"#185FA5",color:"#fff",padding:"7px 14px",borderRadius:6,fontSize:12,zIndex:9999}}>💾 Đang lưu...</div>}
+      {syncErr&&<div style={{background:"#FCEBEB",borderBottom:"1px solid #E24B4A",padding:"8px 1rem",fontSize:13,color:"#A32D2D",textAlign:"center"}}>⚠ Không kết nối được Google Sheets</div>}
+      {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
+      <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
+        <div style={{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
+          <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
+          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"orders",l:"Orders"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
+              {t.l}
+              {t.id==="rfq"&&rfqs.filter(r=>["new","searching"].includes(r.status)).length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>["new","searching"].includes(r.status)).length}</span>}
+              {t.id==="orders"&&orders.filter(o=>o.stage!=="closed").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#534AB7",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{orders.filter(o=>o.stage!=="closed").length}</span>}
+            </button>
+          ))}
+          <div style={{flex:1}}/>
+          {canEdit?(<>
+            <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
+            <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ RFQ</button>
+            <button onClick={()=>setModal({t:"order-form",d:newO()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #1D9E75",background:"none",color:"#1D9E75",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ Order</button>
+            <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
+            <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
+          </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
+        </div>
+      </div>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"1rem"}}>
+        {tab==="list"&&<SupList ctx={ctx}/>}
+        {tab==="rfq"&&<RFQList ctx={ctx}/>}
+        {tab==="orders"&&<OrderList ctx={ctx}/>}
+        {tab==="kraljic"&&<Kraljic ctx={ctx}/>}
+        {tab==="dash"&&<Dash ctx={ctx}/>}
+      </div>
+      {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
+      {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="rfq-assign"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQAssign r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="inq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><INQForm r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="inq-detail"&&<Modal onClose={()=>setModal(null)}><INQDetail r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="import-csv"&&canEdit&&<Modal onClose={()=>setModal(null)}><ImportCSV ctx={ctx}/></Modal>}
+      {modal?.t==="kraljic-edit"&&canEdit&&<Modal onClose={()=>setModal(null)}><KraljicEdit s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="order-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><OrderForm o={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="order-detail"&&<Modal onClose={()=>setModal(null)}><OrderDetail o={modal.d} ctx={ctx}/></Modal>}
+    </div>
+  );
+}
+
+function LoginBanner({onLogin}){
+  const [pw,setPw]=useState("");const [err,setErr]=useState(false);
+  const try_=()=>{if(pw===EDIT_PW){localStorage.setItem(AUTH_KEY,"1");onLogin();}else{setErr(true);setTimeout(()=>setErr(false),2000);}};
+  return(
+    <div style={{background:"#FAEEDA",borderBottom:"1px solid #EF9F27",padding:"9px 1rem"}}>
+      <div style={{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <span style={{fontSize:13,color:"#633806"}}>👁 Chế độ xem — Nhập mật khẩu để chỉnh sửa</span>
+        <div style={{display:"flex",gap:6,marginLeft:"auto",alignItems:"center"}}>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&try_()} placeholder="Mật khẩu..." style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${err?"#E24B4A":"#EF9F27"}`,fontSize:13,width:160}}/>
+          <button onClick={try_} style={{padding:"5px 14px",borderRadius:6,border:"none",background:"#EF9F27",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>OK</button>
+          {err&&<span style={{fontSize:12,color:"#A32D2D",fontWeight:500}}>Sai mật khẩu</span>}
+        </div>
+      </div>
     </div>
   );
 }
