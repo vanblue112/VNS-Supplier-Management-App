@@ -799,7 +799,8 @@ function INQForm({r,ctx}){
 }
 
 function INQDetail({r,ctx}){
-  const {upsR,delR,setModal,canEdit}=ctx;
+  const {upsR,delR,setModal,canEdit,sups}=ctx;
+  const [showEmail,setShowEmail]=useState(false);
   const st=INQ_ST.find(x=>x.id===r.status)||INQ_ST[0];
   const convertToRFQ=()=>{
     const rfq={...newR(),id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:r.sales,desc:r.desc,markets:r.markets,deadline:r.deadline,notes:r.notes,urgent:r.urgent};
@@ -837,6 +838,8 @@ function INQDetail({r,ctx}){
         </div>
       )}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        {showEmail&&<EmailDraft r={r} sups={sups||[]} onClose={()=>setShowEmail(false)}/>}
+        <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email NCC</button>
         {canEdit&&<button onClick={()=>setModal({t:"inq-form",d:r})} style={gBtn}>✏️ Sửa INQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
           <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
@@ -848,8 +851,97 @@ function INQDetail({r,ctx}){
   );
 }
 
+function EmailDraft({r,sups,onClose}){
+  const [email,setEmail]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [copied,setCopied]=useState(false);
+  const asgn=sups.filter(s=>r.sids?.includes(s.id));
+
+  const generate=async()=>{
+    setLoading(true);
+    const isInq=r.type==="inq";
+    const supplierInfo=asgn.length>0?asgn.map(s=>`- ${s.name} (${s.province||"Vietnam"}, ${s.products||""})`).join("\n"):"[Supplier name]";
+    const prompt=`You are a professional sourcing executive at VinaSources, a Vietnamese supply chain company. Write a professional outreach email to a supplier for the following ${isInq?"inquiry":"RFQ"}.
+
+Details:
+- Type: ${isInq?"Inquiry (early stage, no confirmed spec yet)":"RFQ (formal request for quotation)"}
+- Product/Request: ${r.desc||"N/A"}
+- Target markets: ${r.markets?.join(", ")||"N/A"}
+- ${r.qty?"Quantity: "+r.qty:""}
+- ${r.price?"Target price: "+r.price:""}
+- ${r.incoterm?"Incoterm: "+r.incoterm:""}
+- ${r.deadline?"Deadline: "+r.deadline:""}
+- ${r.certs?"Required certifications: "+r.certs:""}
+- ${r.notes?"Additional notes: "+r.notes:""}
+- Supplier(s): ${supplierInfo}
+
+Write a concise, professional email in English. Include:
+1. Brief intro of VinaSources
+2. Clear product requirement
+3. What you need from the supplier (quotation / capability confirmation)
+4. Response deadline
+5. Professional closing
+
+Keep it under 250 words. Output only the email (subject line first, then body). No explanations.`;
+
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+      });
+      const d=await res.json();
+      const txt=d.content?.map(b=>b.text||"").join("")||"";
+      setEmail(txt);
+    }catch(e){
+      setEmail("Lỗi khi tạo email. Vui lòng thử lại.");
+    }
+    setLoading(false);
+  };
+
+  useEffect(()=>{generate();},[]);
+
+  const copy=()=>{navigator.clipboard.writeText(email);setCopied(true);setTimeout(()=>setCopied(false),2000);};
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1100,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{width:"100%",maxWidth:620,marginTop:"2rem",marginBottom:"2rem",background:"#fff",borderRadius:12,border:"1px solid #e5e5e5",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:15,fontWeight:600}}>✉ Email soạn thảo</span>
+          <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:600}}>{r.code}</span>
+          <div style={{flex:1}}/>
+          <button onClick={generate} disabled={loading} style={{fontSize:12,padding:"5px 12px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:loading?"not-allowed":"pointer",color:"#555"}}>
+            {loading?"⏳ Đang soạn...":"🔄 Soạn lại"}
+          </button>
+          <button onClick={copy} disabled={!email||loading} style={{fontSize:12,padding:"5px 14px",borderRadius:6,border:"none",background:copied?"#1D9E75":"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>
+            {copied?"✓ Đã copy":"Copy"}
+          </button>
+          <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa",lineHeight:1}}>×</button>
+        </div>
+        <div style={{padding:"14px 18px"}}>
+          {loading?(
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"2rem",color:"#aaa",justifyContent:"center"}}>
+              <div style={{width:18,height:18,border:"2px solid #534AB7",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+              <span style={{fontSize:13}}>Claude đang soạn email...</span>
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            </div>
+          ):(
+            <textarea
+              value={email}
+              onChange={e=>setEmail(e.target.value)}
+              style={{width:"100%",minHeight:340,border:"1px solid #e5e5e5",borderRadius:8,padding:"12px 14px",fontSize:13,lineHeight:1.7,resize:"vertical",fontFamily:"inherit",color:"#1a1a1a",boxSizing:"border-box"}}
+            />
+          )}
+          <div style={{fontSize:11,color:"#aaa",marginTop:6}}>✏️ Có thể chỉnh sửa trực tiếp trước khi copy</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RFQDetail({r,ctx}){
   const {sups,setModal,upsR,delR,canEdit}=ctx;
+  const [showEmail,setShowEmail]=useState(false);
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const asgn=sups.filter(s=>r.sids?.includes(s.id));
   const urg=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);
@@ -893,6 +985,8 @@ function RFQDetail({r,ctx}){
         </div>
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        {showEmail&&<EmailDraft r={r} sups={sups} onClose={()=>setShowEmail(false)}/>}
+        <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email NCC</button>
         {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>✏️ Sửa RFQ</button>}
         <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
           <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
