@@ -11,22 +11,29 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f0f0;color:#1a1a1a}
 input,select,textarea,button{font-family:inherit;outline:none}
-:root{--r1:8px;--r2:12px;}
 </style>
 </head>
 <body>
-<div id="root"><div style="padding:2rem;color:#666;font-size:14px">Đang khởi động...</div></div>
+<div id="root"><div style="padding:2rem;color:#666;font-size:14px">Đang kết nối dữ liệu...</div></div>
 <script type="text/babel">
 const {useState,useEffect,useCallback,useRef}=React;
+
+// ── CONFIG ──
+const API_URL="https://script.google.com/macros/s/AKfycby2VzZKfYidMhz-i34KPdTsKrHPLin_1aparceNWPBnxnt49gAYFixPHvmAwMuuMLeK/exec";
 const EDIT_PW="vinasources2026";
 const AUTH_KEY="vns_auth_v1";
-const SK_S="vns_sup_v3";
-const SK_R="vns_rfq_v2";
-const db={
-  get:k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},
-  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
-};
 
+// ── API helpers ──
+async function apiGet(sheet){
+  const r=await fetch(`${API_URL}?action=getAll&sheet=${sheet}`);
+  const d=await r.json();
+  return d.data||[];
+}
+async function apiSave(sheet,data){
+  await fetch(API_URL,{method:"POST",body:JSON.stringify({action:"saveAll",sheet,data})});
+}
+
+// ── CONSTANTS ──
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
 const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
@@ -46,6 +53,20 @@ const RFQ_ST=[
   {id:"sent",label:"Đã gửi Sales",c:"#1D9E75",bg:"#EAF3DE"},
   {id:"closed",label:"Closed",c:"#888",bg:"#F0F0F0"},
 ];
+const INQ_ST=[
+  {id:"inq_new",label:"Mới nhận",c:"#534AB7",bg:"#EEEDFE"},
+  {id:"inq_reviewing",label:"Đang xem xét",c:"#854F0B",bg:"#FAEEDA"},
+  {id:"inq_converted",label:"Chuyển → RFQ",c:"#1D9E75",bg:"#EAF3DE"},
+  {id:"inq_closed",label:"Closed",c:"#888",bg:"#F0F0F0"},
+];
+
+// Kraljic matrix
+const KRALJIC_QUADRANTS=[
+  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",x:"high",y:"high",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cung ứng cao",strategy:"Quan hệ đối tác dài hạn, phát triển cùng nhau, chia sẻ thông tin chiến lược"},
+  {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",x:"low",y:"high",icon:"💪",desc:"Tác động tài chính cao · Rủi ro cung ứng thấp",strategy:"Tận dụng sức mua, thương lượng giá tốt, so sánh nhiều nhà cung cấp"},
+  {id:"bottleneck",label:"Bottleneck",labelVi:"Nút thắt",c:"#854F0B",bg:"#FAEEDA",x:"high",y:"low",icon:"⚠️",desc:"Tác động tài chính thấp · Rủi ro cung ứng cao",strategy:"Dự trữ hàng tồn kho, tìm nguồn thay thế, giảm phụ thuộc"},
+  {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",x:"low",y:"low",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro cung ứng thấp",strategy:"Tự động hóa quy trình mua, tối ưu chi phí giao dịch"},
+];
 const VCOLS=[
   {id:"phap_ly",l:"01 Pháp lý",d:"Giấy phép KD, MST, hồ sơ ngành nghề XK đầy đủ"},
   {id:"san_xuat",l:"02 Sản xuất",d:"Nhà xưởng riêng, công suất ≥ MOQ buyer, máy móc đủ"},
@@ -59,6 +80,90 @@ const VCOLS=[
 ];
 const CSV_COLS=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","HT hợp tác VNS","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
 
+// ── VSERF DATA ──
+const vserfCriteria=[
+  {id:1,label:"Pháp lý",icon:"⚖️",desc:"Giấy phép kinh doanh, MST, giấy phép chuyên ngành",hint:"Tra MST tại tracuunnt.mst.gov.vn — nếu hiện 'đang hoạt động' là hợp lệ.",opts:[
+    {pts:0,text:"Không tìm thấy thông tin pháp lý, hoặc đã ngừng hoạt động / giải thể"},
+    {pts:1,text:"Có ĐKKD nhưng MST 'ngừng hoạt động' hoặc thông tin không khớp"},
+    {pts:2,text:"GP và MST hợp lệ nhưng không cung cấp được khi hỏi — phải tự tra"},
+    {pts:3,text:"GP và MST hợp lệ, cung cấp được — chưa có GP chuyên ngành (nếu hàng cần)"},
+    {pts:4,text:"Hồ sơ đầy đủ, chủ động cung cấp — có GP chuyên ngành nhưng chưa cập nhật mới nhất"},
+    {pts:5,text:"Hồ sơ đầy đủ, MST đang hoạt động, chủ động cung cấp — có đủ GP chuyên ngành còn hiệu lực"},
+  ]},
+  {id:2,label:"Sản xuất",icon:"🏭",desc:"Nhà xưởng, máy móc, công suất thực tế",hint:"Hỏi: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu?'",opts:[
+    {pts:0,text:"Không có xưởng, toàn bộ đặt gia công ngoài — thực chất là trading"},
+    {pts:1,text:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài"},
+    {pts:2,text:"Có xưởng nhưng máy móc thiếu, công suất thấp — chỉ đơn hàng nhỏ"},
+    {pts:3,text:"Có xưởng riêng, máy móc cơ bản, đáp ứng MOQ buyer — còn 1–2 công đoạn thuê ngoài"},
+    {pts:4,text:"Xưởng riêng, máy móc đầy đủ, công suất ổn định — ít phụ thuộc ngoài"},
+    {pts:5,text:"Nhà xưởng riêng, máy móc đủ toàn bộ quy trình, công suất ≥ MOQ buyer, không thuê ngoài công đoạn chính"},
+  ]},
+  {id:3,label:"Chất lượng",icon:"✅",desc:"Hệ thống QC, chứng nhận quốc tế",hint:"Hỏi: 'Ai kiểm tra hàng trước khi xuất? Có checklist QC không?'",opts:[
+    {pts:0,text:"Không có quy trình QC — hàng làm xong là đóng gói"},
+    {pts:1,text:"Kiểm tra theo cảm tính, không có tiêu chuẩn hay checklist"},
+    {pts:2,text:"Có checklist QC cơ bản, kiểm tra đầu ra (FQC) — chưa IPQC"},
+    {pts:3,text:"Có IPQC và FQC, chưa có chứng nhận quốc tế"},
+    {pts:4,text:"Có QC 3 lớp, đang lấy ISO hoặc có chứng nhận tương đương"},
+    {pts:5,text:"Có ISO 9001 hoặc tương đương còn hiệu lực, QC 3 lớp đầy đủ (IPQC/FQC/OQC)"},
+  ]},
+  {id:4,label:"Kinh nghiệm XK",icon:"🚢",desc:"Số năm XK, thị trường, thành thạo Incoterms",hint:"Hỏi: 'Đã XK sang thị trường nào? Giao FOB hay CIF?' — Không biết FOB là dấu hiệu xếp mức thấp.",opts:[
+    {pts:0,text:"Chưa từng xuất khẩu, chỉ bán nội địa"},
+    {pts:1,text:"Đã XK 1–2 lần nhưng qua trung gian hoàn toàn"},
+    {pts:2,text:"Có XK trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},
+    {pts:3,text:"XK 1–2 năm, biết FOB/CIF, đã có ít nhất 1 thị trường ổn định"},
+    {pts:4,text:"XK ≥ 2 năm, thành thạo Incoterms, đã bán 2–3 thị trường"},
+    {pts:5,text:"XK ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm nhiều thị trường"},
+  ]},
+  {id:5,label:"Chứng từ XK",icon:"📄",desc:"Tự chuẩn bị CO, packing list, invoice, HS code",hint:"Hỏi thẳng: 'Bên mình tự làm chứng từ hay nhờ logistics làm hộ?'",opts:[
+    {pts:0,text:"Không biết chứng từ XK là gì, chưa bao giờ làm"},
+    {pts:1,text:"Biết các loại nhưng hoàn toàn nhờ logistics làm hộ"},
+    {pts:2,text:"Tự làm packing list và invoice đơn giản, không biết HS code"},
+    {pts:3,text:"Tự làm hầu hết chứng từ, biết HS code — đôi khi cần hỗ trợ CO"},
+    {pts:4,text:"Tự làm đầy đủ tiếng Anh, HS code chính xác — quy trình chưa hoàn toàn chuẩn hóa"},
+    {pts:5,text:"Tự lập hoàn toàn: CO, packing list, commercial invoice EN chuẩn, HS code đúng"},
+  ]},
+  {id:6,label:"Phản hồi RFQ",icon:"⚡",desc:"Tốc độ phản hồi, chất lượng báo giá",hint:"Gửi thử 1 RFQ và đo thời gian phản hồi. Báo giá có rõ MOQ, lead time, Incoterms không?",opts:[
+    {pts:0,text:"Không phản hồi RFQ, hoặc sau hơn 3 ngày"},
+    {pts:1,text:"Phản hồi sau 48–72 giờ, báo giá 1 con số, không có thông tin kèm"},
+    {pts:2,text:"Phản hồi 24–48 giờ, có báo giá nhưng thiếu MOQ, lead time"},
+    {pts:3,text:"Phản hồi trong 24 giờ, có đủ thông tin cơ bản — chưa cost breakdown"},
+    {pts:4,text:"Phản hồi nhanh (<24h), báo giá chi tiết — đôi khi còn gộp chi phí"},
+    {pts:5,text:"Phản hồi <24h, cost breakdown rõ: đơn giá, MOQ, lead time, Incoterms, thanh toán"},
+  ]},
+  {id:7,label:"OEM / ODM",icon:"🔧",desc:"Làm theo yêu cầu buyer: mẫu, thiết kế, tùy chỉnh",hint:"Hỏi: 'Nếu buyer muốn thay đổi kích thước/màu/logo, mất bao lâu để có mẫu?'",opts:[
+    {pts:0,text:"Chỉ bán hàng có sẵn, không nhận tùy chỉnh bất kỳ"},
+    {pts:1,text:"Có thể in logo hoặc thay bao bì — không tùy chỉnh sản phẩm"},
+    {pts:2,text:"Nhận OEM cơ bản, thời gian làm mẫu >3 tuần"},
+    {pts:3,text:"Có OEM/ODM, làm mẫu 2–3 tuần, tùy chỉnh mức trung bình"},
+    {pts:4,text:"Có R&D, làm mẫu 10–14 ngày, đáp ứng hầu hết yêu cầu buyer"},
+    {pts:5,text:"Có team R&D, làm mẫu 7–10 ngày, tùy chỉnh sâu theo spec buyer"},
+  ]},
+  {id:8,label:"Giao tiếp Anh",icon:"🌐",desc:"Giao tiếp trực tiếp với buyer, không cần phiên dịch",hint:"Gửi 1 email tiếng Anh và đánh giá câu trả lời — hiểu đúng không? Diễn đạt rõ không?",opts:[
+    {pts:0,text:"Không ai giao tiếp được tiếng Anh, mọi liên lạc cần phiên dịch"},
+    {pts:1,text:"Đọc hiểu email đơn giản nhưng không tự viết — dùng Google Dịch là chính"},
+    {pts:2,text:"Viết được email cơ bản nhưng nhiều lỗi, dễ gây hiểu nhầm"},
+    {pts:3,text:"Giao tiếp được qua email/chat, hiểu và trả lời đúng ý — chưa tự tin trên Zoom"},
+    {pts:4,text:"Giao tiếp tốt qua email/chat/Zoom, đủ để thương lượng — đôi khi cần xác nhận lại"},
+    {pts:5,text:"Thành thạo mọi kênh, không cần phiên dịch, ít hiểu nhầm"},
+  ]},
+  {id:9,label:"Minh bạch",icon:"👁️",desc:"Sẵn sàng cung cấp thông tin, audit, factory visit",hint:"Thái độ khi được hỏi về xưởng là chỉ báo quan trọng. Né tránh liên tục = rủi ro cao.",opts:[
+    {pts:0,text:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi về năng lực"},
+    {pts:1,text:"Cung cấp thông tin nhỏ giọt, không nhất quán — khó xác minh"},
+    {pts:2,text:"Trả lời khi được hỏi nhưng không chủ động, chưa sẵn sàng buyer visit"},
+    {pts:3,text:"Cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit có biên bản"},
+    {pts:4,text:"Chấp nhận buyer visit và audit, có thể cung cấp ảnh/video xưởng"},
+    {pts:5,text:"Chủ động minh bạch, sẵn sàng buyer visit, factory audit chính thức, cung cấp video khi cần"},
+  ]},
+];
+const vserfTiers=[
+  {min:38,max:45,label:"Tier 1 — Export-Ready",c:"#0F6E56",bg:"#E1F5EE",badge:"🥇",action:"Onboard ngay, ưu tiên nhận đơn hàng lớn"},
+  {min:27,max:37,label:"Tier 2 — Nearly Ready",c:"#185FA5",bg:"#E6F1FB",badge:"🥈",action:"Onboard kèm CAP 30 ngày cho tiêu chí dưới 3 điểm"},
+  {min:18,max:26,label:"Tier 3 — Developing",c:"#BA7517",bg:"#FAEEDA",badge:"🥉",action:"Theo dõi, hỗ trợ 3–6 tháng, đánh giá lại"},
+  {min:0,max:17,label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",badge:"❌",action:"Không onboard, lưu hồ sơ, liên hệ lại sau 6 tháng"},
+];
+const getTier=score=>vserfTiers.find(t=>score>=t.min&&score<=t.max)||vserfTiers[3];
+
+// ── helpers ──
 const calcTier=v=>{
   const t=Object.values(v||{}).reduce((a,b)=>a+(b||0),0);
   if((v.phap_ly||0)<3||(v.san_xuat||0)<3)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
@@ -67,35 +172,12 @@ const calcTier=v=>{
   if(t>=18)return{label:"Tier 3",c:"#854F0B",bg:"#FAEEDA",t};
   return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
 };
-
 const newS=()=>({id:Date.now()+"s",name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString()});
-const newR=()=>({id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",sids:[],snotes:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
-
-const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
-const gBtn={padding:"7px 14px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",fontSize:13,color:"#555"};
-const pBtn={padding:"7px 18px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500};
-
-function Card({children,style={}}){return <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1.4rem",...style}}>{children}</div>;}
-function Sec({title,children}){return<div style={{marginBottom:"1.1rem"}}><div style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:7,borderBottom:"1px solid #f0f0f0",paddingBottom:4}}>{title}</div><div style={{display:"grid",gap:8}}>{children}</div></div>;}
-function Rw({l,children}){return<div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:8,alignItems:"start"}}><span style={{fontSize:13,color:"#666",paddingTop:8,lineHeight:1.3}}>{l}</span><div>{children}</div></div>;}
-function IB({title,children}){return<div><div style={{fontSize:11,fontWeight:600,color:"#999",marginBottom:6,textTransform:"uppercase",letterSpacing:.8}}>{title}</div>{children}</div>;}
-function IR({l,v}){return<div style={{display:"flex",gap:8,fontSize:13,padding:"3px 0"}}><span style={{color:"#777",minWidth:100,flexShrink:0}}>{l}</span><span style={{color:"#1a1a1a",flex:1}}>{v||<span style={{color:"#ccc"}}>—</span>}</span></div>;}
-function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChange(e.target.value)} style={{...iSt,width:"auto"}}>{opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>;}
-function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
-function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
+const newR=()=>({id:Date.now()+"r",type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:[],snotes:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
+const newINQ=()=>({id:Date.now()+"i",type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",notes:"",status:"inq_new",urgent:false,sids:[],ca:new Date().toISOString(),ua:new Date().toISOString()});
 
 // ── CSV helpers ──
-function parseCSVRow(line){
-  const res=[];let cur="";let inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
-    else if(c===','&&!inQ){res.push(cur.trim());cur="";}
-    else cur+=c;
-  }
-  res.push(cur.trim());
-  return res;
-}
+function parseCSVRow(line){const res=[];let cur="";let inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){res.push(cur.trim());cur="";}else cur+=c;}res.push(cur.trim());return res;}
 function parseCSVFile(text){
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2)return{error:"File không có dữ liệu",rows:[]};
@@ -106,24 +188,7 @@ function parseCSVFile(text){
     if(!lines[i].trim())continue;
     const cols=parseCSVRow(lines[i]);
     const get=h=>{const idx=headers.indexOf(h);return idx>=0?(cols[idx]||""):""};
-    const stageVal=get("Stage");
-    rows.push({
-      id:Date.now()+"_"+i+"s",
-      name:get("Tên"),industry:get("Ngành"),products:get("Sản phẩm"),
-      province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),
-      partnerType:get("HT hợp tác VNS")||"Chưa xác định",
-      website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),
-      stage:STAGES.find(s=>s.id===stageVal)?stageVal:"B1",
-      capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),
-      leadTime:get("Lead time"),incoterm:get("Incoterm"),
-      serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),
-      specialNotes:get("Lưu ý đặc biệt"),
-      certs:"",notes:"",channel:"",foundedYear:"",source:"import",
-      vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},
-      perf:{qc:0,delivery:0,comm:0,price:0,flex:0},
-      ca:new Date().toISOString(),ua:new Date().toISOString(),
-      _valid:!!get("Tên").trim(),_row:i+1,
-    });
+    rows.push({id:Date.now()+"_"+i+"s",name:get("Tên"),industry:get("Ngành"),products:get("Sản phẩm"),province:get("Tỉnh/TP"),bizModel:get("Mô hình KD"),legalType:get("Loại hình DN"),partnerType:get("HT hợp tác VNS")||"Chưa xác định",website:get("Website"),contactName:get("Contact"),zalo:get("Zalo"),email:get("Email"),stage:STAGES.find(s=>s.id===get("Stage"))?get("Stage"):"B1",capacity:get("Công suất"),moq:get("MOQ"),priceRange:get("Price Range"),leadTime:get("Lead time"),incoterm:get("Incoterm"),serviceModel:get("Mô hình SX"),paymentMethod:get("Thanh toán"),specialNotes:get("Lưu ý đặc biệt"),certs:"",notes:"",channel:"",foundedYear:"",source:"import",vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:{qc:0,delivery:0,comm:0,price:0,flex:0},ca:new Date().toISOString(),ua:new Date().toISOString(),_valid:!!get("Tên").trim(),_row:i+1});
   }
   return{error:null,rows};
 }
@@ -132,6 +197,19 @@ function downloadTemplate(){
   const blob=new Blob(["\uFEFF"+[CSV_COLS.join(","),ex.map(v=>`"${v}"`).join(",")].join("\r\n")],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_Import_Template.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
+
+// ── UI atoms ──
+const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
+const gBtn={padding:"7px 14px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",fontSize:13,color:"#555"};
+const pBtn={padding:"7px 18px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500};
+function Card({children,style={}}){return <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1.4rem",...style}}>{children}</div>;}
+function Sec({title,children}){return<div style={{marginBottom:"1.1rem"}}><div style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:1,marginBottom:7,borderBottom:"1px solid #f0f0f0",paddingBottom:4}}>{title}</div><div style={{display:"grid",gap:8}}>{children}</div></div>;}
+function Rw({l,children}){return<div style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:8,alignItems:"start"}}><span style={{fontSize:13,color:"#666",paddingTop:8,lineHeight:1.3}}>{l}</span><div>{children}</div></div>;}
+function IB({title,children}){return<div><div style={{fontSize:11,fontWeight:600,color:"#999",marginBottom:6,textTransform:"uppercase",letterSpacing:.8}}>{title}</div>{children}</div>;}
+function IR({l,v}){return<div style={{display:"flex",gap:8,fontSize:13,padding:"3px 0"}}><span style={{color:"#777",minWidth:100,flexShrink:0}}>{l}</span><span style={{color:"#1a1a1a",flex:1}}>{v||<span style={{color:"#ccc"}}>—</span>}</span></div>;}
+function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChange(e.target.value)} style={{...iSt,width:"auto"}}>{opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>;}
+function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
+function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 
 // ── App ──
 function App(){
@@ -142,37 +220,45 @@ function App(){
   const [modal,setModal]=useState(null);
   const [toast,setToast]=useState(null);
   const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [syncErr,setSyncErr]=useState(false);
 
-  useEffect(()=>{setSups(db.get(SK_S)||[]);setRfqs(db.get(SK_R)||[]);setLoading(false);},[]);
+  useEffect(()=>{
+    Promise.all([apiGet("Suppliers"),apiGet("RFQs")])
+      .then(([s,r])=>{setSups(s);setRfqs(r);setLoading(false);})
+      .catch(()=>{setSyncErr(true);setLoading(false);});
+  },[]);
 
   const toast2=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
-  const saveSups=useCallback(l=>{setSups(l);db.set(SK_S,l);},[]);
-  const saveRfqs=useCallback(l=>{setRfqs(l);db.set(SK_R,l);},[]);
 
-  const upsS=s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
-  const delS=id=>{if(!confirm("Xóa supplier này?"))return;saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
-  const upsR=r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ");setModal(null);};
-  const delR=id=>{if(!confirm("Xóa RFQ?"))return;saveRfqs(rfqs.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const saveSups=useCallback(async l=>{setSups(l);setSaving(true);try{await apiSave("Suppliers",l);}finally{setSaving(false);};},[]);
+  const saveRfqs=useCallback(async l=>{setRfqs(l);setSaving(true);try{await apiSave("RFQs",l);}finally{setSaving(false);};},[]);
+
+  const upsS=async s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);await saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
+  const delS=async id=>{if(!confirm("Xóa supplier này?"))return;await saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
+  const upsR=async r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);await saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ");setModal(null);};
+  const delR=async id=>{if(!confirm("Xóa RFQ?"))return;await saveRfqs(rfqs.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
   const logout=()=>{localStorage.removeItem(AUTH_KEY);setCanEdit(false);};
-  const batchImport=list=>{
+  const batchImport=async list=>{
     const cur=[...sups];
     list.forEach(s=>{const i=cur.findIndex(x=>x.name.toLowerCase()===s.name.toLowerCase());if(i>=0)cur[i]={...cur[i],...s,id:cur[i].id};else cur.unshift(s);});
-    saveSups(cur);
-    toast2("Đã import "+list.length+" supplier");
-    setModal(null);
+    await saveSups(cur);toast2("Đã import "+list.length+" supplier");setModal(null);
   };
 
-  if(loading)return <div style={{padding:"2rem",color:"#666"}}>Đang tải...</div>;
-  const ctx={sups,rfqs,upsS,delS,upsR,delR,setModal,toast2,canEdit,batchImport};
+  if(loading)return<div style={{padding:"2rem",color:"#666",display:"flex",alignItems:"center",gap:12}}><div style={{width:20,height:20,border:"3px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span>Đang kết nối Google Sheets...</span><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
+
+  const ctx={sups,rfqs,upsS,delS,upsR,delR,setModal,toast2,canEdit,batchImport,saveSups};
 
   return(
     <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
       {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"10px 20px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500,boxShadow:"0 2px 12px rgba(0,0,0,0.15)"}}>{toast}</div>}
+      {saving&&<div style={{position:"fixed",bottom:14,right:14,background:"#185FA5",color:"#fff",padding:"7px 14px",borderRadius:6,fontSize:12,zIndex:9999}}>💾 Đang lưu...</div>}
+      {syncErr&&<div style={{background:"#FCEBEB",borderBottom:"1px solid #E24B4A",padding:"8px 1rem",fontSize:13,color:"#A32D2D",textAlign:"center"}}>⚠ Không kết nối được Google Sheets — kiểm tra lại Apps Script URL</div>}
       {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
       <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
         <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
           <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
-          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ Tracking"},{id:"dash",l:"Dashboard"}].map(t=>(
+          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
               {t.l}
               {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
@@ -180,7 +266,8 @@ function App(){
           ))}
           <div style={{flex:1}}/>
           {canEdit?(<>
-            <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ mới</button>
+            <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
+            <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ RFQ</button>
             <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
             <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
           </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
@@ -189,15 +276,17 @@ function App(){
       <div style={{maxWidth:940,margin:"0 auto",padding:"1rem"}}>
         {tab==="list"&&<SupList ctx={ctx}/>}
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
+        {tab==="kraljic"&&<Kraljic ctx={ctx}/>}
         {tab==="dash"&&<Dash ctx={ctx}/>}
       </div>
       {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="scoring"&&canEdit&&<Modal onClose={()=>setModal(null)}><Scoring s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
       {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="rfq-assign"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQAssign r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="inq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><INQForm r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="inq-detail"&&<Modal onClose={()=>setModal(null)}><INQDetail r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="import-csv"&&canEdit&&<Modal onClose={()=>setModal(null)}><ImportCSV ctx={ctx}/></Modal>}
     </div>
   );
@@ -232,8 +321,7 @@ function SupList({ctx}){
     try{
       const rows=fl.map(s=>{const ti=calcTier(s.vserf);return[s.name,s.industry,s.products,s.province,s.bizModel,s.legalType,s.partnerType,s.website,s.contactName,s.zalo,s.email,s.stage,ti.label,ti.t,s.capacity,s.moq,s.priceRange,s.leadTime,s.incoterm,s.serviceModel,s.paymentMethod,s.specialNotes].map(v=>`"${(String(v||"")).replace(/"/g,'""')}"`).join(",");});
       const blob=new Blob(["\uFEFF"+[CSV_COLS.join(","),...rows].join("\r\n")],{type:"text/csv;charset=utf-8"});
-      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";
-      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
     }catch(e){alert("Lỗi CSV: "+e.message);}
   };
   return(
@@ -246,7 +334,7 @@ function SupList({ctx}){
         <button onClick={csv} style={gBtn}>⬇ CSV</button>
         {canEdit&&<button onClick={()=>setModal({t:"import-csv"})} style={{...gBtn,color:"#185FA5",borderColor:"#185FA5"}}>⬆ Import</button>}
       </div>
-      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>{fl.length} supplier</div>
+      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>{fl.length} supplier · dữ liệu từ Google Sheets</div>
       {fl.length===0&&<Empty text="Chưa có supplier. Nhấn + Supplier để thêm."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {fl.map(s=>{
@@ -260,7 +348,6 @@ function SupList({ctx}){
               </div>
               {s.partnerType&&s.partnerType!=="Chưa xác định"&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":"#E6F1FB",color:s.partnerType==="Đối tác trực tiếp"?"#3B6D11":"#185FA5",fontWeight:600,flexShrink:0}}>{s.partnerType==="Đối tác trực tiếp"?"Trực tiếp":"Nền tảng"}</span>}
               {s.source==="import"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#f0f0f0",color:"#888",fontWeight:600,flexShrink:0}}>CSV</span>}
-              {s.source==="reactive"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"#EEEDFE",color:"#534AB7",fontWeight:600,flexShrink:0}}>RFQ</span>}
               <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
               <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
               <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
@@ -287,26 +374,16 @@ function SupDetail({s,ctx}){
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
-        <IB title="Thông tin cơ bản">
-          <IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/>
-          <IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/>
-          <IR l="Website" v={s.website}/><IR l="Kênh" v={s.channel}/>
-          <IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/>
-        </IB>
+        <IB title="Thông tin cơ bản"><IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/><IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/><IR l="Website" v={s.website}/><IR l="Kênh" v={s.channel}/><IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/></IB>
         <IB title="Đầu mối liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
-        <IB title="Năng lực & thương mại">
-          <IR l="Chứng nhận" v={s.certs}/><IR l="Công suất/tháng" v={s.capacity}/>
-          <IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/>
-          <IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/>
-          <IR l="Mô hình SX" v={s.serviceModel}/><IR l="Thanh toán" v={s.paymentMethod}/>
-        </IB>
+        <IB title="Năng lực & thương mại"><IR l="Chứng nhận" v={s.certs}/><IR l="Công suất/tháng" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Mô hình SX" v={s.serviceModel}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
         <IB title="VSERF (9 trụ cột)">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
       </div>
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         {canEdit&&<button onClick={()=>setModal({t:"sup-form",d:s})} style={gBtn}>Sửa</button>}
-        {canEdit&&<button onClick={()=>setModal({t:"scoring",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>Chấm VSERF</button>}
+        {canEdit&&<button onClick={()=>setModal({t:"vserf",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>📋 Chấm VSERF</button>}
         <button onClick={()=>setModal({t:"brief",d:s})} style={{padding:"7px 14px",borderRadius:6,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>Xuất Brief</button>
         {canEdit&&<button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
       </div>
@@ -363,38 +440,99 @@ function SupForm({s,ctx}){
   );
 }
 
-function Scoring({s,ctx}){
+// ── VSERF CHECKLIST ──
+function VSERFChecklist({supplier,ctx}){
   const {upsS,setModal}=ctx;
-  const [sc,setSc]=useState({...s.vserf});
-  const [pf,setPf]=useState({...s.perf});
-  const ti=calcTier(sc);
+  const [answers,setAnswers]=useState(()=>{
+    const init={};
+    VCOLS.forEach((c,i)=>{
+      const v=supplier.vserf[c.id]||0;
+      if(v>0)init[i+1]={pts:v,text:vserfCriteria[i]?.opts[v]?.text||""};
+    });
+    return init;
+  });
+  const [hints,setHints]=useState({});
+  const [saved,setSaved]=useState(false);
+
+  const total=Object.values(answers).reduce((s,v)=>s+v.pts,0);
+  const answered=Object.keys(answers).length;
+  const complete=answered===9;
+  const tier=complete?getTier(total):null;
+
+  const selectOpt=(cid,opt)=>{setSaved(false);setAnswers(p=>({...p,[cid]:opt}));};
+  const toggleHint=id=>setHints(p=>({...p,[id]:!p[id]}));
+
+  const handleSave=async()=>{
+    if(!complete)return;
+    const vserf={};
+    vserfCriteria.forEach((c,i)=>{vserf[VCOLS[i].id]=answers[c.id]?.pts||0;});
+    await upsS({...supplier,vserf});
+    setSaved(true);
+    toast2?.("Đã lưu VSERF");
+  };
+
   return(
-    <Card>
-      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>VSERF — {s.name}</h2>
-      <div style={{fontSize:12,color:"#777",marginBottom:12}}>9 trụ cột · 0–5 điểm · Tổng tối đa 45</div>
-      <div style={{background:ti.bg,border:`1.5px solid ${ti.c}`,borderRadius:8,padding:"10px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span style={{fontWeight:600,color:ti.c,fontSize:14}}>{ti.label}</span>
-        <span style={{fontWeight:700,color:ti.c,fontSize:20}}>{ti.t} / 45</span>
+    <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
+      <div style={{marginBottom:14}}>
+        <h2 style={{fontSize:16,fontWeight:600,margin:0}}>📋 VSERF Checklist — {supplier.name}</h2>
+        <div style={{fontSize:12,color:"#777",marginTop:4}}>Chọn mức mô tả đúng nhất · Tổng tối đa 45 điểm</div>
       </div>
-      {VCOLS.map(c=>{const v=sc[c.id]||0;const warn=(c.id==="phap_ly"||c.id==="san_xuat")&&v<3;return(
-        <div key={c.id} style={{marginBottom:12,padding:"10px 12px",border:`1px solid ${warn?"#E24B4A":"#eee"}`,borderRadius:8,background:warn?"#FFF5F5":"#fafafa"}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontWeight:600,fontSize:13,color:warn?"#A32D2D":"#1a1a1a"}}>{c.l}</span><span style={{fontWeight:600,fontSize:14,color:warn?"#A32D2D":"#1a1a1a"}}>{v}/5</span></div>
-          <div style={{fontSize:11,color:"#aaa",marginBottom:6}}>{c.d}</div>
-          {warn&&<div style={{fontSize:11,color:"#A32D2D",marginBottom:5}}>⚠ Bắt buộc ≥3 điểm — dưới ngưỡng → Not Qualified</div>}
-          <input type="range" min={0} max={5} step={1} value={v} onChange={e=>setSc(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#ccc"}}>{[0,1,2,3,4,5].map(n=><span key={n}>{n}</span>)}</div>
-        </div>
-      );})}
-      <div style={{fontSize:13,fontWeight:600,margin:"14px 0 8px",color:"#555"}}>Hiệu suất định kỳ (nếu đã có đơn)</div>
-      {[{id:"qc",l:"Pass QC lần đầu",w:"30%"},{id:"delivery",l:"Giao hàng đúng hạn",w:"25%"},{id:"comm",l:"Phản hồi & giao tiếp",w:"20%"},{id:"price",l:"Giá cạnh tranh",w:"15%"},{id:"flex",l:"Xử lý phát sinh",w:"10%"}].map(c=>(
-        <div key={c.id} style={{marginBottom:10,display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center"}}>
-          <div><div style={{fontSize:13}}>{c.l} <span style={{fontSize:11,color:"#aaa"}}>({c.w})</span></div><input type="range" min={0} max={5} step={1} value={pf[c.id]||0} onChange={e=>setPf(p=>({...p,[c.id]:+e.target.value}))} style={{width:"100%"}}/></div>
-          <span style={{fontSize:14,fontWeight:600,minWidth:30,textAlign:"right"}}>{pf[c.id]||0}/5</span>
-        </div>
-      ))}
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
-        <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-        <button onClick={()=>upsS({...s,vserf:sc,perf:pf})} style={pBtn}>Lưu điểm</button>
+
+      {/* Score summary */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+        {[{l:"Tổng điểm",v:`${total}/45`},{l:"Đã trả lời",v:`${answered}/9`},{l:"TB/tiêu chí",v:answered>0?(total/answered).toFixed(1):"—"}].map(m=>(
+          <div key={m.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}>
+            <div style={{fontSize:11,color:"#aaa",marginBottom:3}}>{m.l}</div>
+            <div style={{fontSize:18,fontWeight:700}}>{m.v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{height:8,background:"#f0f0f0",borderRadius:4,marginBottom:14}}>
+        <div style={{height:8,borderRadius:4,background:"#1D9E75",width:`${Math.round(total/45*100)}%`,transition:"width .3s"}}/>
+      </div>
+      {tier&&<div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:8,background:tier.bg,border:`1.5px solid ${tier.c}`,marginBottom:14}}>
+        <span style={{fontSize:22}}>{tier.badge}</span>
+        <div><div style={{fontSize:14,fontWeight:700,color:tier.c}}>{tier.label}</div><div style={{fontSize:12,color:"#555",marginTop:2}}>{tier.action}</div></div>
+        <div style={{marginLeft:"auto",fontSize:24,fontWeight:800,color:tier.c}}>{total}</div>
+      </div>}
+
+      {/* Criteria */}
+      {vserfCriteria.map(cr=>{
+        const sel=answers[cr.id];
+        const warn=cr.id<=2&&sel?.pts<3;
+        return(
+          <div key={cr.id} style={{border:`1px solid ${warn?"#E24B4A":"#eee"}`,borderRadius:10,padding:"12px 14px",marginBottom:10,background:sel?"#fafffe":"#fff"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:8}}>
+              <span style={{fontSize:11,fontWeight:700,minWidth:26,height:26,borderRadius:"50%",background:sel?"#E1F5EE":"#f3f4f6",color:sel?"#0F6E56":"#6b7280",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{String(cr.id).padStart(2,"0")}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:600}}>{cr.icon} {cr.label}{sel&&<span style={{marginLeft:8,fontSize:11,fontWeight:600,color:"#0F6E56",background:"#E1F5EE",padding:"1px 8px",borderRadius:20}}>{sel.pts} điểm</span>}</div>
+                <div style={{fontSize:12,color:"#777",marginTop:2}}>{cr.desc}</div>
+              </div>
+              <button onClick={()=>toggleHint(cr.id)} style={{fontSize:11,color:"#9ca3af",background:"none",border:"none",cursor:"pointer",padding:"2px 6px",borderRadius:4,flexShrink:0}}>💡 gợi ý</button>
+            </div>
+            {hints[cr.id]&&<div style={{fontSize:12,color:"#374151",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:6,padding:"8px 10px",marginBottom:8,lineHeight:1.5}}>{cr.hint}</div>}
+            {warn&&<div style={{fontSize:11,color:"#A32D2D",marginBottom:6}}>⚠ Tiêu chí bắt buộc — dưới 3 điểm → tự động Not Qualified</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              {cr.opts.map((opt,i)=>{
+                const isSel=sel?.pts===opt.pts&&sel?.text===opt.text;
+                return(
+                  <label key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",borderRadius:7,cursor:"pointer",border:isSel?"1.5px solid #1D9E75":"1px solid #eee",background:isSel?"#E1F5EE":"#fff"}}>
+                    <input type="radio" name={`vserf_${cr.id}`} checked={isSel} onChange={()=>selectOpt(cr.id,opt)} style={{marginTop:3,accentColor:"#1D9E75",flexShrink:0}}/>
+                    <span style={{fontSize:13,lineHeight:1.45,flex:1}}>{opt.text}</span>
+                    <span style={{fontSize:11,fontWeight:600,minWidth:44,textAlign:"right",flexShrink:0,color:isSel?"#0F6E56":"#aaa"}}>{opt.pts} điểm</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={{display:"flex",gap:8,marginTop:8,position:"sticky",bottom:0,background:"#fff",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        <button onClick={handleSave} disabled={!complete||saved} style={{flex:1,padding:"9px 0",borderRadius:8,fontWeight:600,fontSize:13,cursor:complete&&!saved?"pointer":"not-allowed",background:saved?"#E1F5EE":complete?"#1D9E75":"#e5e7eb",color:saved?"#0F6E56":complete?"#fff":"#aaa",border:"none"}}>
+          {saved?"✓ Đã lưu":"Lưu kết quả VSERF"}
+        </button>
+        <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
       </div>
     </Card>
   );
@@ -441,38 +579,46 @@ function ImportCSV({ctx}){
   const [err,setErr]=useState("");
   const [step,setStep]=useState(1);
   const [sel,setSel]=useState({});
+  const [drag,setDrag]=useState(false);
   const fileRef=useRef();
 
-  const onFile=e=>{
-    const f=e.target.files[0];
+  const processFile=f=>{
     if(!f)return;
     const reader=new FileReader();
     reader.onload=ev=>{
       const {error,rows:parsed}=parseCSVFile(ev.target.result);
       if(error){setErr(error);return;}
       setErr("");
-      const existing=new Set(sups.map(s=>s.name.toLowerCase().trim()));
-      const initSel={};
-      parsed.forEach((_,i)=>{initSel[i]=true;});
+      const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
       setRows(parsed);setSel(initSel);setStep(2);
     };
+    reader.onerror=()=>setErr("Không đọc được file. Thử paste nội dung CSV vào ô bên dưới.");
     reader.readAsText(f,"UTF-8");
+  };
+  const onFile=e=>{if(e.target.files[0])processFile(e.target.files[0]);};
+  const onDrop=e=>{e.preventDefault();setDrag(false);if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);};
+  const onPaste=e=>{
+    const text=e.target.value;
+    if(!text.trim())return;
+    const {error,rows:parsed}=parseCSVFile(text);
+    if(error){setErr(error);return;}
+    setErr("");
+    const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
+    setRows(parsed);setSel(initSel);setStep(2);
   };
 
   const doImport=()=>{
     const toImport=rows.filter((_,i)=>sel[i]&&rows[i]._valid);
-    if(!toImport.length){return;}
+    if(!toImport.length)return;
     batchImport(toImport);
   };
-
   const validCount=rows.filter((_,i)=>sel[i]&&rows[i]._valid).length;
   const dupCount=rows.filter(r=>sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase())).length;
 
   return(
     <Card>
       <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Import Supplier từ CSV</h2>
-      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file CSV theo đúng format template · Preview trước khi lưu</div>
-
+      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file hoặc paste nội dung CSV · Preview trước khi lưu vào Google Sheets</div>
       {step===1&&(
         <div>
           <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
@@ -480,58 +626,55 @@ function ImportCSV({ctx}){
             <div style={{fontSize:12,color:"#555",marginBottom:10,lineHeight:1.6}}>Download file mẫu → điền thông tin → save → upload lên.<br/><b>Cột bắt buộc:</b> Tên · Ngành · Sản phẩm</div>
             <button onClick={downloadTemplate} style={{...pBtn,background:"#3B6D11",fontSize:12}}>⬇ Download Template CSV</button>
           </div>
-          <div style={{border:"2px dashed #ddd",borderRadius:10,padding:"2rem",textAlign:"center",cursor:"pointer",background:"#fafafa"}} onClick={()=>fileRef.current.click()}>
-            <div style={{fontSize:28,marginBottom:8}}>📂</div>
-            <div style={{fontSize:14,fontWeight:500,color:"#555",marginBottom:4}}>Click để chọn file CSV</div>
-            <div style={{fontSize:12,color:"#aaa"}}>Chỉ nhận file .csv · Encoding UTF-8</div>
-            <input ref={fileRef} type="file" accept=".csv" onChange={onFile} style={{display:"none"}}/>
+          {/* Click to upload */}
+          <div onDrop={onDrop} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onClick={()=>fileRef.current.click()} style={{border:`2px dashed ${drag?"#1D9E75":"#ddd"}`,borderRadius:10,padding:"1.5rem",textAlign:"center",cursor:"pointer",background:drag?"#F0F9F5":"#fafafa",marginBottom:10}}>
+            <div style={{fontSize:24,marginBottom:6}}>{drag?"📥":"📂"}</div>
+            <div style={{fontSize:13,fontWeight:600,color:drag?"#1D9E75":"#555",marginBottom:2}}>{drag?"Thả file vào đây":"Click để chọn file CSV"}</div>
+            <div style={{fontSize:11,color:"#aaa"}}>hoặc kéo thả file vào đây</div>
+            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} style={{display:"none"}}/>
           </div>
-          {err&&<div style={{marginTop:10,padding:"8px 12px",background:"#FCEBEB",borderRadius:6,fontSize:13,color:"#A32D2D"}}>{err}</div>}
-          <div style={{marginTop:14,padding:"10px 14px",background:"#f8f8f8",borderRadius:8}}>
+          {/* Paste fallback */}
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginBottom:6}}>— hoặc paste nội dung CSV trực tiếp —</div>
+            <textarea onChange={onPaste} placeholder={"Tên,Ngành,Sản phẩm,...\nCông ty A,Footwear,Giày da,..."} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box",fontSize:11,fontFamily:"monospace"}}/>
+          </div>
+          {err&&<div style={{padding:"8px 12px",background:"#FCEBEB",borderRadius:6,fontSize:13,color:"#A32D2D",marginBottom:10}}>{err}</div>}
+          <div style={{padding:"10px 14px",background:"#f8f8f8",borderRadius:8}}>
             <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>Các cột trong template</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{CSV_COLS.map((h,i)=><span key={h} style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:i<3?"#EAF3DE":"#f0f0f0",color:i<3?"#3B6D11":"#666",fontWeight:i<3?600:400}}>{h}{i<3?" *":""}</span>)}</div>
           </div>
         </div>
       )}
-
       {step===2&&(
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
-            {[{l:"Tổng dòng",v:rows.length,c:"#185FA5"},{l:"Sẽ import",v:validCount,c:"#1D9E75"},{l:"Trùng tên (cập nhật)",v:dupCount,c:"#854F0B"}].map(x=>(
-              <div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div>
-                <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{x.l}</div>
-              </div>
+            {[{l:"Tổng dòng",v:rows.length,c:"#185FA5"},{l:"Sẽ import",v:validCount,c:"#1D9E75"},{l:"Trùng (cập nhật)",v:dupCount,c:"#854F0B"}].map(x=>(
+              <div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>{x.l}</div></div>
             ))}
           </div>
-          {dupCount>0&&<div style={{padding:"8px 12px",background:"#FAEEDA",borderRadius:6,fontSize:12,color:"#854F0B",marginBottom:10}}>⚠ Supplier trùng tên sẽ được cập nhật (overwrite) nếu được chọn</div>}
-          <div style={{maxHeight:320,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:14}}>
+          {dupCount>0&&<div style={{padding:"8px 12px",background:"#FAEEDA",borderRadius:6,fontSize:12,color:"#854F0B",marginBottom:10}}>⚠ Supplier trùng tên sẽ được cập nhật nếu được chọn</div>}
+          <div style={{maxHeight:300,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:14}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead style={{background:"#f8f8f8",position:"sticky",top:0}}>
                 <tr>
-                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee",width:30}}>
-                    <input type="checkbox" checked={rows.length>0&&rows.every((_,i)=>sel[i])} onChange={e=>{const s={};rows.forEach((_,i)=>s[i]=e.target.checked);setSel(s);}}/>
-                  </th>
-                  {["#","Tên công ty","Ngành","Sản phẩm","Tỉnh/TP","Trạng thái"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>{h}</th>)}
+                  <th style={{padding:"8px 10px",textAlign:"left",width:30,borderBottom:"1px solid #eee"}}><input type="checkbox" checked={rows.length>0&&rows.every((_,i)=>sel[i])} onChange={e=>{const s={};rows.forEach((_,i)=>s[i]=e.target.checked);setSel(s);}}/></th>
+                  {["#","Tên công ty","Ngành","Sản phẩm","Trạng thái"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:"#555",borderBottom:"1px solid #eee"}}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r,i)=>{
                   const isDup=sups.some(s=>s.name.toLowerCase()===r.name.toLowerCase());
                   return(
-                    <tr key={i} style={{background:sel[i]?"#f0faf6":"#fff",borderBottom:"1px solid #f5f5f5",opacity:r._valid?1:0.5}}>
+                    <tr key={i} style={{background:sel[i]?"#f0faf6":"#fff",borderBottom:"1px solid #f5f5f5"}}>
                       <td style={{padding:"7px 10px"}}><input type="checkbox" checked={!!sel[i]} onChange={e=>setSel(p=>({...p,[i]:e.target.checked}))}/></td>
                       <td style={{padding:"7px 10px",color:"#aaa"}}>{r._row}</td>
                       <td style={{padding:"7px 10px",fontWeight:500}}>{r.name||<span style={{color:"#E24B4A"}}>⚠ Trống</span>}</td>
                       <td style={{padding:"7px 10px",color:"#555"}}>{r.industry||"—"}</td>
-                      <td style={{padding:"7px 10px",color:"#555",maxWidth:120,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.products||"—"}</td>
-                      <td style={{padding:"7px 10px",color:"#555"}}>{r.province||"—"}</td>
+                      <td style={{padding:"7px 10px",color:"#555",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.products||"—"}</td>
                       <td style={{padding:"7px 10px"}}>
-                        {!r._valid
-                          ?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>Thiếu tên</span>
-                          :isDup
-                          ?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>Cập nhật</span>
-                          :<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#EAF3DE",color:"#3B6D11",fontWeight:600}}>Mới</span>}
+                        {!r._valid?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>Thiếu tên</span>
+                        :isDup?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>Cập nhật</span>
+                        :<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#EAF3DE",color:"#3B6D11",fontWeight:600}}>Mới</span>}
                       </td>
                     </tr>
                   );
@@ -540,10 +683,10 @@ function ImportCSV({ctx}){
             </table>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
-            <button onClick={()=>{setStep(1);setRows([]);setErr("");}} style={gBtn}>← Upload lại</button>
+            <button onClick={()=>{setStep(1);setRows([]);}} style={gBtn}>← Upload lại</button>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-              <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5,cursor:validCount?"pointer":"not-allowed"}}>⬆ Import {validCount} supplier</button>
+              <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5}}>⬆ Import {validCount} supplier lên Sheets</button>
             </div>
           </div>
         </div>
@@ -553,26 +696,307 @@ function ImportCSV({ctx}){
 }
 
 function RFQList({ctx}){
-  const {rfqs,setModal}=ctx;
-  const [fS,setFS]=useState("all");
-  const fl=rfqs.filter(r=>fS==="all"||r.status===fS);
+  const {rfqs,setModal,canEdit}=ctx;
+  const [fType,setFType]=useState("all");
+  const [fUrgent,setFUrgent]=useState("all");
+  const [fStatus,setFStatus]=useState("all");
+
+  const allItems=rfqs;
+  const urgentCount=allItems.filter(r=>r.urgent&&r.status!=="closed"&&r.status!=="inq_closed"&&r.status!=="inq_converted").length;
+
+  const fl=allItems.filter(r=>{
+    const typeOk=fType==="all"||(fType==="rfq"&&r.type!=="inq")||(fType==="inq"&&r.type==="inq");
+    const urgentOk=fUrgent==="all"||(fUrgent==="urgent"&&r.urgent)||(fUrgent==="normal"&&!r.urgent);
+    const statusOk=fStatus==="all"||r.status===fStatus;
+    return typeOk&&urgentOk&&statusOk;
+  });
+
+  const allStatuses=[...RFQ_ST,...INQ_ST];
+
   return(
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}><span style={{fontSize:14,fontWeight:600}}>RFQ Tracking</span><div style={{flex:1}}/><Sel val={fS} onChange={setFS} opts={[["all","Tất cả trạng thái"],...RFQ_ST.map(s=>[s.id,s.label])]}/></div>
-      {fl.length===0&&<Empty text="Chưa có RFQ. Nhấn + RFQ mới để tạo."/>}
+      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:14,fontWeight:600}}>RFQ / Inquiry</span>
+        {urgentCount>0&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 {urgentCount} gấp</span>}
+        <div style={{flex:1}}/>
+        {/* Filters */}
+        <Sel val={fType} onChange={setFType} opts={[["all","RFQ + INQ"],["rfq","Chỉ RFQ"],["inq","Chỉ INQ"]]}/>
+        <Sel val={fUrgent} onChange={setFUrgent} opts={[["all","Tất cả"],["urgent","🔴 Gấp"],["normal","Không gấp"]]}/>
+        <Sel val={fStatus} onChange={setFStatus} opts={[["all","Tất cả trạng thái"],...allStatuses.map(s=>[s.id,s.label])]}/>
+      </div>
+
+      {fl.length===0&&<Empty text="Chưa có RFQ/INQ. Nhấn + INQ hoặc + RFQ để tạo."/>}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {fl.map(r=>{const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];const urg=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);return(
-          <div key={r.id} onClick={()=>setModal({t:"rfq-detail",d:r})} style={{background:"#fff",border:`1px solid ${urg&&r.status!=="closed"?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span style={{fontWeight:600,fontSize:12,color:"#aaa",minWidth:80}}>{r.code}</span><span style={{fontWeight:600,fontSize:14,flex:1}}>{r.desc||"(Chưa mô tả)"}</span><span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}</div>
-            <div style={{fontSize:12,color:"#777",marginTop:5,display:"flex",gap:14,flexWrap:"wrap"}}>{r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}{r.deadline&&<span>📅 {r.deadline}</span>}{r.sales&&<span>👤 {r.sales}</span>}{r.sids?.length>0&&<span>🏭 {r.sids.length} NCC</span>}</div>
-          </div>
-        );})}
+        {fl.map(r=>{
+          const isInq=r.type==="inq";
+          const statusList=isInq?INQ_ST:RFQ_ST;
+          const st=statusList.find(x=>x.id===r.status)||statusList[0];
+          const deadlineUrgent=r.deadline&&new Date(r.deadline)<new Date(Date.now()+3*864e5);
+          return(
+            <div key={r.id} onClick={()=>setModal({t:isInq?"inq-detail":"rfq-detail",d:r})} style={{background:"#fff",border:`1px solid ${(r.urgent||deadlineUrgent)&&r.status!=="closed"&&r.status!=="inq_closed"?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:isInq?"#EEEDFE":"#E6F1FB",color:isInq?"#534AB7":"#185FA5"}}>{isInq?"INQ":"RFQ"}</span>
+                <span style={{fontWeight:600,fontSize:12,color:"#aaa",minWidth:70}}>{r.code}</span>
+                <span style={{fontWeight:600,fontSize:14,flex:1}}>{r.desc||"(Chưa mô tả)"}</span>
+                <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
+                {r.urgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
+                {!r.urgent&&deadlineUrgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>⏰ Sắp hết hạn</span>}
+              </div>
+              <div style={{fontSize:12,color:"#777",marginTop:5,display:"flex",gap:14,flexWrap:"wrap"}}>
+                {r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}
+                {r.deadline&&<span>📅 {r.deadline}</span>}
+                {r.sales&&<span>👤 {r.sales}</span>}
+                {r.sids?.length>0&&<span>🏭 {r.sids.length} NCC</span>}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function RFQForm({r,ctx}){
+  const {upsR,setModal}=ctx;
+  const [f,setF]=useState({...r});
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const tog=m=>set("markets",f.markets?.includes(m)?f.markets.filter(x=>x!==m):[...(f.markets||[]),m]);
+  return(
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
+        <h2 style={{margin:0,fontSize:15,fontWeight:600}}>RFQ từ Sales</h2>
+        <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}>
+          <input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/>
+          <span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span>
+        </label>
+      </div>
+      <Sec title="Thông tin RFQ">
+        <Rw l="Mã RFQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Sales phụ trách"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} placeholder="Nguyễn Văn B" style={iSt}/></Rw>
+        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Deadline báo giá"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
+      </Sec>
+      <Sec title="Yêu cầu sản phẩm">
+        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Áo polo cotton 220gsm..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
+        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs" style={iSt}/></Rw>
+        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5/pcs" style={iSt}/></Rw>
+        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
+        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+      </Sec>
+      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu RFQ</button></div>
+    </Card>
+  );
+}
+
+function INQForm({r,ctx}){
+  const {upsR,setModal}=ctx;
+  const [f,setF]=useState({...r});
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const tog=m=>set("markets",f.markets?.includes(m)?f.markets.filter(x=>x!==m):[...(f.markets||[]),m]);
+  return(
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
+        <h2 style={{margin:0,fontSize:15,fontWeight:600}}>📩 Inquiry từ Sales / Buyer</h2>
+        <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}>
+          <input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/>
+          <span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span>
+        </label>
+      </div>
+      <div style={{padding:"8px 12px",background:"#EEEDFE",borderRadius:6,marginBottom:14,fontSize:12,color:"#534AB7"}}>INQ = Buyer hỏi thăm chưa có spec cụ thể. Sau khi xác nhận yêu cầu sẽ chuyển thành RFQ.</div>
+      <Sec title="Thông tin Inquiry">
+        <Rw l="Mã INQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Sales / Nguồn"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} placeholder="Nguyễn Văn B / Email buyer" style={iSt}/></Rw>
+        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Phản hồi trước"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
+      </Sec>
+      <Sec title="Nội dung Inquiry">
+        <Rw l="Mô tả yêu cầu *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Buyer hỏi về sản phẩm gì, số lượng ước tính, thị trường..." style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Thị trường"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#534AB7":"#ddd"}`,background:f.markets?.includes(m)?"#EEEDFE":"none",color:f.markets?.includes(m)?"#534AB7":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
+        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Thông tin thêm từ buyer..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+      </Sec>
+      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu INQ</button></div>
+    </Card>
+  );
+}
+
+function INQDetail({r,ctx}){
+  const {upsR,delR,setModal,canEdit}=ctx;
+  const st=INQ_ST.find(x=>x.id===r.status)||INQ_ST[0];
+  const convertToRFQ=()=>{
+    const rfq={...newR(),id:Date.now()+"r",code:"RFQ-"+Date.now().toString().slice(-5),sales:r.sales,desc:r.desc,markets:r.markets,deadline:r.deadline,notes:r.notes,urgent:r.urgent};
+    upsR({...r,status:"inq_converted"});
+    upsR(rfq);
+    setModal({t:"rfq-detail",d:rfq});
+  };
+  return(
+    <Card>
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:"#EEEDFE",color:"#534AB7"}}>INQ</span>
+            <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
+            {r.urgent&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
+          </div>
+        </div>
+        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5}}>{r.desc||"(Chưa mô tả)"}</h2>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>
+          {r.sales&&<span>👤 {r.sales}</span>}
+          {r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}
+          {r.date&&<span>📥 {r.date}</span>}
+          {r.deadline&&<span>📅 Phản hồi trước: {r.deadline}</span>}
+        </div>
+      </div>
+      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8}}>Ghi chú</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
+      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&(
+        <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:14}}>
+          <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div>
+          <div style={{fontSize:12,color:"#555",marginBottom:8}}>Khi buyer đã xác nhận yêu cầu cụ thể, convert INQ này thành RFQ để tiến hành sourcing.</div>
+          <button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button>
+        </div>
+      )}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        {canEdit&&<button onClick={()=>setModal({t:"inq-form",d:r})} style={gBtn}>✏️ Sửa INQ</button>}
+        <div style={{display:"flex",gap:6,alignItems:"center",marginLeft:"auto"}}>
+          <span style={{fontSize:12,color:"#aaa"}}>Trạng thái:</span>
+          {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
+        </div>
+        {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
+      </div>
+    </Card>
+  );
+}
+
+// ── KRALJIC MATRIX ──
+function Kraljic({ctx}){
+  const {sups,upsS,setModal,canEdit}=ctx;
+
+  const quadrants=KRALJIC_QUADRANTS;
+  const getQ=s=>quadrants.find(q=>q.id===s.kraljic)||null;
+
+  // Group suppliers by quadrant
+  const grouped={strategic:[],leverage:[],bottleneck:[],routine:[],unclassified:[]};
+  sups.forEach(s=>{
+    if(s.kraljic&&grouped[s.kraljic])grouped[s.kraljic].push(s);
+    else grouped.unclassified.push(s);
+  });
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:15,fontWeight:600}}>Ma trận Kraljic — Phân loại NCC</div>
+          <div style={{fontSize:12,color:"#777",marginTop:2}}>Phân loại nhà cung cấp theo tác động tài chính và rủi ro cung ứng</div>
+        </div>
+        {grouped.unclassified.length>0&&<div style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:"#FAEEDA",color:"#854F0B",fontWeight:500}}>{grouped.unclassified.length} NCC chưa phân loại</div>}
+      </div>
+
+      {/* Matrix 2x2 */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+        {[
+          {q:quadrants.find(q=>q.id==="strategic"),key:"strategic"},
+          {q:quadrants.find(q=>q.id==="leverage"),key:"leverage"},
+          {q:quadrants.find(q=>q.id==="bottleneck"),key:"bottleneck"},
+          {q:quadrants.find(q=>q.id==="routine"),key:"routine"},
+        ].map(({q,key})=>(
+          <div key={key} style={{background:q.bg,border:`1.5px solid ${q.c}`,borderRadius:12,padding:"1rem"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <span style={{fontSize:20}}>{q.icon}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div>
+                <div style={{fontSize:11,color:"#666"}}>{q.desc}</div>
+              </div>
+              <span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[key].length}</span>
+            </div>
+            <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8,lineHeight:1.5}}>💡 {q.strategy}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {grouped[key].map(s=>{
+                const ti=calcTier(s.vserf);
+                return(
+                  <div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
+                      <div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div>
+                    </div>
+                    <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+                    {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}
+                  </div>
+                );
+              })}
+              {grouped[key].length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:"8px 0"}}>Chưa có NCC</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Unclassified */}
+      {grouped.unclassified.length>0&&(
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length} NCC)</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
+            {grouped.unclassified.map(s=>{
+              const ti=calcTier(s.vserf);
+              return(
+                <div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
+                    <div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label} · {ti.t}/45</div>
+                  </div>
+                  {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div style={{marginTop:12,padding:"10px 14px",background:"#f8f8f8",borderRadius:8,fontSize:12,color:"#666"}}>
+        <div style={{fontWeight:600,marginBottom:6}}>Hướng dẫn phân loại:</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+          <div><b style={{color:"#A32D2D"}}>⭐ Strategic:</b> NCC độc quyền, khó thay thế, ảnh hưởng lớn đến doanh thu</div>
+          <div><b style={{color:"#3B6D11"}}>💪 Leverage:</b> Nhiều NCC thay thế, giá trị mua lớn — có thể thương lượng mạnh</div>
+          <div><b style={{color:"#854F0B"}}>⚠️ Bottleneck:</b> Khó tìm thay thế nhưng giá trị không cao — cần dự phòng</div>
+          <div><b style={{color:"#185FA5"}}>📦 Routine:</b> Dễ mua, giá trị thấp — tối ưu quy trình và chi phí giao dịch</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KraljicEdit({s,ctx}){
+  const {upsS,setModal}=ctx;
+  const [selected,setSelected]=useState(s.kraljic||"");
+  return(
+    <Card>
+      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Phân loại Kraljic — {s.name}</h2>
+      <div style={{fontSize:12,color:"#777",marginBottom:16}}>Chọn nhóm phù hợp với vai trò của NCC này trong chuỗi cung ứng</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        {KRALJIC_QUADRANTS.map(q=>(
+          <div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff",transition:"all .15s"}}>
+            <div style={{fontSize:18,marginBottom:4}}>{q.icon}</div>
+            <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div>
+            <div style={{fontSize:11,color:"#777",marginBottom:6}}>{q.labelVi} · {q.desc}</div>
+            <div style={{fontSize:11,color:"#555",lineHeight:1.5}}>→ {q.strategy}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
+        {s.kraljic&&<button onClick={()=>{upsS({...s,kraljic:""});setModal(null);}} style={{...gBtn,color:"#E24B4A"}}>Bỏ phân loại</button>}
+        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
+          <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
+          <button onClick={()=>{upsS({...s,kraljic:selected});setModal(null);}} disabled={!selected} style={{...pBtn,background:"#534AB7",opacity:selected?1:.5}}>Lưu phân loại</button>
+        </div>
+      </div>
+    </Card>
+  );
+}
   const {upsR,setModal}=ctx;
   const [f,setF]=useState({...r});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
@@ -587,13 +1011,13 @@ function RFQForm({r,ctx}){
         <Rw l="Deadline báo giá"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Yêu cầu sản phẩm">
-        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Áo polo cotton 220gsm, logo thêu..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Áo polo cotton 220gsm..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
-        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs, 1 container 20ft" style={iSt}/></Rw>
-        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5–4.0/pcs" style={iSt}/></Rw>
+        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs" style={iSt}/></Rw>
+        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5/pcs" style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
-        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65, HACCP..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt, packaging..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu RFQ</button></div>
@@ -610,40 +1034,35 @@ function RFQDetail({r,ctx}){
   return(
     <Card>
       <div style={{marginBottom:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
           <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
           <div style={{display:"flex",gap:6}}><span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{urg&&r.status!=="closed"&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}</div>
         </div>
         <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600,lineHeight:1.5}}>{r.desc||"(Chưa mô tả)"}</h2>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>
-          {r.sales&&<span>👤 {r.sales}</span>}{r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}{r.date&&<span>📥 Nhận: {r.date}</span>}{r.deadline&&<span style={{color:urg?"#A32D2D":"#777",fontWeight:urg?600:400}}>📅 Deadline: {r.deadline}</span>}
-        </div>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>{r.sales&&<span>👤 {r.sales}</span>}{r.markets?.length>0&&<span>🌍 {r.markets.join(", ")}</span>}{r.date&&<span>📥 {r.date}</span>}{r.deadline&&<span style={{color:urg?"#A32D2D":"#777",fontWeight:urg?600:400}}>📅 {r.deadline}</span>}</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
-        {[{l:"MOQ / Số lượng",v:r.qty},{l:"Giá mục tiêu",v:r.price},{l:"Incoterm",v:r.incoterm}].map(x=>x.v?(<div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>{x.l}</div><div style={{fontSize:13,fontWeight:500}}>{x.v}</div></div>):null)}
+        {[{l:"MOQ",v:r.qty},{l:"Giá mục tiêu",v:r.price},{l:"Incoterm",v:r.incoterm}].map(x=>x.v?(<div key={x.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>{x.l}</div><div style={{fontSize:13,fontWeight:500}}>{x.v}</div></div>):null)}
       </div>
-      {certTags.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:7}}>Chứng chỉ yêu cầu</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{certTags.map((c,i)=><span key={i} style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:"#EAF3DE",color:"#3B6D11",fontWeight:500,border:"1px solid #C5DFA8"}}>{c}</span>)}</div></div>}
-      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Ghi chú & Yêu cầu kỹ thuật</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
+      {certTags.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:7}}>Chứng chỉ yêu cầu</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{certTags.map((c,i)=><span key={i} style={{fontSize:12,padding:"3px 10px",borderRadius:20,background:"#EAF3DE",color:"#3B6D11",fontWeight:500,border:"1px solid #C5DFA8"}}>{c}</span>)}</div></div>}
+      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8}}>Ghi chú & Yêu cầu kỹ thuật</div><div style={{fontSize:13,color:"#333",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{r.notes}</div></div>}
       <div style={{marginBottom:14}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>NCC được gán ({asgn.length})</span>
-          {canEdit&&<div style={{display:"flex",gap:6}}>
-            <button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán từ DB</button>
-            <button onClick={()=>setModal({t:"sup-form",d:{...newS(),source:"reactive"}})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #534AB7",background:"none",color:"#534AB7",cursor:"pointer"}}>+ NCC mới</button>
-          </div>}
+          {canEdit&&<div style={{display:"flex",gap:6}}><button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán từ DB</button><button onClick={()=>setModal({t:"sup-form",d:{...newS(),source:"reactive"}})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #534AB7",background:"none",color:"#534AB7",cursor:"pointer"}}>+ NCC mới</button></div>}
         </div>
-        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"8px 0"}}>Chưa có NCC.{canEdit?" Gán từ DB hoặc thêm mới.":""}</div>}
+        {asgn.length===0&&<div style={{fontSize:13,color:"#bbb",padding:"8px 0"}}>Chưa có NCC.</div>}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {asgn.map(s=>{const ti=calcTier(s.vserf);const note=r.snotes?.[s.id]||"";return(
             <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start"}}>
               <div style={{flex:1}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>{s.bizModel&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f0f0f0",color:"#666"}}>{s.bizModel}</span>}</div>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span></div>
                 <div style={{fontSize:12,color:"#777"}}>{[s.products,s.province].filter(Boolean).join(" · ")}</div>
                 {s.zalo&&<div style={{fontSize:12,color:"#777",marginTop:2}}>📱 {s.zalo}</div>}
-                {canEdit?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá, phản hồi NCC..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>:note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>}
+                {canEdit?<input value={note} onChange={e=>upsR({...r,snotes:{...r.snotes,[s.id]:e.target.value}})} placeholder="Ghi chú báo giá..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>:note&&<div style={{fontSize:12,color:"#555",marginTop:6,padding:"6px 10px",background:"#fff",borderRadius:6,border:"1px solid #eee"}}>{note}</div>}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
-                <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>Brief</button>
+                <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
                 {canEdit&&<button onClick={()=>upsR({...r,sids:r.sids.filter(x=>x!==s.id)})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
               </div>
             </div>
@@ -700,7 +1119,7 @@ function Dash({ctx}){
   const kpis=[{l:"Tổng supplier",v:sups.length,t:"—",c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,t:"≥40%",c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",t:"≥40%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",t:"≥32/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"RFQ đang mở",v:rfqs.filter(r=>r.status!=="closed").length,t:"—",c:"#534AB7"},{l:"RFQ đã gửi Sales",v:rfqs.filter(r=>r.status==="sent").length,t:"—",c:"#854F0B"}];
   return(
     <div>
-      <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard Management</div>
+      <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard · dữ liệu từ Google Sheets</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>{kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div><div style={{fontSize:10,color:"#ccc",marginTop:2}}>Mục tiêu: {k.t}</div></div>)}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1 Export-Ready",v:ti.t1,c:"#1D9E75"},{l:"Tier 2 Nearly Ready",v:ti.t2,c:"#185FA5"},{l:"Tier 3 Developing",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
