@@ -18,12 +18,10 @@ input,select,textarea,button{font-family:inherit;outline:none}
 <script type="text/babel">
 const {useState,useEffect,useCallback,useRef}=React;
 
-// ── CONFIG ──
-const API_URL="https://script.google.com/macros/s/AKfycby2VzZKfYidMhz-i34KPdTsKrHPLin_1aparceNWPBnxnt49gAYFixPHvmAwMuuMLeK/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbyy-RFrjZLoOL5hz7BQikRlkbcIVKwdfE7yOd8xLmOxsupoa5rv6hmcYhHptfWG6IrC/exec";
 const EDIT_PW="vinasources2026";
 const AUTH_KEY="vns_auth_v1";
 
-// ── API helpers ──
 async function apiGet(sheet){
   const r=await fetch(`${API_URL}?action=getAll&sheet=${sheet}`);
   const d=await r.json();
@@ -33,7 +31,6 @@ async function apiSave(sheet,data){
   await fetch(API_URL,{method:"POST",body:JSON.stringify({action:"saveAll",sheet,data})});
 }
 
-// ── CONSTANTS ──
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
 const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
@@ -59,8 +56,6 @@ const INQ_ST=[
   {id:"inq_converted",label:"Chuyển → RFQ",c:"#1D9E75",bg:"#EAF3DE"},
   {id:"inq_closed",label:"Closed",c:"#888",bg:"#F0F0F0"},
 ];
-
-// Kraljic matrix
 const KRALJIC_QUADRANTS=[
   {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",x:"high",y:"high",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cung ứng cao",strategy:"Quan hệ đối tác dài hạn, phát triển cùng nhau, chia sẻ thông tin chiến lược"},
   {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",x:"low",y:"high",icon:"💪",desc:"Tác động tài chính cao · Rủi ro cung ứng thấp",strategy:"Tận dụng sức mua, thương lượng giá tốt, so sánh nhiều nhà cung cấp"},
@@ -80,7 +75,6 @@ const VCOLS=[
 ];
 const CSV_COLS=["Tên","Ngành","Sản phẩm","Tỉnh/TP","Mô hình KD","Loại hình DN","HT hợp tác VNS","Website","Contact","Zalo","Email","Stage","Tier","VSERF","Công suất","MOQ","Price Range","Lead time","Incoterm","Mô hình SX","Thanh toán","Lưu ý đặc biệt"];
 
-// ── VSERF DATA ──
 const vserfCriteria=[
   {id:1,label:"Pháp lý",icon:"⚖️",desc:"Giấy phép kinh doanh, MST, giấy phép chuyên ngành",hint:"Tra MST tại tracuunnt.mst.gov.vn — nếu hiện 'đang hoạt động' là hợp lệ.",opts:[
     {pts:0,text:"Không tìm thấy thông tin pháp lý, hoặc đã ngừng hoạt động / giải thể"},
@@ -163,7 +157,6 @@ const vserfTiers=[
 ];
 const getTier=score=>vserfTiers.find(t=>score>=t.min&&score<=t.max)||vserfTiers[3];
 
-// ── helpers ──
 const calcTier=v=>{
   const t=Object.values(v||{}).reduce((a,b)=>a+(b||0),0);
   if((v.phap_ly||0)<3||(v.san_xuat||0)<3)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
@@ -176,7 +169,6 @@ const newS=()=>({id:Date.now()+"s",name:"",bizModel:"",legalType:"",partnerType:
 const newR=()=>({id:Date.now()+"r",type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:[],snotes:{},ca:new Date().toISOString(),ua:new Date().toISOString()});
 const newINQ=()=>({id:Date.now()+"i",type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:new Date().toISOString().slice(0,10),desc:"",markets:[],deadline:"",notes:"",status:"inq_new",urgent:false,sids:[],ca:new Date().toISOString(),ua:new Date().toISOString()});
 
-// ── CSV helpers ──
 function parseCSVRow(line){const res=[];let cur="";let inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){res.push(cur.trim());cur="";}else cur+=c;}res.push(cur.trim());return res;}
 function parseCSVFile(text){
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
@@ -198,7 +190,6 @@ function downloadTemplate(){
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VinaSources_Import_Template.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 
-// ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
 const gBtn={padding:"7px 14px",borderRadius:6,border:"1px solid #ddd",background:"none",cursor:"pointer",fontSize:13,color:"#555"};
 const pBtn={padding:"7px 18px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500};
@@ -211,7 +202,6 @@ function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChang
 function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
 function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 
-// ── App ──
 function App(){
   const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
   const [sups,setSups]=useState([]);
@@ -285,9 +275,11 @@ function App(){
       {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
       {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="rfq-assign"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQAssign r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="inq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><INQForm r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="inq-detail"&&<Modal onClose={()=>setModal(null)}><INQDetail r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="import-csv"&&canEdit&&<Modal onClose={()=>setModal(null)}><ImportCSV ctx={ctx}/></Modal>}
+      {modal?.t==="kraljic-edit"&&canEdit&&<Modal onClose={()=>setModal(null)}><KraljicEdit s={modal.d} ctx={ctx}/></Modal>}
     </div>
   );
 }
@@ -440,9 +432,8 @@ function SupForm({s,ctx}){
   );
 }
 
-// ── VSERF CHECKLIST ──
 function VSERFChecklist({supplier,ctx}){
-  const {upsS,setModal}=ctx;
+  const {upsS,setModal,toast2}=ctx;
   const [answers,setAnswers]=useState(()=>{
     const init={};
     VCOLS.forEach((c,i)=>{
@@ -468,7 +459,7 @@ function VSERFChecklist({supplier,ctx}){
     vserfCriteria.forEach((c,i)=>{vserf[VCOLS[i].id]=answers[c.id]?.pts||0;});
     await upsS({...supplier,vserf});
     setSaved(true);
-    toast2?.("Đã lưu VSERF");
+    toast2&&toast2("Đã lưu VSERF");
   };
 
   return(
@@ -477,8 +468,6 @@ function VSERFChecklist({supplier,ctx}){
         <h2 style={{fontSize:16,fontWeight:600,margin:0}}>📋 VSERF Checklist — {supplier.name}</h2>
         <div style={{fontSize:12,color:"#777",marginTop:4}}>Chọn mức mô tả đúng nhất · Tổng tối đa 45 điểm</div>
       </div>
-
-      {/* Score summary */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
         {[{l:"Tổng điểm",v:`${total}/45`},{l:"Đã trả lời",v:`${answered}/9`},{l:"TB/tiêu chí",v:answered>0?(total/answered).toFixed(1):"—"}].map(m=>(
           <div key={m.l} style={{background:"#f8f8f8",borderRadius:8,padding:"10px",textAlign:"center"}}>
@@ -495,8 +484,6 @@ function VSERFChecklist({supplier,ctx}){
         <div><div style={{fontSize:14,fontWeight:700,color:tier.c}}>{tier.label}</div><div style={{fontSize:12,color:"#555",marginTop:2}}>{tier.action}</div></div>
         <div style={{marginLeft:"auto",fontSize:24,fontWeight:800,color:tier.c}}>{total}</div>
       </div>}
-
-      {/* Criteria */}
       {vserfCriteria.map(cr=>{
         const sel=answers[cr.id];
         const warn=cr.id<=2&&sel?.pts<3;
@@ -527,7 +514,6 @@ function VSERFChecklist({supplier,ctx}){
           </div>
         );
       })}
-
       <div style={{display:"flex",gap:8,marginTop:8,position:"sticky",bottom:0,background:"#fff",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <button onClick={handleSave} disabled={!complete||saved} style={{flex:1,padding:"9px 0",borderRadius:8,fontWeight:600,fontSize:13,cursor:complete&&!saved?"pointer":"not-allowed",background:saved?"#E1F5EE":complete?"#1D9E75":"#e5e7eb",color:saved?"#0F6E56":complete?"#fff":"#aaa",border:"none"}}>
           {saved?"✓ Đã lưu":"Lưu kết quả VSERF"}
@@ -592,7 +578,7 @@ function ImportCSV({ctx}){
       const initSel={};parsed.forEach((_,i)=>{initSel[i]=true;});
       setRows(parsed);setSel(initSel);setStep(2);
     };
-    reader.onerror=()=>setErr("Không đọc được file. Thử paste nội dung CSV vào ô bên dưới.");
+    reader.onerror=()=>setErr("Không đọc được file.");
     reader.readAsText(f,"UTF-8");
   };
   const onFile=e=>{if(e.target.files[0])processFile(e.target.files[0]);};
@@ -618,7 +604,7 @@ function ImportCSV({ctx}){
   return(
     <Card>
       <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Import Supplier từ CSV</h2>
-      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file hoặc paste nội dung CSV · Preview trước khi lưu vào Google Sheets</div>
+      <div style={{fontSize:12,color:"#aaa",marginBottom:14}}>Upload file hoặc paste nội dung CSV · Preview trước khi lưu</div>
       {step===1&&(
         <div>
           <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
@@ -626,23 +612,17 @@ function ImportCSV({ctx}){
             <div style={{fontSize:12,color:"#555",marginBottom:10,lineHeight:1.6}}>Download file mẫu → điền thông tin → save → upload lên.<br/><b>Cột bắt buộc:</b> Tên · Ngành · Sản phẩm</div>
             <button onClick={downloadTemplate} style={{...pBtn,background:"#3B6D11",fontSize:12}}>⬇ Download Template CSV</button>
           </div>
-          {/* Click to upload */}
           <div onDrop={onDrop} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onClick={()=>fileRef.current.click()} style={{border:`2px dashed ${drag?"#1D9E75":"#ddd"}`,borderRadius:10,padding:"1.5rem",textAlign:"center",cursor:"pointer",background:drag?"#F0F9F5":"#fafafa",marginBottom:10}}>
             <div style={{fontSize:24,marginBottom:6}}>{drag?"📥":"📂"}</div>
             <div style={{fontSize:13,fontWeight:600,color:drag?"#1D9E75":"#555",marginBottom:2}}>{drag?"Thả file vào đây":"Click để chọn file CSV"}</div>
             <div style={{fontSize:11,color:"#aaa"}}>hoặc kéo thả file vào đây</div>
             <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} style={{display:"none"}}/>
           </div>
-          {/* Paste fallback */}
           <div style={{marginBottom:10}}>
             <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginBottom:6}}>— hoặc paste nội dung CSV trực tiếp —</div>
             <textarea onChange={onPaste} placeholder={"Tên,Ngành,Sản phẩm,...\nCông ty A,Footwear,Giày da,..."} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box",fontSize:11,fontFamily:"monospace"}}/>
           </div>
           {err&&<div style={{padding:"8px 12px",background:"#FCEBEB",borderRadius:6,fontSize:13,color:"#A32D2D",marginBottom:10}}>{err}</div>}
-          <div style={{padding:"10px 14px",background:"#f8f8f8",borderRadius:8}}>
-            <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>Các cột trong template</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{CSV_COLS.map((h,i)=><span key={h} style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:i<3?"#EAF3DE":"#f0f0f0",color:i<3?"#3B6D11":"#666",fontWeight:i<3?600:400}}>{h}{i<3?" *":""}</span>)}</div>
-          </div>
         </div>
       )}
       {step===2&&(
@@ -686,7 +666,7 @@ function ImportCSV({ctx}){
             <button onClick={()=>{setStep(1);setRows([]);}} style={gBtn}>← Upload lại</button>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-              <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5}}>⬆ Import {validCount} supplier lên Sheets</button>
+              <button onClick={doImport} disabled={!validCount} style={{...pBtn,opacity:validCount?1:.5}}>⬆ Import {validCount} supplier</button>
             </div>
           </div>
         </div>
@@ -701,16 +681,13 @@ function RFQList({ctx}){
   const [fUrgent,setFUrgent]=useState("all");
   const [fStatus,setFStatus]=useState("all");
 
-  const allItems=rfqs;
-  const urgentCount=allItems.filter(r=>r.urgent&&r.status!=="closed"&&r.status!=="inq_closed"&&r.status!=="inq_converted").length;
-
-  const fl=allItems.filter(r=>{
+  const urgentCount=rfqs.filter(r=>r.urgent&&r.status!=="closed"&&r.status!=="inq_closed"&&r.status!=="inq_converted").length;
+  const fl=rfqs.filter(r=>{
     const typeOk=fType==="all"||(fType==="rfq"&&r.type!=="inq")||(fType==="inq"&&r.type==="inq");
     const urgentOk=fUrgent==="all"||(fUrgent==="urgent"&&r.urgent)||(fUrgent==="normal"&&!r.urgent);
     const statusOk=fStatus==="all"||r.status===fStatus;
     return typeOk&&urgentOk&&statusOk;
   });
-
   const allStatuses=[...RFQ_ST,...INQ_ST];
 
   return(
@@ -719,12 +696,10 @@ function RFQList({ctx}){
         <span style={{fontSize:14,fontWeight:600}}>RFQ / Inquiry</span>
         {urgentCount>0&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 {urgentCount} gấp</span>}
         <div style={{flex:1}}/>
-        {/* Filters */}
         <Sel val={fType} onChange={setFType} opts={[["all","RFQ + INQ"],["rfq","Chỉ RFQ"],["inq","Chỉ INQ"]]}/>
         <Sel val={fUrgent} onChange={setFUrgent} opts={[["all","Tất cả"],["urgent","🔴 Gấp"],["normal","Không gấp"]]}/>
         <Sel val={fStatus} onChange={setFStatus} opts={[["all","Tất cả trạng thái"],...allStatuses.map(s=>[s.id,s.label])]}/>
       </div>
-
       {fl.length===0&&<Empty text="Chưa có RFQ/INQ. Nhấn + INQ hoặc + RFQ để tạo."/>}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {fl.map(r=>{
@@ -873,158 +848,6 @@ function INQDetail({r,ctx}){
   );
 }
 
-// ── KRALJIC MATRIX ──
-function Kraljic({ctx}){
-  const {sups,upsS,setModal,canEdit}=ctx;
-
-  const quadrants=KRALJIC_QUADRANTS;
-  const getQ=s=>quadrants.find(q=>q.id===s.kraljic)||null;
-
-  // Group suppliers by quadrant
-  const grouped={strategic:[],leverage:[],bottleneck:[],routine:[],unclassified:[]};
-  sups.forEach(s=>{
-    if(s.kraljic&&grouped[s.kraljic])grouped[s.kraljic].push(s);
-    else grouped.unclassified.push(s);
-  });
-
-  return(
-    <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div>
-          <div style={{fontSize:15,fontWeight:600}}>Ma trận Kraljic — Phân loại NCC</div>
-          <div style={{fontSize:12,color:"#777",marginTop:2}}>Phân loại nhà cung cấp theo tác động tài chính và rủi ro cung ứng</div>
-        </div>
-        {grouped.unclassified.length>0&&<div style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:"#FAEEDA",color:"#854F0B",fontWeight:500}}>{grouped.unclassified.length} NCC chưa phân loại</div>}
-      </div>
-
-      {/* Matrix 2x2 */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-        {[
-          {q:quadrants.find(q=>q.id==="strategic"),key:"strategic"},
-          {q:quadrants.find(q=>q.id==="leverage"),key:"leverage"},
-          {q:quadrants.find(q=>q.id==="bottleneck"),key:"bottleneck"},
-          {q:quadrants.find(q=>q.id==="routine"),key:"routine"},
-        ].map(({q,key})=>(
-          <div key={key} style={{background:q.bg,border:`1.5px solid ${q.c}`,borderRadius:12,padding:"1rem"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-              <span style={{fontSize:20}}>{q.icon}</span>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div>
-                <div style={{fontSize:11,color:"#666"}}>{q.desc}</div>
-              </div>
-              <span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[key].length}</span>
-            </div>
-            <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8,lineHeight:1.5}}>💡 {q.strategy}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {grouped[key].map(s=>{
-                const ti=calcTier(s.vserf);
-                return(
-                  <div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-                      <div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div>
-                    </div>
-                    <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-                    {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}
-                  </div>
-                );
-              })}
-              {grouped[key].length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:"8px 0"}}>Chưa có NCC</div>}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Unclassified */}
-      {grouped.unclassified.length>0&&(
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length} NCC)</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
-            {grouped.unclassified.map(s=>{
-              const ti=calcTier(s.vserf);
-              return(
-                <div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-                    <div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label} · {ti.t}/45</div>
-                  </div>
-                  {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Legend */}
-      <div style={{marginTop:12,padding:"10px 14px",background:"#f8f8f8",borderRadius:8,fontSize:12,color:"#666"}}>
-        <div style={{fontWeight:600,marginBottom:6}}>Hướng dẫn phân loại:</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-          <div><b style={{color:"#A32D2D"}}>⭐ Strategic:</b> NCC độc quyền, khó thay thế, ảnh hưởng lớn đến doanh thu</div>
-          <div><b style={{color:"#3B6D11"}}>💪 Leverage:</b> Nhiều NCC thay thế, giá trị mua lớn — có thể thương lượng mạnh</div>
-          <div><b style={{color:"#854F0B"}}>⚠️ Bottleneck:</b> Khó tìm thay thế nhưng giá trị không cao — cần dự phòng</div>
-          <div><b style={{color:"#185FA5"}}>📦 Routine:</b> Dễ mua, giá trị thấp — tối ưu quy trình và chi phí giao dịch</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function KraljicEdit({s,ctx}){
-  const {upsS,setModal}=ctx;
-  const [selected,setSelected]=useState(s.kraljic||"");
-  return(
-    <Card>
-      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Phân loại Kraljic — {s.name}</h2>
-      <div style={{fontSize:12,color:"#777",marginBottom:16}}>Chọn nhóm phù hợp với vai trò của NCC này trong chuỗi cung ứng</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-        {KRALJIC_QUADRANTS.map(q=>(
-          <div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff",transition:"all .15s"}}>
-            <div style={{fontSize:18,marginBottom:4}}>{q.icon}</div>
-            <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div>
-            <div style={{fontSize:11,color:"#777",marginBottom:6}}>{q.labelVi} · {q.desc}</div>
-            <div style={{fontSize:11,color:"#555",lineHeight:1.5}}>→ {q.strategy}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
-        {s.kraljic&&<button onClick={()=>{upsS({...s,kraljic:""});setModal(null);}} style={{...gBtn,color:"#E24B4A"}}>Bỏ phân loại</button>}
-        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
-          <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-          <button onClick={()=>{upsS({...s,kraljic:selected});setModal(null);}} disabled={!selected} style={{...pBtn,background:"#534AB7",opacity:selected?1:.5}}>Lưu phân loại</button>
-        </div>
-      </div>
-    </Card>
-  );
-}
-  const {upsR,setModal}=ctx;
-  const [f,setF]=useState({...r});
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
-  const tog=m=>set("markets",f.markets?.includes(m)?f.markets.filter(x=>x!==m):[...(f.markets||[]),m]);
-  return(
-    <Card>
-      <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>Tạo RFQ từ Sales</h2>
-      <Sec title="Thông tin RFQ">
-        <Rw l="Mã RFQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Sales phụ trách"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} placeholder="Nguyễn Văn B" style={iSt}/></Rw>
-        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Deadline báo giá"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
-      </Sec>
-      <Sec title="Yêu cầu sản phẩm">
-        <Rw l="Mô tả sản phẩm *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} placeholder="Áo polo cotton 220gsm..." style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-        <Rw l="Thị trường buyer"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets?.includes(m)?"#185FA5":"#ddd"}`,background:f.markets?.includes(m)?"#E6F1FB":"none",color:f.markets?.includes(m)?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
-        <Rw l="MOQ / Số lượng"><input value={f.qty||""} onChange={e=>set("qty",e.target.value)} placeholder="500 pcs" style={iSt}/></Rw>
-        <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} placeholder="FOB $3.5/pcs" style={iSt}/></Rw>
-        <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} placeholder="FOB HCMC" style={iSt}/></Rw>
-        <Rw l="Chứng chỉ yêu cầu"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} placeholder="BSCI, REACH, CA65..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-        <Rw l="Ghi chú thêm"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Yêu cầu đặc biệt..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
-      </Sec>
-      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu RFQ</button></div>
-    </Card>
-  );
-}
-
 function RFQDetail({r,ctx}){
   const {sups,setModal,upsR,delR,canEdit}=ctx;
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
@@ -1104,6 +927,113 @@ function RFQAssign({r,ctx}){
       <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",marginTop:12}}>
         <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn</span>
         <div style={{display:"flex",gap:8}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>{upsR({...r,sids:sel,status:sel.length>0?"shortlisted":r.status});setModal(null);}} style={pBtn}>Lưu</button></div>
+      </div>
+    </Card>
+  );
+}
+
+function Kraljic({ctx}){
+  const {sups,upsS,setModal,canEdit}=ctx;
+  const grouped={strategic:[],leverage:[],bottleneck:[],routine:[],unclassified:[]};
+  sups.forEach(s=>{
+    if(s.kraljic&&grouped[s.kraljic])grouped[s.kraljic].push(s);
+    else grouped.unclassified.push(s);
+  });
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:15,fontWeight:600}}>Ma trận Kraljic — Phân loại NCC</div>
+          <div style={{fontSize:12,color:"#777",marginTop:2}}>Phân loại nhà cung cấp theo tác động tài chính và rủi ro cung ứng</div>
+        </div>
+        {grouped.unclassified.length>0&&<div style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:"#FAEEDA",color:"#854F0B",fontWeight:500}}>{grouped.unclassified.length} NCC chưa phân loại</div>}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+        {KRALJIC_QUADRANTS.map(q=>(
+          <div key={q.id} style={{background:q.bg,border:`1.5px solid ${q.c}`,borderRadius:12,padding:"1rem"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <span style={{fontSize:20}}>{q.icon}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div>
+                <div style={{fontSize:11,color:"#666"}}>{q.desc}</div>
+              </div>
+              <span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[q.id].length}</span>
+            </div>
+            <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8,lineHeight:1.5}}>💡 {q.strategy}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {grouped[q.id].map(s=>{
+                const ti=calcTier(s.vserf);
+                return(
+                  <div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
+                      <div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div>
+                    </div>
+                    <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+                    {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}
+                  </div>
+                );
+              })}
+              {grouped[q.id].length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:"8px 0"}}>Chưa có NCC</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {grouped.unclassified.length>0&&(
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length} NCC)</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
+            {grouped.unclassified.map(s=>{
+              const ti=calcTier(s.vserf);
+              return(
+                <div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
+                    <div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label} · {ti.t}/45</div>
+                  </div>
+                  {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div style={{marginTop:12,padding:"10px 14px",background:"#f8f8f8",borderRadius:8,fontSize:12,color:"#666"}}>
+        <div style={{fontWeight:600,marginBottom:6}}>Hướng dẫn phân loại:</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+          <div><b style={{color:"#A32D2D"}}>⭐ Strategic:</b> NCC độc quyền, khó thay thế, ảnh hưởng lớn đến doanh thu</div>
+          <div><b style={{color:"#3B6D11"}}>💪 Leverage:</b> Nhiều NCC thay thế, giá trị mua lớn — có thể thương lượng mạnh</div>
+          <div><b style={{color:"#854F0B"}}>⚠️ Bottleneck:</b> Khó tìm thay thế nhưng giá trị không cao — cần dự phòng</div>
+          <div><b style={{color:"#185FA5"}}>📦 Routine:</b> Dễ mua, giá trị thấp — tối ưu quy trình và chi phí giao dịch</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KraljicEdit({s,ctx}){
+  const {upsS,setModal}=ctx;
+  const [selected,setSelected]=useState(s.kraljic||"");
+  return(
+    <Card>
+      <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Phân loại Kraljic — {s.name}</h2>
+      <div style={{fontSize:12,color:"#777",marginBottom:16}}>Chọn nhóm phù hợp với vai trò của NCC này trong chuỗi cung ứng</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        {KRALJIC_QUADRANTS.map(q=>(
+          <div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff",transition:"all .15s"}}>
+            <div style={{fontSize:18,marginBottom:4}}>{q.icon}</div>
+            <div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div>
+            <div style={{fontSize:11,color:"#777",marginBottom:6}}>{q.labelVi} · {q.desc}</div>
+            <div style={{fontSize:11,color:"#555",lineHeight:1.5}}>→ {q.strategy}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
+        {s.kraljic&&<button onClick={()=>{upsS({...s,kraljic:""});setModal(null);}} style={{...gBtn,color:"#E24B4A"}}>Bỏ phân loại</button>}
+        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
+          <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
+          <button onClick={()=>{upsS({...s,kraljic:selected});setModal(null);}} disabled={!selected} style={{...pBtn,background:"#534AB7",opacity:selected?1:.5}}>Lưu phân loại</button>
+        </div>
       </div>
     </Card>
   );
