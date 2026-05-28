@@ -264,6 +264,7 @@ function App(){
   const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
   const [sups,setSups]=useState([]);
   const [rfqs,setRfqs]=useState([]);
+  const [orders,setOrders]=useState([]);
   const [tab,setTab]=useState("list");
   const [modal,setModal]=useState(null);
   const [toast,setToast]=useState(null);
@@ -272,8 +273,8 @@ function App(){
   const [syncErr,setSyncErr]=useState(false);
 
   useEffect(()=>{
-    Promise.all([apiGet("Suppliers"),apiGet("RFQs")])
-      .then(([s,r])=>{setSups(s);setRfqs(r);setLoading(false);})
+    Promise.all([apiGet("Suppliers"),apiGet("RFQs"),apiGet("Orders")])
+      .then(([s,r,o])=>{setSups(s);setRfqs(r);setOrders(o);setLoading(false);})
       .catch(()=>{setSyncErr(true);setLoading(false);});
   },[]);
 
@@ -282,6 +283,9 @@ function App(){
   const saveSups=useCallback(async l=>{setSups(l);setSaving(true);try{await apiSave("Suppliers",l);}finally{setSaving(false);};},[]);
   const saveRfqs=useCallback(async l=>{setRfqs(l);setSaving(true);try{await apiSave("RFQs",l);}finally{setSaving(false);};},[]);
 
+  const saveOrders=useCallback(async l=>{setOrders(l);setSaving(true);try{await apiSave("Orders",l);}finally{setSaving(false);};},[]);
+  const upsO=async o=>{const u={...o,ua:new Date().toISOString()};const i=orders.findIndex(x=>x.id===u.id);await saveOrders(i>=0?orders.map((x,j)=>j===i?u:x):[u,...orders]);toast2(i>=0?"Đã cập nhật order":"Đã tạo order");setModal(null);};
+  const delO=async id=>{if(!confirm("Xóa order này?"))return;await saveOrders(orders.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
   const upsS=async s=>{const u={...s,ua:new Date().toISOString()};const i=sups.findIndex(x=>x.id===u.id);await saveSups(i>=0?sups.map((x,j)=>j===i?u:x):[u,...sups]);toast2(i>=0?"Đã cập nhật":"Đã thêm supplier");setModal(null);};
   const delS=async id=>{if(!confirm("Xóa supplier này?"))return;await saveSups(sups.filter(x=>x.id!==id));setModal(null);toast2("Đã xóa");};
   const upsR=async r=>{const u={...r,ua:new Date().toISOString()};const i=rfqs.findIndex(x=>x.id===u.id);await saveRfqs(i>=0?rfqs.map((x,j)=>j===i?u:x):[u,...rfqs]);toast2(i>=0?"Đã cập nhật RFQ":"Đã tạo RFQ");setModal(null);};
@@ -295,7 +299,7 @@ function App(){
 
   if(loading)return<div style={{padding:"2rem",color:"#666",display:"flex",alignItems:"center",gap:12}}><div style={{width:20,height:20,border:"3px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span>Đang kết nối Google Sheets...</span><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
 
-  const ctx={sups,rfqs,upsS,delS,upsR,delR,setModal,toast2,canEdit,batchImport,saveSups};
+  const ctx={sups,rfqs,upsS,delS,upsR,delR,orders,upsO,delO,setModal,toast2,canEdit,batchImport,saveSups};
 
   return(
     <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
@@ -306,10 +310,11 @@ function App(){
       <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
         <div style={{maxWidth:940,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
           <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
-          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
+          {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"orders",l:"Orders"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
               {t.l}
               {t.id==="rfq"&&rfqs.filter(r=>r.status==="new"||r.status==="searching").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>r.status==="new"||r.status==="searching").length}</span>}
+              {t.id==="orders"&&orders.filter(o=>o.stage!=="closed").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#534AB7",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{orders.filter(o=>o.stage!=="closed").length}</span>}
             </button>
           ))}
           <div style={{flex:1}}/>
@@ -324,9 +329,12 @@ function App(){
       <div style={{maxWidth:940,margin:"0 auto",padding:"1rem"}}>
         {tab==="list"&&<SupList ctx={ctx}/>}
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
+        {tab==="orders"&&<OrderList ctx={ctx}/>}
         {tab==="kraljic"&&<Kraljic ctx={ctx}/>}
         {tab==="dash"&&<Dash ctx={ctx}/>}
       </div>
+      {modal?.t==="order-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><OrderForm o={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="order-detail"&&<Modal onClose={()=>setModal(null)}><OrderDetail o={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
@@ -410,8 +418,9 @@ function SupList({ctx}){
 }
 
 function SupDetail({s,ctx}){
-  const {setModal,delS,canEdit}=ctx;
+  const {setModal,delS,canEdit,orders}=ctx;
   const ti=calcTier(s.vserf);
+  const perf=calcSupPerf(s.id,orders||[]);
   const ptColor=s.partnerType==="Đối tác trực tiếp"?"#3B6D11":s.partnerType==="Đối tác nền tảng"?"#185FA5":"#aaa";
   const ptBg=s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":s.partnerType==="Đối tác nền tảng"?"#E6F1FB":"#f0f0f0";
   return(
@@ -429,6 +438,14 @@ function SupDetail({s,ctx}){
         <IB title="Năng lực & thương mại"><IR l="Chứng nhận" v={s.certs}/><IR l="Công suất/tháng" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Mô hình SX" v={s.serviceModel}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
         <IB title="VSERF (9 trụ cột)">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
       </div>
+      {perf&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#0F6E56",marginBottom:6}}>📦 Supplier Performance ({perf.orders} orders)</div>
+        <div style={{display:"flex",gap:20,flexWrap:"wrap",fontSize:13}}>
+          <div><div style={{fontSize:18}}>{[1,2,3,4,5].map(n=><span key={n} style={{opacity:perf.rating>=n?1:0.2}}>⭐</span>)}</div><div style={{fontSize:11,color:"#777"}}>Overall {perf.rating}/5</div></div>
+          {perf.onTime!=null&&<div><div style={{fontSize:18,fontWeight:700,color:perf.onTime>=80?"#1D9E75":"#E24B4A"}}>{perf.onTime}%</div><div style={{fontSize:11,color:"#777"}}>On-time</div></div>}
+          {perf.quality!=null&&<div><div style={{fontSize:18,fontWeight:700,color:perf.quality>=95?"#1D9E75":"#854F0B"}}>{perf.quality}%</div><div style={{fontSize:11,color:"#777"}}>Quality pass</div></div>}
+        </div>
+      </div>}
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt về sản phẩm</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
