@@ -43,9 +43,9 @@ const apiGetByField=(sheet,field,value)=>api("getByField",sheet,{field,value});
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
 const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
-const PARTNER_TYPES=["Đối tác trực tiếp","Đối tác nền tảng","Chưa xác định"];
+const PARTNER_TYPES=["Đối tác trực tiếp","Đối tác nền tảng","Cả hai hình thức","Chưa xác định"];
 const PROVINCES=["Hà Nội","TP. Hồ Chí Minh","Hải Phòng","Đà Nẵng","Cần Thơ","An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái"];
-const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành"];
+const CHANNELS=["Referral / Network","Triển lãm (HAWA, VietnamExpo...)","Outbound / LinkedIn","Alibaba / Global Sources","Google / Directory ngành","Supplier tự tiếp cận"];
 const MARKETS=["EU","US","Nhật Bản","Hàn Quốc","Úc","Canada","UK","Trung Đông","ASEAN","Khác"];
 const STAGES=[
   {id:"B1",label:"B1 Xác định ngành",ph:1},{id:"B2",label:"B2 Longlist",ph:1},{id:"B3",label:"B3 Pre-score",ph:1},
@@ -949,17 +949,72 @@ function Dash({ctx}){
   const av=vc?Math.round(tv/vc):0;const t12=sups.length?Math.round((ti.t1+ti.t2)/sups.length*100):0;
   const sc={};sups.forEach(s=>{sc[s.stage]=(sc[s.stage]||0)+1;});
   const ind={};sups.forEach(s=>{if(s.industry)ind[s.industry]=(ind[s.industry]||0)+1;});
+
+  // Partner type chart data
+  const ptCount={};
+  sups.forEach(s=>{const k=s.partnerType||"Chưa xác định";ptCount[k]=(ptCount[k]||0)+1;});
+  const ptData=Object.entries(ptCount).sort((a,b)=>b[1]-a[1]);
+  const ptColors={"Đối tác trực tiếp":"#1D9E75","Đối tác nền tảng":"#185FA5","Cả hai hình thức":"#534AB7","Chưa xác định":"#aaa"};
+
+  // Industry chart data
+  const indData=Object.entries(ind).sort((a,b)=>b[1]-a[1]);
+  const indMax=indData.length?indData[0][1]:1;
+
+  const ptMax=ptData.length?ptData[0][1]:1;
+
   const kpis=[{l:"Tổng supplier",v:sups.length,c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"Orders active",v:(orders||[]).filter(o=>o.stage!=="closed").length,c:"#534AB7"},{l:"RFQ đang mở",v:rfqs.filter(r=>!["closed","inq_closed","inq_converted"].includes(r.status)).length,c:"#854F0B"}];
+
   return(
     <div>
       <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>{kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div></div>)}</div>
+
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1",v:ti.t1,c:"#1D9E75"},{l:"Tier 2",v:ti.t2,c:"#185FA5"},{l:"Tier 3",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Orders theo stage</div>{ORDER_STAGES.map(st=>{const cnt=(orders||[]).filter(o=>o.stage===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:13}}>{st.icon}</span><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}</div>
       </div>
+
+      {/* HT hợp tác — bar chart ngang */}
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Hình thức hợp tác VNS</div>
+        {ptData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:ptData.map(([k,v])=>{
+          const pct=sups.length?Math.round(v/sups.length*100):0;
+          const c=ptColors[k]||"#aaa";
+          return(
+            <div key={k} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
+                <span style={{color:"#555",fontWeight:500}}>{k}</span>
+                <span style={{color:"#777"}}>{v} supplier · <b style={{color:c}}>{pct}%</b></span>
+              </div>
+              <div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}>
+                <div style={{height:"100%",width:pct+"%",background:c,borderRadius:5,transition:"width .4s"}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Ngành hàng — bar chart ngang */}
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Phân bổ ngành hàng</div>
+        {indData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:indData.map(([k,v])=>{
+          const pct=sups.length?Math.round(v/sups.length*100):0;
+          const barW=Math.round(v/indMax*100);
+          return(
+            <div key={k} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
+                <span style={{color:"#555",fontWeight:500}}>{k}</span>
+                <span style={{color:"#777"}}>{v} supplier · <b style={{color:"#534AB7"}}>{pct}%</b></span>
+              </div>
+              <div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}>
+                <div style={{height:"100%",width:barW+"%",background:"#534AB7",borderRadius:5,transition:"width .4s"}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline Supplier</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}</div>
-      {Object.keys(ind).length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Ngành hàng</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{Object.entries(ind).sort((a,b)=>b[1]-a[1]).map(([i,c])=><div key={i} style={{padding:"4px 12px",borderRadius:20,background:"#f5f5f5",fontSize:12,color:"#555"}}>{i} <b style={{color:"#1a1a1a"}}>{c}</b></div>)}</div></div>}
     </div>
   );
 }
