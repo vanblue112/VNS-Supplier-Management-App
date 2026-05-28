@@ -182,6 +182,11 @@ button.danger{padding:7px 16px;border-radius:7px;border:1px solid #E0A0A0;backgr
 <!-- STEP 0: Đơn hàng & AQL -->
 <div id="panel-0" class="panel active">
   <div class="card">
+    <div class="card-title">🏭 Ngành hàng / Product Category</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px" id="cat-grid"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title">📦 Thông tin đơn hàng</div>
     <table class="meta-table">
       <tr><td class="ml">Supplier<span class="en">Nhà cung cấp</span></td><td class="mv"><input id="o-sup" placeholder="Tên công ty" oninput="debounceSave()"></td></tr>
@@ -341,6 +346,7 @@ button.danger{padding:7px 16px;border-radius:7px;border:1px solid #E0A0A0;backgr
   </div>
 </div>
 
+<script src="qc-data.js"></script>
 <script>
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbyyHiNH2lj8eiZqcgtR3vdNufbefe2kBxhlDppqzJ20m6WmBiVIqlRrYiNTc-wyHSRX/exec';
@@ -415,6 +421,7 @@ window.onload = async () => {
     qcOrderId = Date.now() + 'qc';
   }
 
+  buildCatGrid();
   buildRatings();
   applyPhaseToggle();
   setSaveStatus('ok', '✓ Đã lưu');
@@ -477,6 +484,8 @@ async function loadQCSession(id) {
       document.getElementById('nav-sub').textContent = `${d.poCode || ''} ${d.supplier ? '· ' + d.supplier : ''}`;
     }
 
+    selectedCat = d.selectedCat || 'textile';
+    buildCatGrid();
     calcAQL();
     calcDupProgress();
     calcFriVerdict();
@@ -532,7 +541,7 @@ async function saveSession() {
       friState: JSON.stringify(phaseState.fri),
       cliState: JSON.stringify(phaseState.cli),
       postState: JSON.stringify(phaseState.post),
-      do_ipi: document.getElementById('do-ipi')?.checked,
+      selectedCat: selectedCat,
       do_dupro: document.getElementById('do-dupro')?.checked,
       do_fri: document.getElementById('do-fri')?.checked,
       do_cli: document.getElementById('do-cli')?.checked,
@@ -674,115 +683,40 @@ function navBtns(cur) {
   return `<div class="nav-btns">${prev||'<div></div>'}${next}</div>`;
 }
 
-// ── CHECKLIST DATA (simplified) ──
-const CL_COMMON = {
-  ipi: [
-    { lbl:'Nguyên vật liệu chính', lblEn:'Main Raw Materials', items:[
-      ['Vật liệu đúng chủng loại, nguồn gốc hợp pháp','Correct material type, legal origin','critical'],
-      ['Không có hóa chất cấm vượt ngưỡng EU/US REACH','No banned chemicals above EU/US REACH limits','critical'],
-      ['Màu sắc, kích thước đúng spec đã duyệt','Color and dimensions per approved spec','major'],
-      ['Không có lỗi bề mặt rõ ràng (mốc, nứt, bẩn)','No visible surface defects (mold, cracks, stains)','major'],
-      ['Số lượng nguyên liệu đủ cho lô + dự phòng 5%','Material qty sufficient for lot + 5% spare','minor'],
-    ]},
-    { lbl:'Phụ liệu & bao bì', lblEn:'Accessories & Packaging', items:[
-      ['Phụ liệu không chứa chì/nickel vượt ngưỡng','Accessories: lead/nickel within limits','critical'],
-      ['Phụ liệu đúng màu, chủng loại theo spec','Accessories correct color and type per spec','major'],
-      ['Bao bì sơ cấp đúng quy cách, đủ số lượng','Primary packaging per spec, sufficient qty','minor'],
-    ]},
-    { lbl:'Mẫu đầu dây chuyền', lblEn:'First-off Production Sample', items:[
-      ['Mẫu đầu khớp Golden Sample 100% về thiết kế','First-off 100% matches Golden Sample design','critical'],
-      ['Kích thước đúng spec, sai lệch trong tolerance','Dimensions per spec, within tolerance','major'],
-      ['Workmanship đạt yêu cầu thẩm mỹ','Workmanship meets aesthetic requirements','major'],
-      ['Logo/nhãn đúng vị trí và nội dung','Logo/label correct position and content','minor'],
-    ]},
-    { lbl:'Thiết bị & điều kiện xưởng', lblEn:'Equipment & Factory', items:[
-      ['Có hệ thống PCCC, lối thoát hiểm thông thoáng','Fire safety, clear emergency exits','critical'],
-      ['Không sử dụng lao động trẻ em','No child labor','critical'],
-      ['Máy móc an toàn, có che chắn đúng quy định','Machinery safe, proper guards','major'],
-      ['Ánh sáng và thông gió đạt yêu cầu','Adequate lighting and ventilation','minor'],
-    ]},
-  ],
-  dupro: [
-    { lbl:'Workmanship & gia công', lblEn:'Workmanship & Processing', items:[
-      ['Không có dị vật nguy hiểm trong sản phẩm','No dangerous foreign objects in product','critical'],
-      ['Kết cấu liên kết chắc, không lung lay','Structural joints secure, no wobble','critical'],
-      ['Kích thước WIP đúng spec, trong tolerance','WIP dimensions per spec, within tolerance','major'],
-      ['Bề mặt đúng yêu cầu: phẳng, không lỗi rõ','Surface meets requirements: flat, no visible defects','major'],
-      ['Màu sắc đồng đều, không chênh lệch lô','Color consistent, no lot shading','major'],
-      ['Chỉ/mối dán/mối ghép đúng kỹ thuật','Thread/adhesive/joints technically correct','major'],
-      ['Tỷ lệ rework ≤5%','Rework rate ≤5%','minor'],
-      ['WIP được kiểm soát, phân lô rõ ràng','WIP controlled, lots clearly identified','minor'],
-    ]},
-    { lbl:'Kiểm soát chất lượng nội bộ', lblEn:'Internal QC Control', items:[
-      ['Lô NG tách riêng, không trộn với good','NG lot separated, not mixed with good','critical'],
-      ['In-line QC có check sheet, ghi nhận đầy đủ','In-line QC has check sheet with full records','major'],
-      ['Tiến độ đúng kế hoạch (trễ ≤3 ngày OK)','Production on schedule (≤3 day delay OK)','major'],
-    ]},
-  ],
-  fri: [
-    { lbl:'Chất lượng thành phẩm', lblEn:'Finished Product Quality', items:[
-      ['Không có dị vật nguy hiểm trong sản phẩm','No dangerous foreign objects in product','critical'],
-      ['Không có lỗi chức năng nghiêm trọng','No critical functional defects','critical'],
-      ['Không có hóa chất cấm vượt ngưỡng','No banned chemicals above limits','critical'],
-      ['Màu sắc đúng mẫu, đồng đều toàn lô','Color matches sample, uniform across lot','major'],
-      ['Kích thước đúng spec, sai lệch trong tolerance','Dimensions per spec, within tolerance','major'],
-      ['Workmanship đạt tiêu chuẩn XK','Workmanship meets export standard','major'],
-      ['Logo/nhãn/label đúng nội dung và vị trí','Logo/label correct content and position','major'],
-      ['Chức năng (khóa, bản lề, kéo...) hoạt động OK','Function (lock, hinge, zipper...) operates OK','major'],
-      ['Không có chỉ thừa, vết bẩn, lỗi thẩm mỹ rõ','No loose threads, stains, visible defects','minor'],
-    ]},
-    { lbl:'Đóng gói & shipping mark', lblEn:'Packaging & Shipping Mark', items:[
-      ['Bao bì có warning suffocation (US/EU)','Packaging has suffocation warning (US/EU)','critical'],
-      ['Số lượng đúng từng thùng, khớp packing list','Qty per carton correct, matches packing list','major'],
-      ['Shipping mark đầy đủ: PO, SKU, qty, destination','Shipping mark complete: PO, SKU, qty, destination','major'],
-      ['Carton đủ chắc cho vận chuyển quốc tế','Carton strong enough for international shipping','major'],
-      ['Mép thùng dán băng đúng kiểu chữ H','Carton sealed in H-pattern','minor'],
-    ]},
-    { lbl:'Chứng từ xuất khẩu', lblEn:'Export Documents', items:[
-      ['Test report hóa chất còn hiệu lực nếu yêu cầu','Chemical test report valid if required','critical'],
-      ['C/O đúng form thị trường XK','C/O correct form for export market','major'],
-      ['Packing list khớp thực tế 100%','Packing list 100% matches actuals','major'],
-      ['Hóa đơn đúng quy định','Invoice compliant','major'],
-    ]},
-  ],
-  cli: [
-    { lbl:'Kiểm tra container trước khi xếp', lblEn:'Pre-loading Inspection', items:[
-      ['Container không lỗ thủng, không dột (light test)','Container no holes, no leaks (light test)','critical'],
-      ['Container sạch, khô, không mùi hóa chất','Container clean, dry, no chemical odor','critical'],
-      ['Số container và seal khớp booking confirmation','Container and seal match booking confirmation','critical'],
-      ['Cửa container hoạt động trơn tru, gasket kín','Container door smooth, gasket sealed','major'],
-    ]},
-    { lbl:'Xếp hàng vào container', lblEn:'Loading Process', items:[
-      ['Số thùng xếp khớp 100% packing list','Cartons loaded match packing list 100%','critical'],
-      ['Không trộn lẫn hàng đơn khác trong FCL','No mixing with other orders in FCL','critical'],
-      ['Hàng không vượt trọng tải container','Goods do not exceed container load limit','critical'],
-      ['Carton không bị móp/vỡ khi xếp','Cartons not crushed during loading','major'],
-      ['Hàng xếp đúng hướng (this side up, fragile...)','Goods loaded in correct orientation','major'],
-      ['Dunnage/airbag đủ, hàng không dịch chuyển','Dunnage/airbags sufficient, goods do not shift','major'],
-    ]},
-    { lbl:'Hoàn tất & niêm phong', lblEn:'Completion & Sealing', items:[
-      ['Container sealed, ghi nhận số seal vào báo cáo','Container sealed, seal number recorded','critical'],
-      ['Số seal khớp booking, không dấu hiệu đã mở','Seal matches booking, no signs of tampering','critical'],
-      ['Ảnh chụp container trước khi đóng cửa','Photos of container before closing','major'],
-      ['Tổng trọng lượng không vượt giới hạn','Total weight does not exceed limit','major'],
-    ]},
-  ],
-  post: [
-    { lbl:'Đánh giá sau giao hàng', lblEn:'Post-Delivery Assessment', items:[
-      ['Buyer xác nhận nhận đủ hàng, số lượng đúng','Buyer confirmed receipt, correct quantity','critical'],
-      ['Không có khiếu nại nghiêm trọng về an toàn','No critical safety complaints','critical'],
-      ['Không có sản phẩm trả về do lỗi chất lượng','No returns due to quality issues','critical'],
-      ['Không có hàng hư hỏng trong vận chuyển >5%','No transit damage exceeding 5%','major'],
-      ['Chứng từ giao hàng đầy đủ và đã ký xác nhận','Delivery documents complete and signed','major'],
-      ['Thanh toán thực hiện đúng điều khoản hợp đồng','Payment per contract terms','major'],
-      ['Khiếu nại nhỏ được supplier giải quyết kịp thời','Minor complaints resolved promptly','minor'],
-    ]},
-  ],
-};
+// ── CATEGORY SELECTION ──
+let selectedCat = 'textile';
+function buildCatGrid() {
+  const g = document.getElementById('cat-grid');
+  if (!g) return;
+  g.innerHTML = Object.entries(CAT_DATA).map(([k,v])=>`
+    <div onclick="selCat('${k}',this)" style="border:1.5px solid ${k===selectedCat?'#111':'#e5e5e5'};border-radius:8px;padding:9px 11px;cursor:pointer;background:${k===selectedCat?'#111':'#fff'};color:${k===selectedCat?'#fff':'#555'};font-size:12px;font-weight:600;text-align:center;transition:all .15s">
+      ${v.name}
+    </div>`).join('');
+}
+function selCat(cat, el) {
+  selectedCat = cat;
+  document.querySelectorAll('#cat-grid > div').forEach(d=>{ d.style.border='1.5px solid #e5e5e5'; d.style.background='#fff'; d.style.color='#555'; });
+  el.style.border='1.5px solid #111'; el.style.background='#111'; el.style.color='#fff';
+  // Reset rendered phases so they rebuild with new category
+  ['ipi-content','dupro-content','fri-content','cli-content','post-content'].forEach(id=>{
+    const el2=document.getElementById(id); if(el2) el2.innerHTML='';
+  });
+  debounceSave();
+}
+
+// ── GET SECTIONS for phase & category ──
+function getSections(phaseKey) {
+  const ph = CL[phaseKey];
+  if (!ph) return [];
+  // CLI and POST use 'all'
+  if (ph.all) return ph.all;
+  // Use selected category, fallback to first available
+  return ph[selectedCat] || ph[Object.keys(ph)[0]] || [];
+}
 
 // ── RENDER PHASE ──
 function renderPhase(phaseKey, containerId) {
-  const secs = CL_COMMON[phaseKey] || [];
+  const secs = getSections(phaseKey);
   const w = document.getElementById(containerId);
   if (!w) return;
   w.innerHTML = '';
@@ -997,7 +931,9 @@ function renderPost() {
   const st = phaseState.post;
   if (!st.items) st.items = {};
   if (!st.custom) st.custom = [];
-  const sec = CL_COMMON.post[0];
+  const secs = getSections('post');
+  const sec = secs[0];
+  if (!sec) return;
   const tbodyId = 'post_tbody_0';
   const rows = sec.items.map((it, ii) => {
     const id = `post_s0_i${ii}`;
