@@ -287,16 +287,16 @@ const now=()=>new Date().toISOString();
 const today=()=>new Date().toISOString().slice(0,10);
 
 const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
-const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",ca:now(),ua:now()});
-const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",ca:now(),ua:now()});
+const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
+const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
-const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE"});
+const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",date:r.date||today(),deadline:r.deadline||""});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0});
 
 const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,prescore:typeof s.prescore==="object"?JSON.stringify(s.prescore):s.prescore,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
-const serRfq=r=>({...r,markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes});
+const serRfq=r=>({...r,markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes});
 
 // ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
@@ -386,7 +386,113 @@ function EmailDraft({r,sups,onClose}){
   );
 }
 
-// ── APP ──
+// ── IMPORT / EXPORT ──
+const SUP_CSV_FIELDS=["id","name","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","channel","contactName","zalo","email","certs","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
+
+function exportSupCSV(sups){
+  const header=SUP_CSV_FIELDS.join(",");
+  const esc=v=>{const s=String(v??""
+  );return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
+  const rows=sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","));
+  const csv=[header,...rows].join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=`VinaSources_Suppliers_${today()}.csv`;a.click();
+  URL.revokeObjectURL(url);
+}
+
+function ImportModal({ctx,onClose}){
+  const {upsS,toast2}=ctx;
+  const [preview,setPreview]=useState(null);
+  const [importing,setImporting]=useState(false);
+  const [done,setDone]=useState(false);
+  const fileRef=useRef();
+
+  const parseCSV=text=>{
+    const lines=text.split(/\r?\n/).filter(Boolean);
+    if(lines.length<2)return[];
+    const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+    return lines.slice(1).map(line=>{
+      const vals=[];let cur="",inQ=false;
+      for(let i=0;i<line.length;i++){
+        if(line[i]==='"'){inQ=!inQ;}
+        else if(line[i]===","&&!inQ){vals.push(cur.trim());cur="";}
+        else cur+=line[i];
+      }
+      vals.push(cur.trim());
+      const obj={};
+      headers.forEach((h,i)=>{obj[h]=(vals[i]||"").replace(/^"|"$/g,"").replace(/""/g,'"');});
+      return obj;
+    }).filter(r=>r.name);
+  };
+
+  const handleFile=e=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const text=ev.target.result.replace(/^\uFEFF/,"");
+      const rows=parseCSV(text);
+      setPreview(rows);
+    };
+    reader.readAsText(file,"utf-8");
+  };
+
+  const handleImport=async()=>{
+    if(!preview?.length)return;
+    setImporting(true);
+    let ok=0;
+    for(const row of preview){
+      try{
+        const s=normSup({...newS(),...row,id:row.id||newId("s"),ca:row.ca||now(),ua:now()});
+        await upsS(s);ok++;
+      }catch(e){console.error(e);}
+    }
+    setImporting(false);setDone(true);
+    toast2&&toast2(`Đã import ${ok}/${preview.length} supplier`);
+  };
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1100,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{width:"100%",maxWidth:560,marginTop:"2rem",marginBottom:"2rem",background:"#fff",borderRadius:12,border:"1px solid #e5e5e5",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontWeight:600,fontSize:15}}>📥 Import Supplier từ CSV</span>
+          <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa"}}>×</button>
+        </div>
+        <div style={{padding:"16px 18px"}}>
+          {/* Instructions */}
+          <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#0F6E56",lineHeight:1.7}}>
+            <b>Định dạng CSV:</b> hàng đầu là header, các cột: <span style={{fontFamily:"monospace",background:"#E1F5EE",padding:"1px 4px",borderRadius:3"}}>name, industry, products, province, stage</span>... Tải file mẫu từ nút Export trước để xem đúng format.
+          </div>
+          <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} style={{display:"none"}}/>
+          <button onClick={()=>fileRef.current.click()} style={{...gBtn,width:"100%",marginBottom:12,padding:"10px",textAlign:"center"}}>
+            📂 Chọn file CSV...
+          </button>
+          {preview&&(
+            <div>
+              <div style={{fontSize:12,color:"#777",marginBottom:8}}>
+                Tìm thấy <b style={{color:"#1a1a1a"}}>{preview.length} supplier</b> — xem trước 3 dòng đầu:
+              </div>
+              <div style={{border:"1px solid #e5e5e5",borderRadius:8,overflow:"auto",maxHeight:160,marginBottom:12}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead><tr style={{background:"#f5f5f5"}}>{["Tên","Ngành","Tỉnh","Stage"].map(h=><th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:600,color:"#666",borderBottom:"1px solid #eee"}}>{h}</th>)}</tr></thead>
+                  <tbody>{preview.slice(0,3).map((r,i)=><tr key={i} style={{borderBottom:"1px solid #f5f5f5"}}>{[r.name,r.industry,r.province,r.stage].map((v,j)=><td key={j} style={{padding:"6px 10px",color:"#333"}}>{v||"—"}</td>)}</tr>)}</tbody>
+                </table>
+              </div>
+              {done
+                ?<div style={{textAlign:"center",padding:"10px",color:"#1D9E75",fontWeight:600,fontSize:13}}>✅ Import hoàn tất!</div>
+                :<button onClick={handleImport} disabled={importing} style={{...pBtn,width:"100%",padding:"10px",fontSize:13}}>
+                  {importing?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Spin/>Đang import...</span>:`Import ${preview.length} supplier`}
+                </button>
+              }
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 function App(){
   const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
   const [sups,setSups]=useState([]);
@@ -1087,9 +1193,17 @@ function INQDetail({r,ctx}){
 function RFQDetail({r,ctx}){
   const {sups,setModal,upsR,delR,canEdit}=ctx;
   const [showEmail,setShowEmail]=useState(false);
+  // local state for notes/quotes so fields are editable
+  const [snotes,setSnotes]=useState(parseJ(r.snotes)||{});
+  const [squotes,setSquotes]=useState(parseJ(r.squotes)||{});
+  const saveNotes=(sid,field,val)=>{
+    const newSn=field==="note"?{...snotes,[sid]:val}:snotes;
+    const newSq=field!=="note"?{...squotes,[sid]:{...(squotes[sid]||{}),[field]:val}}:squotes;
+    if(field==="note")setSnotes(newSn); else setSquotes(newSq);
+    upsR({...r,snotes:newSn,squotes:newSq});
+  };
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const sids=parseJ(r.sids)||[];
-  const snotes=parseJ(r.snotes)||{};
   const mkts=parseJ(r.markets)||[];
   const asgn=sups.filter(s=>sids.includes(s.id));
   return(
@@ -1104,7 +1218,7 @@ function RFQDetail({r,ctx}){
         </div>
         <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600,flexShrink:0}}>{st.label}</span>
       </div>
-      {/* Meta row */}
+      {/* Meta */}
       <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:12,color:"#777",marginBottom:12,paddingBottom:12,borderBottom:"1px solid #f0f0f0"}}>
         {r.sales&&<span>👤 {r.sales}</span>}
         {mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
@@ -1114,37 +1228,77 @@ function RFQDetail({r,ctx}){
         {r.price&&<span>💲 Target: {r.price}</span>}
         {r.incoterm&&<span>🚢 {r.incoterm}</span>}
       </div>
-      {/* Main desc */}
+      {/* Desc */}
       <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung RFQ</div>
         <RFQDesc text={r.desc}/>
       </div>
-      {/* Certs */}
       {r.certs&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#0F6E56",marginBottom:6}}>CHỨNG NHẬN YÊU CẦU</div>
         <RFQDesc text={r.certs}/>
       </div>}
-      {/* Notes */}
       {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div>
         <RFQDesc text={r.notes}/>
       </div>}
-      {/* NCC assigned */}
+      {/* NCC */}
       <div style={{marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>NCC được gán ({asgn.length})</span>
           {canEdit&&<button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán NCC</button>}
         </div>
-        {asgn.map(s=>{const ti=calcTier(s.vserf);const note=snotes[s.id]||"";return(
-          <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"10px 14px",display:"flex",gap:10,alignItems:"flex-start",marginBottom:8}}>
-            <div style={{flex:1}}><div style={{display:"flex",gap:8,alignItems:"center",marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{s.name}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label}</span></div><div style={{fontSize:12,color:"#777"}}>{s.zalo&&"📱 "+s.zalo}</div>
-            {canEdit?<input value={note} onChange={e=>{const ns={...snotes,[s.id]:e.target.value};upsR({...r,snotes:ns});}} placeholder="Ghi chú báo giá..." style={{...iSt,fontSize:12,marginTop:8,boxSizing:"border-box"}}/>:note&&<div style={{fontSize:12,marginTop:6}}>{note}</div>}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
-              <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
-              {canEdit&&<button onClick={()=>{const ns=sids.filter(x=>x!==s.id);upsR({...r,sids:ns});}} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
+        {asgn.map(s=>{
+          const ti=calcTier(s.vserf);
+          const note=snotes[s.id]||"";
+          const sq=squotes[s.id]||{};
+          return(
+            <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
+              {/* Supplier header */}
+              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
+                <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
+                <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label}</span>
+                {s.zalo&&<span style={{fontSize:12,color:"#777"}}>📱 {s.zalo}</span>}
+                <div style={{marginLeft:"auto",display:"flex",gap:5,flexShrink:0}}>
+                  <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
+                  {canEdit&&<button onClick={()=>{const ns=sids.filter(x=>x!==s.id);upsR({...r,sids:ns});}} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
+                </div>
+              </div>
+              {/* Quote fields */}
+              <div style={{display:"grid",gap:7}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:4}}>✅ Báo giá theo product spec</div>
+                  <textarea
+                    value={sq.spec||""}
+                    onChange={e=>saveNotes(s.id,"spec",e.target.value)}
+                    disabled={!canEdit}
+                    placeholder="Điền giá báo đúng spec: đơn giá, MOQ, lead time, điều kiện..."
+                    style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}
+                  />
+                </div>
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#854F0B",marginBottom:4}}>🔄 Báo giá không theo spec / đề xuất thay thế</div>
+                  <textarea
+                    value={sq.alt||""}
+                    onChange={e=>saveNotes(s.id,"alt",e.target.value)}
+                    disabled={!canEdit}
+                    placeholder="Điền đề xuất thay thế của NCC: thay đổi gì, giá bao nhiêu..."
+                    style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}
+                  />
+                </div>
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:4}}>📝 Ghi chú nội bộ</div>
+                  <input
+                    value={note}
+                    onChange={e=>saveNotes(s.id,"note",e.target.value)}
+                    disabled={!canEdit}
+                    placeholder="Ghi chú nội bộ về NCC này..."
+                    style={{...iSt,fontSize:12}}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        );})}
+          );
+        })}
       </div>
       {/* Actions */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
