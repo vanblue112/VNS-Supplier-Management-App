@@ -79,6 +79,17 @@ const VCOLS=[
   {id:"xuat_khau",l:"04 Xuất khẩu"},{id:"chung_tu",l:"05 Chứng từ"},{id:"rfq",l:"06 Phản hồi RFQ"},
   {id:"oem_odm",l:"07 OEM/ODM"},{id:"giao_tiep",l:"08 Giao tiếp"},{id:"minh_bach",l:"09 Minh bạch"},
 ];
+const PROD_STATUS=[
+  {id:"on_track",label:"Đúng tiến độ",labelShort:"On track",c:"#1D9E75",bg:"#EAF3DE",icon:"🟢",
+   action:"Báo cáo định kỳ, không cần action thêm",who:""},
+  {id:"delay_minor",label:"Chậm 5–10%",labelShort:"Chậm nhẹ",c:"#856A00",bg:"#FFF9D6",icon:"🟡",
+   action:"Supply liên hệ supplier ngay — tìm nguyên nhân. Chưa báo Sales/Buyer.",who:"Supply"},
+  {id:"delay_moderate",label:"Chậm 10–20%",labelShort:"Chậm vừa",c:"#C05A00",bg:"#FFF0E0",icon:"🟠",
+   action:"Supply lên kế hoạch catch-up, thông báo Sales (chưa báo Buyer). Chuẩn bị backup option.",who:"Supply + Sales"},
+  {id:"delay_critical",label:"Chậm >20% / Miss milestone",labelShort:"Nguy hiểm",c:"#A32D2D",bg:"#FCEBEB",icon:"🔴",
+   action:"Escalate GD. Sales đàm phán với Buyer: gia hạn lead time, partial shipment, hoặc bồi thường.",who:"GD + Sales + Buyer"},
+];
+
 const KRALJIC_QUADRANTS=[
   {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi cao",strategy:"Quan hệ đối tác dài hạn"},
   {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",icon:"💪",desc:"Tác động tài chính cao · Rủi ro thấp",strategy:"Tận dụng sức mua, thương lượng"},
@@ -115,7 +126,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),perf:"{}",ca:now(),ua:now()});
 const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",ca:now(),ua:now()});
 const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",ca:now(),ua:now()});
-const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
+const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:parseJ(s.perf)||{}});
 const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE"});
@@ -534,7 +545,7 @@ function RFQList({ctx}){
   const allSt=[...RFQ_ST,...INQ_ST];
   return(
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
         <span style={{fontSize:14,fontWeight:600}}>RFQ / Inquiry</span>
         {urgentCount>0&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 {urgentCount} gấp</span>}
         <div style={{flex:1}}/>
@@ -542,25 +553,47 @@ function RFQList({ctx}){
         <Sel val={fStatus} onChange={setFStatus} opts={[["all","Tất cả"],...allSt.map(s=>[s.id,s.label])]}/>
       </div>
       {fl.length===0&&<Empty text="Chưa có RFQ/INQ."/>}
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {fl.map(r=>{
-          const isInq=r.type==="inq";const stList=isInq?INQ_ST:RFQ_ST;const st=stList.find(x=>x.id===r.status)||stList[0];
+      {/* Table header */}
+      <div style={{display:"grid",gridTemplateColumns:"52px 1fr 130px 90px 80px 70px",gap:0,padding:"6px 14px",background:"#f5f5f5",borderRadius:"8px 8px 0 0",border:"1px solid #e5e5e5",borderBottom:"none"}}>
+        {["Loại","Mô tả","Trạng thái","Thị trường","Deadline","NCC"].map(h=>(
+          <span key={h} style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:.5}}>{h}</span>
+        ))}
+      </div>
+      <div style={{border:"1px solid #e5e5e5",borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
+        {fl.map((r,idx)=>{
+          const isInq=r.type==="inq";
+          const stList=isInq?INQ_ST:RFQ_ST;
+          const st=stList.find(x=>x.id===r.status)||stList[0];
           const mkts=parseJ(r.markets)||[];
+          const isOverdue=r.deadline&&new Date(r.deadline)<new Date()&&!["closed","inq_closed","inq_converted"].includes(r.status);
           return(
-            <div key={r.id} onClick={()=>setModal({t:isInq?"inq-detail":"rfq-detail",d:r})} style={{background:"#fff",border:`1px solid ${r.urgent&&!["closed","inq_closed"].includes(r.status)?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:isInq?"#EEEDFE":"#E6F1FB",color:isInq?"#534AB7":"#185FA5"}}>{isInq?"INQ":"RFQ"}</span>
-                <span style={{fontWeight:600,fontSize:12,color:"#aaa"}}>{r.code}</span>
-                <span style={{fontWeight:600,fontSize:14,flex:1}}>{r.desc||"(Chưa mô tả)"}</span>
-                <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>
-                {r.urgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴 Gấp</span>}
+            <div key={r.id} onClick={()=>setModal({t:isInq?"inq-detail":"rfq-detail",d:r})}
+              style={{display:"grid",gridTemplateColumns:"52px 1fr 130px 90px 80px 70px",gap:0,padding:"10px 14px",
+                background:r.urgent&&!["closed","inq_closed"].includes(r.status)?"#FFFAFA":"#fff",
+                borderTop:idx>0?"1px solid #f0f0f0":"none",cursor:"pointer",alignItems:"center"}}
+              onMouseEnter={e=>e.currentTarget.style.background=r.urgent?"#FFF5F5":"#FAFAFA"}
+              onMouseLeave={e=>e.currentTarget.style.background=r.urgent&&!["closed","inq_closed"].includes(r.status)?"#FFFAFA":"#fff"}>
+              {/* Col 1: type badge + code */}
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,fontWeight:700,background:isInq?"#EEEDFE":"#E6F1FB",color:isInq?"#534AB7":"#185FA5",alignSelf:"flex-start"}}>{isInq?"INQ":"RFQ"}</span>
+                <span style={{fontSize:10,color:"#bbb",whiteSpace:"nowrap"}}>{r.code}</span>
               </div>
-              <div style={{fontSize:12,color:"#777",marginTop:5,display:"flex",gap:14,flexWrap:"wrap"}}>
-                {mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
-                {r.deadline&&<span>📅 {r.deadline}</span>}
-                {r.sales&&<span>👤 {r.sales}</span>}
-                {(parseJ(r.sids)||[]).length>0&&<span>🏭 {(parseJ(r.sids)||[]).length} NCC</span>}
+              {/* Col 2: desc + sales + urgent */}
+              <div style={{minWidth:0,paddingRight:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  {r.urgent&&<span style={{fontSize:10,color:"#A32D2D",fontWeight:700,flexShrink:0}}>🔴</span>}
+                  <span style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.desc||"(Chưa mô tả)"}</span>
+                </div>
+                {r.sales&&<div style={{fontSize:11,color:"#aaa",marginTop:2}}>👤 {r.sales}</div>}
               </div>
+              {/* Col 3: status */}
+              <div><span style={{fontSize:11,padding:"3px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600,whiteSpace:"nowrap"}}>{st.label}</span></div>
+              {/* Col 4: markets */}
+              <div style={{fontSize:11,color:"#777",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{mkts.length>0?mkts.join(", "):"—"}</div>
+              {/* Col 5: deadline */}
+              <div style={{fontSize:11,color:isOverdue?"#A32D2D":"#777",fontWeight:isOverdue?600:400}}>{r.deadline||"—"}</div>
+              {/* Col 6: NCC count */}
+              <div style={{fontSize:12,color:"#555",fontWeight:600}}>{(parseJ(r.sids)||[]).length>0?`${(parseJ(r.sids)||[]).length} NCC`:"—"}</div>
             </div>
           );
         })}
@@ -790,6 +823,19 @@ function OrderForm({o,ctx}){
       <Sec title="Production">
         <Rw l="Bắt đầu SX"><input type="date" value={f.prodStart||""} onChange={e=>set("prodStart",e.target.value)} style={iSt}/></Rw>
         <Rw l="ETD"><input type="date" value={f.etd||""} onChange={e=>set("etd",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Production Status">
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {PROD_STATUS.map(ps=>(
+              <label key={ps.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 10px",borderRadius:7,border:`1.5px solid ${f.prodStatus===ps.id?ps.c:"#e5e5e5"}`,background:f.prodStatus===ps.id?ps.bg:"#fff",cursor:"pointer"}}>
+                <input type="radio" name="prodStatus" value={ps.id} checked={f.prodStatus===ps.id} onChange={()=>set("prodStatus",ps.id)} style={{marginTop:2,accentColor:ps.c}}/>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:ps.c}}>{ps.icon} {ps.label}</div>
+                  <div style={{fontSize:11,color:"#666",marginTop:2,lineHeight:1.5}}>{ps.action}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </Rw>
       </Sec>
       <Sec title="QC">
         <Rw l="Loại QC"><select value={f.qcType||""} onChange={e=>set("qcType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{["Tự audit","SGS","Bureau Veritas","Intertek","QIMA","Khác"].map(t=><option key={t}>{t}</option>)}</select></Rw>
@@ -854,6 +900,20 @@ function OrderDetail({o,ctx}){
           </div>
         </IB>
       </div>
+      {/* Production Status */}
+      {o.prodStatus&&(()=>{
+        const ps=PROD_STATUS.find(x=>x.id===o.prodStatus);
+        if(!ps)return null;
+        return(
+          <div style={{background:ps.bg,border:`1.5px solid ${ps.c}`,borderRadius:10,padding:"12px 16px",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+              <div style={{fontSize:13,fontWeight:700,color:ps.c}}>{ps.icon} Production Status — {ps.label}</div>
+              {ps.who&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"rgba(0,0,0,0.07)",color:ps.c,fontWeight:600}}>👥 {ps.who}</span>}
+            </div>
+            <div style={{fontSize:12,color:"#555",lineHeight:1.6}}>{ps.action}</div>
+          </div>
+        );
+      })()}
       {(o.qcType||o.qcResult)&&<div style={{background:o.qcResult?qcBg:"#f8f8f8",border:`1px solid ${o.qcResult?qcColor:"#eee"}`,borderRadius:8,padding:"10px 14px",marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>🔍 QC</div>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13}}>
