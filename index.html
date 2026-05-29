@@ -260,7 +260,30 @@ const KRALJIC_QUADRANTS=[
   {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro thấp",strategy:"Tự động hóa, tối ưu chi phí"},
 ];
 
+// Normalize date từ Sheets: ISO timestamp → YYYY-MM-DD
 // ── Helpers ──
+  if(!v)return"";
+  const s=String(v).trim();
+  // Đã đúng format YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  // ISO timestamp: lấy phần date theo local time
+  if(s.includes("T")||s.includes("Z")){
+    const d=new Date(s);
+    if(!isNaN(d)){
+      // Dùng local date để tránh lệch múi giờ UTC+7
+      const y=d.getFullYear();
+      const m=String(d.getMonth()+1).padStart(2,"0");
+      const dd=String(d.getDate()).padStart(2,"0");
+      return`${y}-${m}-${dd}`;
+    }
+  }
+  // MM/DD/YYYY
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
+    const[mo,dd,yy]=s.split("/");
+    return`${yy}-${mo.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+  }
+  return s;
+};
 const calcTier=v=>{
   if(!v)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t:0};
   const t=Object.values(v).reduce((a,b)=>a+(b||0),0);
