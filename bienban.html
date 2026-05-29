@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Biên Bản Kiểm Tra Nghiệm Thu — VinaSources</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f5f5f0;padding:20px}
+
+/* TOOLBAR */
+.toolbar{max-width:900px;margin:0 auto 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar a{font-size:12px;color:#777;text-decoration:none;padding:6px 12px;border:1px solid #ddd;border-radius:6px;background:#fff}
+.toolbar a:hover{background:#f5f5f3}
+.toolbar button{padding:6px 16px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500}
+.btn-print{background:#1a3a5c;color:#fff;border:none}
+.btn-print:hover{background:#25527a}
+.btn-load{background:#fff;color:#1a3a5c;border:1px solid #1a3a5c}
+.btn-load:hover{background:#f0f4f8}
+.toolbar .spacer{flex:1}
+.save-ind{font-size:11px;color:#3B6D11;background:#E8F4E2;border:1px solid #C5DFA8;padding:3px 10px;border-radius:10px}
+
+/* PAGE */
+.page{background:#fff;max-width:900px;margin:0 auto;padding:36px 40px;border:0.5px solid #ddd;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+
+/* HEADER */
+.doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #1a3a5c;padding-bottom:14px;margin-bottom:18px}
+.company-badge{font-size:11px;font-weight:700;letter-spacing:0.5px;color:#fff;background:#1a3a5c;padding:4px 10px;border-radius:3px;display:inline-block}
+.doc-title{margin-top:6px}
+.doc-title h1{font-size:15px;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.3px}
+.doc-title p{font-size:11px;color:#666;font-style:italic;margin-top:2px}
+.doc-meta{text-align:right;min-width:200px}
+.doc-no input{font-size:13px;font-weight:700;color:#1a3a5c;border:none;border-bottom:1.5px solid #1a3a5c;outline:none;width:160px;background:transparent;text-align:right}
+.meta-row{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:6px;font-size:12px;color:#555}
+.meta-row input{border:none;border-bottom:1px solid #bbb;outline:none;font-size:12px;color:#1a1a1a;background:transparent;width:130px;text-align:center}
+
+/* REF BAR */
+.ref-bar{background:#f0f4f8;border-left:3px solid #1a3a5c;padding:7px 12px;margin-bottom:18px;display:flex;gap:24px;font-size:12px;color:#444;flex-wrap:wrap;align-items:center}
+.ref-bar label{color:#888;font-style:italic;white-space:nowrap;margin-right:4px}
+.ref-bar input{border:none;border-bottom:1px solid #bbb;outline:none;font-size:12px;color:#1a1a1a;background:transparent;width:180px}
+.ref-bar input.wide{width:280px}
+
+/* SECTION */
+.sec-title{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#fff;background:#1a3a5c;padding:5px 10px;margin-bottom:0}
+.sec-sub{font-size:10px;font-style:italic;color:#aac;background:#1a3a5c;padding:0 10px 5px;margin-bottom:1px}
+
+/* INFO TABLE */
+table.info{width:100%;border-collapse:collapse;margin-bottom:16px}
+table.info td{border:0.5px solid #c8d0d8;padding:5px 9px;vertical-align:middle}
+table.info td.lbl{width:220px;color:#555;font-size:11.5px;background:#f9fafb;white-space:nowrap}
+table.info td.lbl em{display:block;font-style:italic;color:#aaa;font-size:10.5px}
+table.info td.val input,table.info td.val select,table.info td.val textarea{border:none;outline:none;width:100%;font-size:12.5px;color:#1a1a1a;background:transparent;font-family:inherit;resize:none}
+table.info td.val textarea{min-height:40px}
+.divider-row td{background:#e8edf2;padding:4px 9px;font-size:10.5px;font-weight:700;letter-spacing:0.5px;color:#1a3a5c;text-transform:uppercase;border:0.5px solid #c8d0d8}
+
+/* APPENDIX TABLE */
+.appendix-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.appendix-table th{background:#1a3a5c;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;text-align:left}
+.appendix-table td{border:0.5px solid #c8d0d8;padding:6px 10px;font-size:12px;vertical-align:top}
+.appendix-table tr:nth-child(even) td{background:#f9fafb}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px}
+.badge-blue{background:#daeaf8;color:#1a3a5c}
+.verdict-sel{font-size:11px;padding:3px 6px;border:1px solid #c8d0d8;border-radius:4px;background:#fff;color:#1a1a1a;font-family:inherit}
+.verdict-sel.pass{border-color:#1D9E75;color:#0F6E56;background:#E1F5EE}
+.verdict-sel.cap{border-color:#E09F27;color:#7A4500;background:#FDF3CD}
+.verdict-sel.hold{border-color:#854F0B;color:#854F0B;background:#FAEEDA}
+.verdict-sel.reject{border-color:#E24B4A;color:#A32D2D;background:#FCEBEB}
+
+/* SIGN */
+.sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:0.5px solid #c8d0d8;margin-top:20px;margin-bottom:20px}
+.sign-box{padding:20px 16px 16px;text-align:center}
+.sign-box:first-child{border-right:0.5px solid #c8d0d8}
+.sign-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#1a3a5c;margin-bottom:2px}
+.sign-sub{font-size:10px;font-style:italic;color:#888;margin-bottom:32px}
+.sign-line{border-top:1px dashed #bbb;width:70%;margin:0 auto 8px}
+.sign-name input{border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;background:transparent;width:80%;text-align:center;font-family:inherit;color:#1a1a1a}
+
+/* NOTE BOX */
+.note-box{background:#fffde7;border:0.5px solid #f0c040;border-left:3px solid #f0a000;padding:10px 14px;font-size:11.5px;color:#555;margin-top:4px;margin-bottom:16px}
+.note-box ul{padding-left:16px;margin-top:4px}
+.note-box li{margin-bottom:3px}
+
+/* PHOTO SECTION */
+.photo-tabs{display:flex;gap:0;border-bottom:2px solid #1a3a5c;margin-bottom:16px}
+.photo-tab{padding:7px 18px;font-size:12px;font-weight:600;cursor:pointer;border:0.5px solid transparent;border-bottom:none;background:#f5f5f0;border-radius:4px 4px 0 0;margin-right:2px;color:#666}
+.photo-tab.active{background:#fff;color:#1a3a5c;border-color:#1a3a5c;border-bottom:2px solid #fff;margin-bottom:-2px}
+.photo-panel{display:none}
+.photo-panel.active{display:block}
+.cat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#1a3a5c;margin:14px 0 6px;border-left:3px solid #1a3a5c;padding-left:7px}
+.cat-label em{font-weight:400;font-style:italic;color:#888;text-transform:none;letter-spacing:0;font-size:10.5px}
+.img-upload-zone{border:2px dashed #1a3a5c;border-radius:6px;padding:20px;text-align:center;cursor:pointer;background:#f8fafc;transition:background .15s;margin-bottom:10px}
+.img-upload-zone:hover{background:#eaf0f8}
+.img-upload-zone input[type=file]{display:none}
+.img-upload-zone p{color:#666;font-size:12px;margin-top:6px}
+.img-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px}
+.img-card{position:relative;border:0.5px solid #c8d0d8;border-radius:4px;overflow:hidden;background:#f9fafb}
+.img-card img{width:100%;height:130px;object-fit:cover;display:block}
+.img-card .img-cap{padding:4px 8px;font-size:11px;color:#444;border-top:0.5px solid #eee}
+.img-card .img-cap input{border:none;outline:none;font-size:11px;width:100%;background:transparent;color:#333;font-family:inherit}
+.img-card .del-btn{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:22px;text-align:center;padding:0;font-family:inherit}
+.photo-cat.has-photos .img-upload-zone{display:none}
+.add-more-btn{display:none;background:#fff;border:1.5px dashed #c0d0e0;color:#1a3a5c;font-size:11px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;margin-top:8px;align-items:center;gap:5px;font-family:inherit}
+.add-more-btn:hover{background:#f0f4f8;border-color:#1a3a5c}
+.photo-cat.has-photos .add-more-btn{display:inline-flex}
+
+/* FOOTER */
+.doc-footer{display:flex;justify-content:space-between;align-items:center;margin-top:24px;border-top:0.5px solid #ddd;padding-top:10px;font-size:10.5px;color:#999}
+.footer-doc{font-weight:600;color:#1a3a5c}
+.conf{color:#c00;font-weight:600;letter-spacing:0.5px}
+
+@media print{
+  body{background:#fff;padding:0}
+  .page{box-shadow:none;border:none;padding:20px}
+  .toolbar{display:none!important}
+  .photo-panel{display:block!important}
+  .photo-tab{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <a href="index.html">← VinaSources</a>
+  <a href="qc-tracker.html" id="back-qc">← QC Tracker</a>
+  <span id="load-status" class="save-ind" style="display:none">✓ Đã load từ QC Tracker</span>
+  <span class="spacer"></span>
+  <button class="btn-load" onclick="loadFromQC()">⬇ Load từ QC Tracker</button>
+  <button class="btn-print" onclick="window.print()">🖨 In / Export PDF</button>
+</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div>
+      <span class="company-badge">VINASOURCES</span>
+      <div class="doc-title">
+        <h1>Biên Bản Kiểm Tra Nghiệm Thu Hàng Hóa</h1>
+        <p>Goods Inspection and Acceptance Report</p>
+      </div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-no">No.: <input id="doc-no" placeholder="BB-KT-VNS-___" oninput="updateFooter()"/></div>
+      <div class="meta-row"><label>Ngày / Date:</label><input type="date" id="doc-date"/></div>
+    </div>
+  </div>
+
+  <!-- REF BAR -->
+  <div class="ref-bar">
+    <span><label>Căn cứ HĐ / Contract No.:</label><input class="wide" id="ref-contract" placeholder="Số hợp đồng"/></span>
+    <span><label>PO No.:</label><input id="ref-po" placeholder="Mã đơn hàng"/></span>
+  </div>
+
+  <!-- TABS -->
+  <div class="photo-tabs">
+    <div class="photo-tab active" onclick="switchTab('tab-main',this)">📋 Biên Bản Chính <span style="font-size:10px;font-weight:400">Main Report</span></div>
+    <div class="photo-tab" onclick="switchTab('tab-photo',this)">🖼 Phụ lục 5 – Hình Ảnh <span style="font-size:10px;font-weight:400">Appendix 5</span></div>
+  </div>
+
+  <!-- TAB MAIN -->
+  <div id="tab-main" class="photo-panel active">
+
+    <div class="sec-title">I. Thông Tin Các Bên / Party Information</div>
+    <div class="sec-sub">Bên mua và bên bán / Buyer and seller</div>
+    <table class="info" style="margin-top:1px">
+      <tr class="divider-row"><td colspan="2">Bên Mua (Bên A) / Buyer (Party A)</td></tr>
+      <tr><td class="lbl">Tên công ty <em>Company name</em></td><td class="val"><input id="a-name" placeholder="VinaSources hoặc Buyer"/></td></tr>
+      <tr><td class="lbl">Địa chỉ <em>Address</em></td><td class="val"><input id="a-addr" placeholder="Địa chỉ đầy đủ"/></td></tr>
+      <tr><td class="lbl">Người đại diện <em>Representative</em></td><td class="val"><input id="a-rep" placeholder="Họ và tên"/></td></tr>
+      <tr><td class="lbl">Chức vụ <em>Position</em></td><td class="val"><input id="a-pos" placeholder="Chức danh"/></td></tr>
+      <tr class="divider-row"><td colspan="2">Bên Bán / Nhà SX (Bên B) / Seller / Manufacturer (Party B)</td></tr>
+      <tr><td class="lbl">Tên công ty <em>Company name</em></td><td class="val"><input id="b-name" placeholder="Tên nhà cung cấp"/></td></tr>
+      <tr><td class="lbl">Địa chỉ <em>Address</em></td><td class="val"><input id="b-addr" placeholder="Địa chỉ xưởng"/></td></tr>
+      <tr><td class="lbl">Người đại diện <em>Representative</em></td><td class="val"><input id="b-rep" placeholder="Họ và tên"/></td></tr>
+      <tr><td class="lbl">Chức vụ <em>Position</em></td><td class="val"><input id="b-pos" placeholder="Chức danh"/></td></tr>
+    </table>
+
+    <div class="sec-title">II. Thông Tin Kiểm Tra / Inspection Details</div>
+    <div class="sec-sub">Địa điểm, thời gian, hàng hóa, phương pháp</div>
+    <table class="info" style="margin-top:1px">
+      <tr><td class="lbl">Địa điểm kiểm tra <em>Inspection location</em></td><td class="val"><input id="insp-loc" placeholder="Địa điểm xưởng / cảng"/></td></tr>
+      <tr><td class="lbl">Thời gian <em>Date &amp; time</em></td><td class="val"><input type="datetime-local" id="insp-time"/></td></tr>
+      <tr><td class="lbl">Tên hàng hóa / SKU <em>Product name / SKU</em></td><td class="val"><input id="insp-sku" placeholder="Tên sản phẩm / SKU"/></td></tr>
+      <tr><td class="lbl">Số lượng lô <em>Lot quantity</em></td><td class="val"><input id="insp-lot" placeholder="_____ units / pcs"/></td></tr>
+      <tr><td class="lbl">Số lượng mẫu KT <em>Sample size</em></td><td class="val"><input id="insp-sample" placeholder="_____ pcs — __% ngẫu nhiên"/></td></tr>
+      <tr><td class="lbl">Phương pháp <em>Method</em></td><td class="val"><input id="insp-method" value="Kiểm tra ngẫu nhiên / Random Sampling — AQL ISO 2859-1"/></td></tr>
+      <tr><td class="lbl">Người kiểm tra QC <em>Inspector</em></td><td class="val"><input id="insp-qc" placeholder="Họ tên — Bộ phận"/></td></tr>
+    </table>
+
+    <div class="sec-title">III. Kết Quả Tổng Hợp / Summary Results</div>
+    <div class="sec-sub">Tổng hợp kết quả từ QC Tracker</div>
+    <table class="info" style="margin-top:1px">
+      <tr><td class="lbl">IPI (0–20% SX)</td><td class="val">
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="verdict-sel" id="v-ipi" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select>
+          <input placeholder="Ghi chú / Note" style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;flex:1;background:transparent;font-family:inherit" id="n-ipi"/>
+        </div>
+      </td></tr>
+      <tr><td class="lbl">DUPRO (30–50%)</td><td class="val">
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="verdict-sel" id="v-dupro" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select>
+          <input placeholder="Ghi chú / Note" style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;flex:1;background:transparent;font-family:inherit" id="n-dupro"/>
+        </div>
+      </td></tr>
+      <tr><td class="lbl">FRI/PSI (≥80%)</td><td class="val">
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="verdict-sel" id="v-fri" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select>
+          <input placeholder="Ghi chú / Note" style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;flex:1;background:transparent;font-family:inherit" id="n-fri"/>
+        </div>
+      </td></tr>
+      <tr><td class="lbl">CLI (Container)</td><td class="val">
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="verdict-sel" id="v-cli" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select>
+          <input placeholder="Ghi chú / Note" style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;flex:1;background:transparent;font-family:inherit" id="n-cli"/>
+        </div>
+      </td></tr>
+      <tr><td class="lbl" style="font-weight:700;color:#1a3a5c">KẾT LUẬN CHUNG <em>Overall Verdict</em></td><td class="val">
+        <select class="verdict-sel" id="v-overall" onchange="styleVerdict(this)" style="font-size:13px;font-weight:700;padding:5px 10px">
+          <option value="">— Chưa kết luận —</option>
+          <option value="pass">✓ CHẤP NHẬN / ACCEPTED</option>
+          <option value="cap">CHẤP NHẬN CÓ ĐIỀU KIỆN / CONDITIONAL ACCEPT</option>
+          <option value="hold">TẠM GIỮ / ON HOLD</option>
+          <option value="reject">✗ TỪ CHỐI / REJECTED</option>
+        </select>
+      </td></tr>
+      <tr><td class="lbl">Lỗi phát hiện <em>Defects found</em></td><td class="val">
+        <div style="display:flex;gap:16px;font-size:12px">
+          <span>Critical: <input type="number" id="d-crit" value="0" style="width:50px;border:none;border-bottom:1px solid #ddd;outline:none;text-align:center;font-family:inherit"/></span>
+          <span>Major: <input type="number" id="d-maj" value="0" style="width:50px;border:none;border-bottom:1px solid #ddd;outline:none;text-align:center;font-family:inherit"/></span>
+          <span>Minor: <input type="number" id="d-min" value="0" style="width:50px;border:none;border-bottom:1px solid #ddd;outline:none;text-align:center;font-family:inherit"/></span>
+        </div>
+      </td></tr>
+    </table>
+
+    <div class="sec-title">IV. Danh Mục Phụ Lục / List of Appendices</div>
+    <div class="sec-sub">Các phụ lục đính kèm là bộ phận không tách rời của biên bản này</div>
+    <br/>
+    <table class="appendix-table">
+      <thead><tr><th style="width:110px">Phụ lục</th><th>Nội dung / Content</th><th style="width:110px;text-align:center">Kết luận</th><th style="width:100px">Ghi chú</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">Phụ lục 1</span><br/><em style="font-size:10px;color:#888">Appendix 1</em></td>
+          <td><strong>Checklist IPI – Kiểm Tra Đầu Vào Nguyên Liệu & Mẫu Đầu Dây Chuyền</strong><br/><em style="color:#888;font-size:11px">IPI Checklist – Input Material & First-off Inspection</em><br/><span style="font-size:11px;color:#555">Giai đoạn 0–20% SX · Thang điểm 0–5</span></td>
+          <td style="text-align:center"><select class="verdict-sel" id="app1" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select></td>
+          <td style="font-size:11px">Đính kèm<br/><em style="color:#aaa">Trang: ___</em></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">Phụ lục 2</span><br/><em style="font-size:10px;color:#888">Appendix 2</em></td>
+          <td><strong>Checklist DUPRO – Kiểm Tra Giữa Quá Trình Sản Xuất</strong><br/><em style="color:#888;font-size:11px">DUPRO Checklist – During Production Inspection</em><br/><span style="font-size:11px;color:#555">Giai đoạn 30–50% SX · AQL sampling ANSI/ASQ Z1.4</span></td>
+          <td style="text-align:center"><select class="verdict-sel" id="app2" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select></td>
+          <td style="font-size:11px">Đính kèm<br/><em style="color:#aaa">Trang: ___</em></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">Phụ lục 3</span><br/><em style="font-size:10px;color:#888">Appendix 3</em></td>
+          <td><strong>Checklist FRI/PSI – Kiểm Tra Thành Phẩm & Đóng Gói</strong><br/><em style="color:#888;font-size:11px">FRI/PSI Checklist – Final Random Inspection & Packaging</em><br/><span style="font-size:11px;color:#555">≥80% đóng gói · AQL ISO 2859-1 · Kết luận xuất hàng</span></td>
+          <td style="text-align:center"><select class="verdict-sel" id="app3" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select></td>
+          <td style="font-size:11px">Đính kèm<br/><em style="color:#aaa">Trang: ___</em></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">Phụ lục 4</span><br/><em style="font-size:10px;color:#888">Appendix 4</em></td>
+          <td><strong>Checklist CLI – Kiểm Tra Xếp Hàng Container</strong><br/><em style="color:#888;font-size:11px">CLI Checklist – Container Loading Inspection</em><br/><span style="font-size:11px;color:#555">Xác nhận xếp hàng trước khi niêm phong</span></td>
+          <td style="text-align:center"><select class="verdict-sel" id="app4" onchange="styleVerdict(this)"><option value="">—</option><option value="pass">✓ PASS</option><option value="cap">PASS-CAP</option><option value="hold">HOLD</option><option value="reject">✗ REJECT</option></select></td>
+          <td style="font-size:11px">Đính kèm<br/><em style="color:#aaa">Trang: ___</em></td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">Phụ lục 5</span><br/><em style="font-size:10px;color:#888">Appendix 5</em></td>
+          <td><strong>Hình Ảnh Sản Phẩm & Đóng Gói Hoàn Thiện</strong><br/><em style="color:#888;font-size:11px">Finished Product & Packaging Photographs</em></td>
+          <td style="text-align:center;color:#aaa;font-size:11px">—</td>
+          <td style="font-size:11px">Đính kèm<br/><em style="color:#aaa">Trang: ___</em></td>
+        </tr>
+        <tr style="background:#fafbfc">
+          <td><span class="badge" style="background:#eef2f6;color:#667788;font-size:10px">Phụ lục 6+</span><br/><em style="font-size:10px;color:#bbb">Optional</em></td>
+          <td><input style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;width:100%;background:transparent;color:#555;font-family:inherit" placeholder="[Tên phụ lục bổ sung / Additional appendix]"/></td>
+          <td style="text-align:center;color:#ccc">—</td>
+          <td style="font-size:11px;color:#aaa">Đính kèm</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <strong>Lưu ý / Note:</strong>
+      <ul>
+        <li>Các phụ lục là bộ phận không tách rời của Biên bản kiểm tra này. <em>All appendices are inseparable parts of this Inspection Report.</em></li>
+        <li>Biên bản được lập thành 02 (hai) bản có giá trị pháp lý như nhau. <em>This report is made in 02 (two) originals of equal legal validity.</em></li>
+      </ul>
+    </div>
+
+    <div class="sec-title">V. Corrective Action Plan (CAP)</div>
+    <div class="sec-sub">Điền nếu có lỗi cần khắc phục / Fill if defects require corrective action</div>
+    <table class="info" style="margin-top:1px">
+      <tr><td class="lbl">Mô tả lỗi <em>Defect description</em></td><td class="val"><textarea id="cap-desc" placeholder="Mô tả chi tiết lỗi phát hiện..."></textarea></td></tr>
+      <tr><td class="lbl">Hành động khắc phục <em>Corrective action</em></td><td class="val"><textarea id="cap-action" placeholder="Hành động xử lý cụ thể..."></textarea></td></tr>
+      <tr><td class="lbl">Người phụ trách <em>Responsible party</em></td><td class="val"><input id="cap-owner" placeholder="Tên và bộ phận"/></td></tr>
+      <tr><td class="lbl">Deadline <em>Completion deadline</em></td><td class="val"><input type="date" id="cap-deadline"/></td></tr>
+    </table>
+
+    <div class="sec-title">VI. Xác Nhận Của Hai Bên / Confirmation by Both Parties</div>
+    <div class="sec-sub">Hai bên cùng đọc, đồng ý và ký xác nhận / Both parties have read, agreed and signed</div>
+    <br/>
+    <div class="sign-grid">
+      <div class="sign-box">
+        <div class="sign-title">Đại Diện Bên Mua (Bên A)</div>
+        <div class="sign-sub">Representative of Buyer (Party A)</div>
+        <div class="sign-line"></div>
+        <div style="font-size:11px;color:#aaa;font-style:italic;margin-bottom:8px">Chữ ký / Signature</div>
+        <div class="sign-name"><input placeholder="Họ tên / Full name" id="sign-a-name"/></div>
+        <div style="font-size:11px;color:#777;margin-top:4px">Ngày / Date: <input type="date" id="sign-a-date" style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:11px;background:transparent;font-family:inherit"/></div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-title">Đại Diện Bên Bán (Bên B)</div>
+        <div class="sign-sub">Representative of Seller (Party B)</div>
+        <div class="sign-line"></div>
+        <div style="font-size:11px;color:#aaa;font-style:italic;margin-bottom:8px">Chữ ký / Signature</div>
+        <div class="sign-name"><input placeholder="Họ tên / Full name" id="sign-b-name"/></div>
+        <div style="font-size:11px;color:#777;margin-top:4px">Ngày / Date: <input type="date" id="sign-b-date" style="border:none;border-bottom:1px solid #ddd;outline:none;font-size:11px;background:transparent;font-family:inherit"/></div>
+      </div>
+    </div>
+
+  </div><!-- end tab-main -->
+
+  <!-- TAB PHOTO -->
+  <div id="tab-photo" class="photo-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div class="sec-title" style="display:inline-block">Phụ Lục 5 – Hình Ảnh Sản Phẩm & Đóng Gói</div>
+        <div style="font-size:11px;color:#888;font-style:italic;margin-top:2px">Appendix 5 · Finished Product & Packaging Photographs</div>
+      </div>
+    </div>
+
+    <div class="photo-cat" data-cat="product">
+      <div class="cat-label">📦 Hình ảnh sản phẩm thực tế <em>Actual product photos</em></div>
+      <div class="img-upload-zone" onclick="triggerUpload('product')">
+        <input type="file" accept="image/*" multiple onchange="handleFiles(event,'product')"/>
+        <span style="font-size:28px">📷</span>
+        <p>Nhấn để tải ảnh lên / Click to upload<br/><em style="font-size:11px;color:#aaa">PNG, JPG, WEBP — nhiều file</em></p>
+      </div>
+      <div class="img-gallery" id="gallery-product"></div>
+      <button class="add-more-btn" onclick="triggerUpload('product')">📷 Thêm ảnh khác</button>
+    </div>
+
+    <div class="photo-cat" data-cat="inner">
+      <div class="cat-label">🗂 Đóng gói đơn vị <em>Inner packaging</em></div>
+      <div class="img-upload-zone" onclick="triggerUpload('inner')">
+        <input type="file" accept="image/*" multiple onchange="handleFiles(event,'inner')"/>
+        <span style="font-size:28px">📷</span>
+        <p>Nhấn để tải ảnh lên / Click to upload</p>
+      </div>
+      <div class="img-gallery" id="gallery-inner"></div>
+      <button class="add-more-btn" onclick="triggerUpload('inner')">📷 Thêm ảnh khác</button>
+    </div>
+
+    <div class="photo-cat" data-cat="carton">
+      <div class="cat-label">📫 Carton & Shipping mark</div>
+      <div class="img-upload-zone" onclick="triggerUpload('carton')">
+        <input type="file" accept="image/*" multiple onchange="handleFiles(event,'carton')"/>
+        <span style="font-size:28px">📷</span>
+        <p>Nhấn để tải ảnh lên / Click to upload</p>
+      </div>
+      <div class="img-gallery" id="gallery-carton"></div>
+      <button class="add-more-btn" onclick="triggerUpload('carton')">📷 Thêm ảnh khác</button>
+    </div>
+
+    <div class="photo-cat" data-cat="defect">
+      <div class="cat-label">⚠️ Hình ảnh lỗi phát hiện (nếu có) <em>Defect photos (if any)</em></div>
+      <div class="img-upload-zone" onclick="triggerUpload('defect')">
+        <input type="file" accept="image/*" multiple onchange="handleFiles(event,'defect')"/>
+        <span style="font-size:28px">📷</span>
+        <p>Nhấn để tải ảnh lên / Click to upload</p>
+      </div>
+      <div class="img-gallery" id="gallery-defect"></div>
+      <button class="add-more-btn" onclick="triggerUpload('defect')">📷 Thêm ảnh khác</button>
+    </div>
+  </div><!-- end tab-photo -->
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <span>Trang / Page &nbsp;&nbsp;___ / ___</span>
+    <span class="footer-doc">No.: <span id="footer-no">BB-KT-VNS-___</span></span>
+    <span class="conf">TÀI LIỆU NỘI BỘ / INTERNAL USE ONLY</span>
+  </div>
+
+</div><!-- end page -->
+
+<script>
+// ── INIT ──
+window.onload = () => {
+  // Set today
+  const t = new Date().toISOString().split('T')[0];
+  document.getElementById('doc-date').value = t;
+  document.getElementById('sign-a-date').value = t;
+  document.getElementById('sign-b-date').value = t;
+
+  // Check if opened from QC Tracker with params
+  const params = new URLSearchParams(location.search);
+  const qcId = params.get('qcId');
+  const orderId = params.get('orderId');
+  if (qcId || orderId) {
+    // Update back link
+    const backLink = document.getElementById('back-qc');
+    if (backLink) backLink.href = `qc-tracker.html?${qcId?'qcId='+qcId:''}${orderId?'&orderId='+orderId:''}`;
+    // Auto-load if localStorage has QC data
+    autoLoadFromStorage(qcId || orderId);
+  }
+};
+
+// ── AUTO LOAD from localStorage (QC Tracker saves state there too as backup) ──
+function autoLoadFromStorage(key) {
+  // Try sessionStorage for data passed from QC Tracker
+  try {
+    const raw = sessionStorage.getItem('vns_bb_data');
+    if (raw) {
+      const d = JSON.parse(raw);
+      fillFromData(d);
+      document.getElementById('load-status').style.display = '';
+    }
+  } catch(e) {}
+}
+
+function loadFromQC() {
+  // Read from sessionStorage set by QC Tracker
+  try {
+    const raw = sessionStorage.getItem('vns_bb_data');
+    if (!raw) {
+      alert('Chưa có dữ liệu từ QC Tracker. Vui lòng mở Biên bản từ nút trong QC Tracker.');
+      return;
+    }
+    const d = JSON.parse(raw);
+    fillFromData(d);
+    document.getElementById('load-status').style.display = '';
+  } catch(e) {
+    alert('Lỗi đọc dữ liệu: ' + e.message);
+  }
+}
+
+function fillFromData(d) {
+  const s = id => { const el=document.getElementById(id); if(el&&d[id]!==undefined) el.value=d[id]||''; };
+  s('ref-po'); s('b-name'); s('insp-sku'); s('insp-lot'); s('insp-sample'); s('insp-qc');
+  s('d-crit'); s('d-maj'); s('d-min');
+  // Verdicts
+  ['ipi','dupro','fri','cli'].forEach(ph => {
+    const sel = document.getElementById('v-'+ph);
+    if (sel && d['verdict_'+ph]) { sel.value = d['verdict_'+ph]; styleVerdict(sel); }
+    const note = document.getElementById('n-'+ph);
+    if (note && d['remark_'+ph]) note.value = d['remark_'+ph];
+    const app = document.getElementById('app'+(ph==='ipi'?1:ph==='dupro'?2:ph==='fri'?3:4));
+    if (app && d['verdict_'+ph]) { app.value = d['verdict_'+ph]; styleVerdict(app); }
+  });
+  // Overall
+  const ov = document.getElementById('v-overall');
+  if (ov && d.verdict_overall) { ov.value = d.verdict_overall; styleVerdict(ov); }
+  // CAP
+  if (d.cap_desc) { const el=document.getElementById('cap-desc'); if(el) el.value=d.cap_desc; }
+  if (d.cap_action) { const el=document.getElementById('cap-action'); if(el) el.value=d.cap_action; }
+}
+
+// ── TAB ──
+function switchTab(id, el) {
+  document.querySelectorAll('.photo-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.photo-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── VERDICT STYLE ──
+function styleVerdict(sel) {
+  sel.className = 'verdict-sel';
+  const v = sel.value;
+  if (v==='pass') sel.classList.add('pass');
+  else if (v==='cap') sel.classList.add('cap');
+  else if (v==='hold') sel.classList.add('hold');
+  else if (v==='reject') sel.classList.add('reject');
+}
+
+// ── FOOTER ──
+function updateFooter() {
+  const v = document.getElementById('doc-no').value;
+  const el = document.getElementById('footer-no');
+  if (el) el.textContent = v || 'BB-KT-VNS-___';
+}
+
+// ── PHOTO UPLOAD ──
+function triggerUpload(cat) {
+  document.querySelector(`.photo-cat[data-cat="${cat}"] input[type=file]`).click();
+}
+function handleFiles(e, cat) {
+  const files = Array.from(e.target.files);
+  const gallery = document.getElementById('gallery-' + cat);
+  const photoCat = document.querySelector(`.photo-cat[data-cat="${cat}"]`);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const card = document.createElement('div'); card.className = 'img-card';
+      const img = document.createElement('img'); img.src = ev.target.result;
+      const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '×';
+      del.onclick = () => { card.remove(); if (gallery.children.length===0) photoCat.classList.remove('has-photos'); };
+      const cap = document.createElement('div'); cap.className = 'img-cap';
+      const capInp = document.createElement('input'); capInp.placeholder = 'Chú thích ảnh...'; capInp.style.cssText='border:none;outline:none;font-size:11px;width:100%;background:transparent;font-family:inherit';
+      cap.appendChild(capInp);
+      card.appendChild(img); card.appendChild(del); card.appendChild(cap);
+      gallery.appendChild(card);
+    };
+    reader.readAsDataURL(file);
+  });
+  if (files.length > 0 && photoCat) photoCat.classList.add('has-photos');
+  e.target.value = '';
+}
+</script>
+</body>
+</html>
