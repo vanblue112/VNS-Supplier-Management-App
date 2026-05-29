@@ -261,6 +261,27 @@ const KRALJIC_QUADRANTS=[
 ];
 
 // Normalize date từ Sheets: ISO timestamp → YYYY-MM-DD
+// Normalize date từ Sheets: ISO timestamp → YYYY-MM-DD
+const normDate=v=>{
+  if(!v)return"";
+  const s=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  if(s.includes("T")||s.includes("Z")){
+    const d=new Date(s);
+    if(!isNaN(d)){
+      const y=d.getFullYear();
+      const m=String(d.getMonth()+1).padStart(2,"0");
+      const dd=String(d.getDate()).padStart(2,"0");
+      return`${y}-${m}-${dd}`;
+    }
+  }
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
+    const[mo,dd,yy]=s.split("/");
+    return`${yy}-${mo.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+  }
+  return s;
+};
+
 // ── Helpers ──
   if(!v)return"";
   const s=String(v).trim();
@@ -315,8 +336,8 @@ const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().sl
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
-const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",date:r.date||today(),deadline:r.deadline||""});
-const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0});
+const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
+const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0,poDate:normDate(o.poDate),etd:normDate(o.etd),eta:normDate(o.eta),prodStart:normDate(o.prodStart),qcDate:normDate(o.qcDate),depositDate:normDate(o.depositDate),balanceDate:normDate(o.balanceDate)});
 
 const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,prescore:typeof s.prescore==="object"?JSON.stringify(s.prescore):s.prescore,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
 const serRfq=r=>({
