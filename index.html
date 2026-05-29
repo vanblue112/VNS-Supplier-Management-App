@@ -79,6 +79,169 @@ const VCOLS=[
   {id:"xuat_khau",l:"04 Xuất khẩu"},{id:"chung_tu",l:"05 Chứng từ"},{id:"rfq",l:"06 Phản hồi RFQ"},
   {id:"oem_odm",l:"07 OEM/ODM"},{id:"giao_tiep",l:"08 Giao tiếp"},{id:"minh_bach",l:"09 Minh bạch"},
 ];
+
+const VSERF_CRITERIA=[
+  {id:"phap_ly",icon:"⚖️",label:"Pháp lý",desc:"Giấy phép kinh doanh, MST còn hiệu lực, giấy phép chuyên ngành nếu hàng có điều kiện",
+   hint:"Tra MST tại tracuunnt.mst.gov.vn — 'đang hoạt động' là hợp lệ.",
+   opts:[
+    {p:0,t:"Không tìm thấy thông tin pháp lý, hoặc doanh nghiệp đã ngừng hoạt động / giải thể"},
+    {p:1,t:"Có đăng ký kinh doanh nhưng MST tra ra 'ngừng hoạt động' hoặc thông tin không khớp"},
+    {p:2,t:"Giấy phép và MST hợp lệ, nhưng không cung cấp được khi được hỏi — phải tự tra"},
+    {p:3,t:"Giấy phép và MST hợp lệ, cung cấp được khi yêu cầu — chưa có giấy phép chuyên ngành (nếu hàng cần)"},
+    {p:4,t:"Hồ sơ pháp lý đầy đủ, chủ động cung cấp — giấy phép chuyên ngành có nhưng chưa cập nhật mới nhất"},
+    {p:5,t:"Hồ sơ đầy đủ, MST đang hoạt động, chủ động cung cấp — có đủ giấy phép chuyên ngành còn hiệu lực"},
+  ]},
+  {id:"san_xuat",icon:"🏭",label:"Sản xuất",desc:"Nhà xưởng, máy móc, công suất thực tế",
+   hint:"Hỏi: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu? Có ảnh/video xưởng không?'",
+   opts:[
+    {p:0,t:"Không có xưởng, toàn bộ đặt gia công ngoài — thực chất là trading"},
+    {p:1,t:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài — khó kiểm soát chất lượng và tiến độ"},
+    {p:2,t:"Có xưởng nhưng máy móc thiếu, công suất thấp — chỉ đáp ứng đơn nhỏ"},
+    {p:3,t:"Có xưởng riêng, máy móc cơ bản, đáp ứng được MOQ buyer — còn 1–2 công đoạn thuê ngoài"},
+    {p:4,t:"Xưởng riêng, máy móc đầy đủ, công suất ổn định — hầu hết tự sản xuất"},
+    {p:5,t:"Nhà xưởng riêng, máy móc đủ toàn bộ quy trình, công suất ≥ MOQ buyer, không thuê ngoài công đoạn chính"},
+  ]},
+  {id:"chat_luong",icon:"✅",label:"Chất lượng",desc:"Hệ thống kiểm soát chất lượng, chứng nhận quốc tế",
+   hint:"Hỏi: 'Ai kiểm tra hàng trước khi xuất? Có checklist QC không? Có ISO hay chứng nhận không?'",
+   opts:[
+    {p:0,t:"Không có quy trình QC nào — hàng làm xong là đóng gói, không kiểm tra"},
+    {p:1,t:"Có kiểm tra hàng nhưng theo cảm tính, không có tiêu chuẩn hay checklist cụ thể"},
+    {p:2,t:"Có checklist QC cơ bản, kiểm tra đầu ra (FQC) — chưa kiểm tra trong quá trình sản xuất"},
+    {p:3,t:"Có QC trong quá trình (IPQC) và đầu ra (FQC), chưa có chứng nhận quốc tế"},
+    {p:4,t:"Có QC 3 lớp (IPQC/FQC/OQC), đang trong quá trình lấy ISO hoặc có chứng nhận tương đương"},
+    {p:5,t:"Có ISO 9001 hoặc tương đương còn hiệu lực, QC nội bộ 3 lớp đầy đủ (IPQC/FQC/OQC)"},
+  ]},
+  {id:"xuat_khau",icon:"🚢",label:"Kinh nghiệm xuất khẩu",desc:"Số năm XK thực tế, thị trường đã bán, thành thạo Incoterms",
+   hint:"Hỏi: 'Đã xuất khẩu sang thị trường nào? Giao hàng theo điều kiện gì — FOB hay CIF?'",
+   opts:[
+    {p:0,t:"Chưa từng xuất khẩu, chỉ bán nội địa"},
+    {p:1,t:"Đã xuất khẩu 1–2 lần nhưng qua trung gian hoàn toàn — không trực tiếp làm việc với buyer ngoài"},
+    {p:2,t:"Có xuất khẩu trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},
+    {p:3,t:"Xuất khẩu 1–2 năm, biết FOB/CIF, đã có ít nhất 1 thị trường ổn định"},
+    {p:4,t:"Xuất khẩu ≥ 2 năm, thành thạo Incoterms phổ biến, đã bán vào 2–3 thị trường khác nhau"},
+    {p:5,t:"Xuất khẩu ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm đa thị trường và nhiều dạng buyer"},
+  ]},
+  {id:"chung_tu",icon:"📄",label:"Chứng từ xuất khẩu",desc:"Tự chuẩn bị CO, packing list, commercial invoice tiếng Anh, HS code",
+   hint:"Hỏi thẳng: 'Tự làm chứng từ hay nhờ logistics làm hộ?' và 'HS code của sản phẩm này là gì?'",
+   opts:[
+    {p:0,t:"Không biết chứng từ xuất khẩu là gì, chưa bao giờ làm"},
+    {p:1,t:"Biết các loại chứng từ nhưng hoàn toàn nhờ logistics hoặc môi giới làm hộ"},
+    {p:2,t:"Tự làm được packing list và invoice đơn giản, không biết HS code hoặc cách xin CO"},
+    {p:3,t:"Tự làm được hầu hết chứng từ, biết HS code — đôi khi cần hỗ trợ xác nhận CO"},
+    {p:4,t:"Tự làm đầy đủ bộ chứng từ tiếng Anh, HS code chính xác — quy trình chưa hoàn toàn chuẩn hóa"},
+    {p:5,t:"Tự lập hoàn toàn: CO, packing list, commercial invoice tiếng Anh chuẩn, HS code đúng"},
+  ]},
+  {id:"rfq",icon:"⚡",label:"Phản hồi & báo giá",desc:"Tốc độ phản hồi RFQ, chất lượng và chi tiết báo giá",
+   hint:"Gửi thử 1 RFQ và đo thời gian phản hồi. Xem báo giá có ghi rõ đơn giá, MOQ, Incoterms, lead time không.",
+   opts:[
+    {p:0,t:"Không phản hồi RFQ, hoặc phản hồi sau hơn 3 ngày"},
+    {p:1,t:"Phản hồi sau 48–72 giờ, báo giá chỉ 1 con số, không có thông tin kèm theo"},
+    {p:2,t:"Phản hồi trong 24–48 giờ, có báo giá nhưng thiếu MOQ, lead time hoặc điều kiện giao hàng"},
+    {p:3,t:"Phản hồi trong 24 giờ, báo giá có đủ thông tin cơ bản — chưa có cost breakdown chi tiết"},
+    {p:4,t:"Phản hồi < 24 giờ, báo giá chi tiết — đôi khi vẫn gộp chung một số hạng mục chi phí"},
+    {p:5,t:"Phản hồi < 24 giờ, cost breakdown rõ ràng: đơn giá, MOQ, lead time, Incoterms, điều kiện thanh toán"},
+  ]},
+  {id:"oem_odm",icon:"🔧",label:"OEM / ODM",desc:"Khả năng làm mẫu, tùy chỉnh sản phẩm theo yêu cầu buyer",
+   hint:"Hỏi: 'Nếu buyer muốn thay kích thước/màu sắc/logo, mất bao lâu để có mẫu?'",
+   opts:[
+    {p:0,t:"Chỉ bán hàng có sẵn, không nhận yêu cầu tùy chỉnh bất kỳ"},
+    {p:1,t:"Có thể in logo hoặc thay đổi bao bì — không tùy chỉnh được sản phẩm"},
+    {p:2,t:"Nhận OEM cơ bản (thay màu, kích thước đơn giản), thời gian làm mẫu >3 tuần"},
+    {p:3,t:"Có OEM/ODM, làm mẫu trong 2–3 tuần, tùy chỉnh mức trung bình — chưa có team R&D riêng"},
+    {p:4,t:"Có nhân sự R&D, làm mẫu trong 10–14 ngày, đáp ứng hầu hết yêu cầu tùy chỉnh của buyer"},
+    {p:5,t:"Có team R&D, làm mẫu trong 7–10 ngày, sẵn sàng tùy chỉnh sâu theo spec của buyer"},
+  ]},
+  {id:"giao_tiep",icon:"🌐",label:"Giao tiếp tiếng Anh",desc:"Giao tiếp trực tiếp với buyer nước ngoài, không cần phiên dịch",
+   hint:"Gửi 1 email tiếng Anh và đánh giá phản hồi: có hiểu đúng không? Diễn đạt có rõ không?",
+   opts:[
+    {p:0,t:"Không có ai giao tiếp được tiếng Anh, mọi liên lạc cần phiên dịch"},
+    {p:1,t:"Đọc hiểu email đơn giản nhưng không tự viết được — dùng Google Dịch là chính"},
+    {p:2,t:"Viết được email cơ bản, hiểu ý buyer — diễn đạt còn nhiều lỗi, dễ gây hiểu nhầm"},
+    {p:3,t:"Giao tiếp được qua email và chat, hiểu và trả lời đúng ý — chưa tự tin trên Zoom/call"},
+    {p:4,t:"Giao tiếp tốt qua email/chat/Zoom, đủ thương lượng và giải quyết vấn đề — đôi khi cần xác nhận lại ý"},
+    {p:5,t:"Tiếng Anh thành thạo qua mọi kênh (email/chat/Zoom/call), không cần phiên dịch"},
+  ]},
+  {id:"minh_bach",icon:"👁️",label:"Minh bạch & hợp tác",desc:"Sẵn sàng cung cấp thông tin, chấp nhận audit và factory visit",
+   hint:"Thái độ khi được hỏi về xưởng và quy trình là chỉ báo quan trọng. Né tránh liên tục = rủi ro cao.",
+   opts:[
+    {p:0,t:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi về năng lực hoặc quy trình sản xuất"},
+    {p:1,t:"Cung cấp thông tin nhỏ giọt, không nhất quán — khó xác minh thực tế"},
+    {p:2,t:"Trả lời câu hỏi khi được hỏi nhưng không chủ động, chưa sẵn sàng cho buyer visit"},
+    {p:3,t:"Chấp nhận trao đổi cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit có biên bản"},
+    {p:4,t:"Chấp nhận buyer visit và audit, có thể cung cấp ảnh/video xưởng — chưa có quy trình chuẩn"},
+    {p:5,t:"Chủ động minh bạch, sẵn sàng buyer visit, factory audit chính thức, cung cấp video khi cần"},
+  ]},
+];
+
+// Pre-score criteria — đánh giá từ xa qua thông tin công khai
+const PRESCORE_CRITERIA=[
+  {id:"ps_online",icon:"🌐",label:"Hiện diện online",
+   desc:"Website, Alibaba/Global Sources profile, mạng xã hội doanh nghiệp",
+   hint:"Tìm tên công ty + 'export' / 'manufacturer' trên Google, Alibaba, Facebook. Xem độ cập nhật và chuyên nghiệp.",
+   opts:[
+    {p:0,t:"Không tìm thấy bất kỳ thông tin online nào"},
+    {p:1,t:"Chỉ có Facebook cá nhân hoặc trang rất sơ sài, không có thông tin xuất khẩu"},
+    {p:2,t:"Có website hoặc Alibaba profile nhưng ít nội dung, không cập nhật"},
+    {p:3,t:"Có website/Alibaba đủ thông tin cơ bản: sản phẩm, năng lực, liên hệ — chưa có nội dung xuất khẩu rõ"},
+    {p:4,t:"Profile chuyên nghiệp, có ảnh xưởng/sản phẩm thực tế, đề cập thị trường xuất khẩu"},
+    {p:5,t:"Profile đầy đủ và cập nhật: website EN+VI, Alibaba verified, ảnh xưởng thực, list thị trường XK rõ ràng"},
+  ]},
+  {id:"ps_legal",icon:"⚖️",label:"Pháp lý tra cứu được",
+   desc:"MST tra được tại tracuunnt.mst.gov.vn, thông tin khớp với hồ sơ",
+   hint:"Tra MST: status 'đang hoạt động', tên công ty và địa chỉ khớp với thông tin họ cung cấp.",
+   opts:[
+    {p:0,t:"Không tra được MST, hoặc tra ra 'đã giải thể / ngừng hoạt động'"},
+    {p:1,t:"Có MST nhưng tên công ty / địa chỉ không khớp với thông tin họ cung cấp"},
+    {p:2,t:"MST hợp lệ và đang hoạt động — thông tin còn thiếu (không rõ ngành nghề hoặc địa chỉ)"},
+    {p:3,t:"MST hợp lệ, đang hoạt động, thông tin cơ bản khớp — chưa xác minh được giấy phép chuyên ngành"},
+    {p:4,t:"MST hợp lệ, thông tin đầy đủ và khớp — có dấu hiệu giấy phép chuyên ngành (đề cập trên web/profile)"},
+    {p:5,t:"MST hợp lệ, thông tin đầy đủ và nhất quán trên tất cả nguồn, có bằng chứng giấy phép chuyên ngành"},
+  ]},
+  {id:"ps_product",icon:"📦",label:"Sản phẩm & năng lực",
+   desc:"Sản phẩm thực tế khớp RFQ, có ảnh/video thực, thông số kỹ thuật rõ",
+   hint:"Xem catalog, ảnh sản phẩm có watermark thực hay stock photo? Thông số kỹ thuật có đủ không?",
+   opts:[
+    {p:0,t:"Không tìm thấy thông tin sản phẩm, hoặc sản phẩm hoàn toàn không khớp với RFQ"},
+    {p:1,t:"Có đề cập sản phẩm tương tự nhưng chỉ là ảnh stock, không có thông số kỹ thuật"},
+    {p:2,t:"Có ảnh sản phẩm thực, thiếu thông số kỹ thuật hoặc catalog — năng lực chưa rõ"},
+    {p:3,t:"Có catalog / thông số cơ bản, sản phẩm khớp RFQ — chưa có video xưởng hay chứng minh năng lực thực"},
+    {p:4,t:"Có catalog chi tiết, ảnh/video sản phẩm thực, thông số kỹ thuật đủ — đề cập MOQ / lead time"},
+    {p:5,t:"Catalog đầy đủ, ảnh/video xưởng và sản phẩm thực, thông số kỹ thuật rõ, MOQ và lead time cụ thể"},
+  ]},
+  {id:"ps_export",icon:"🚢",label:"Dấu hiệu xuất khẩu",
+   desc:"Đề cập thị trường đã xuất, chứng nhận quốc tế, logo buyer / reference",
+   hint:"Tìm: 'exported to', tên thị trường, logo chứng nhận ISO/BSCI/SA8000 trên website. Chứng nhận có thể verify online.",
+   opts:[
+    {p:0,t:"Không có bất kỳ dấu hiệu xuất khẩu nào"},
+    {p:1,t:"Có đề cập 'xuất khẩu' nhưng không rõ thị trường hay buyer cụ thể"},
+    {p:2,t:"Có đề cập 1 thị trường xuất khẩu, không có chứng nhận quốc tế"},
+    {p:3,t:"Có đề cập 2+ thị trường xuất khẩu, có ít nhất 1 chứng nhận quốc tế (có thể verify)"},
+    {p:4,t:"Có reference buyer / thị trường rõ ràng, 2+ chứng nhận quốc tế còn hiệu lực"},
+    {p:5,t:"Có tên buyer / thị trường cụ thể, 3+ chứng nhận quốc tế verify được, lịch sử xuất khẩu rõ ràng"},
+  ]},
+  {id:"ps_consistency",icon:"🔍",label:"Nhất quán thông tin",
+   desc:"Thông tin trên các nguồn (web, Alibaba, Facebook, báo) có khớp nhau không",
+   hint:"So sánh: tên công ty, địa chỉ, năng lực, sản phẩm giữa các nguồn. Mâu thuẫn lớn = red flag.",
+   opts:[
+    {p:0,t:"Thông tin mâu thuẫn nghiêm trọng giữa các nguồn (địa chỉ khác, sản phẩm khác, tên khác)"},
+    {p:1,t:"Có mâu thuẫn rõ ở 1–2 điểm quan trọng — đáng ngờ, cần xác minh trực tiếp"},
+    {p:2,t:"Thông tin cơ bản khớp nhưng năng lực / quy mô không nhất quán giữa các nguồn"},
+    {p:3,t:"Thông tin chủ yếu nhất quán, có 1–2 điểm không rõ nhưng không đáng ngờ"},
+    {p:4,t:"Thông tin nhất quán trên tất cả nguồn — một số chi tiết chưa verify được nhưng không mâu thuẫn"},
+    {p:5,t:"Thông tin nhất quán hoàn toàn trên tất cả nguồn công khai, không có red flag"},
+  ]},
+  {id:"ps_certs",icon:"🏅",label:"Chứng nhận nhà máy & sản phẩm",
+   desc:"Chứng nhận hệ thống (ISO, BSCI, SA8000...) và chứng nhận sản phẩm (CE, FDA, Organic, REACH...)",
+   hint:"Tìm logo chứng nhận trên website/Alibaba. Verify tại cơ sở dữ liệu của tổ chức cấp (iaf.nu, bsigroup.com, ul.com). Phân biệt: chứng nhận hệ thống (nhà máy) vs. chứng nhận sản phẩm (từng SKU) — cả hai quan trọng tùy thị trường buyer.",
+   opts:[
+    {p:0,t:"Không tìm thấy bất kỳ chứng nhận nào — không đề cập trên bất kỳ kênh nào"},
+    {p:1,t:"Có đề cập chứng nhận nhưng không rõ loại, không có số chứng chỉ, không verify được"},
+    {p:2,t:"Có ít nhất 1 chứng nhận hệ thống (ISO 9001 / BSCI / SA8000...) — chưa có chứng nhận sản phẩm"},
+    {p:3,t:"Có 1–2 chứng nhận hệ thống verify được + đề cập chứng nhận sản phẩm (CE / FDA / Organic...) nhưng chưa verify"},
+    {p:4,t:"Có 2+ chứng nhận hệ thống còn hiệu lực + ít nhất 1 chứng nhận sản phẩm verify được, phù hợp thị trường buyer"},
+    {p:5,t:"Đầy đủ cả hai nhóm: chứng nhận hệ thống (ISO/BSCI...) + chứng nhận sản phẩm (CE/FDA/Organic...) — tất cả còn hiệu lực và verify được"},
+  ]},
+];
 const PROD_STATUS=[
   {id:"on_track",label:"Đúng tiến độ",labelShort:"On track",c:"#1D9E75",bg:"#EAF3DE",icon:"🟢",
    action:"Báo cáo định kỳ, không cần action thêm",who:""},
@@ -123,16 +286,16 @@ const newId=sfx=>Date.now()+sfx;
 const now=()=>new Date().toISOString();
 const today=()=>new Date().toISOString().slice(0,10);
 
-const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),perf:"{}",ca:now(),ua:now()});
+const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
 const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",ca:now(),ua:now()});
 const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
-const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:parseJ(s.perf)||{}});
+const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
 const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE"});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0});
 
-const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
+const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,prescore:typeof s.prescore==="object"?JSON.stringify(s.prescore):s.prescore,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
 const serRfq=r=>({...r,markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes});
 
 // ── UI atoms ──
@@ -148,6 +311,41 @@ function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChang
 function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
 function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 function Spin(){return<div style={{width:16,height:16,border:"2px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",display:"inline-block"}}/>;}
+
+// ── RFQ DESC RENDERER ──
+// Parses "— TIÊU ĐỀ —" as section headers, "• item" as bullets, blank lines as spacers
+function RFQDesc({text}){
+  if(!text)return<span style={{color:"#ccc"}}>—</span>;
+  const lines=text.split("\n");
+  const els=[];let buf=[];
+  const flushBuf=()=>{
+    if(!buf.length)return;
+    els.push(<div key={els.length} style={{display:"flex",flexDirection:"column",gap:3,marginBottom:4}}>{buf.map((l,i)=><div key={i} style={{fontSize:13,color:"#333",lineHeight:1.7}}>{l}</div>)}</div>);
+    buf=[];
+  };
+  lines.forEach((raw,i)=>{
+    const line=raw.trim();
+    // Section header: — TEXT — or -- TEXT --
+    if(/^[-—]{1,2}\s*.+\s*[-—]{1,2}$/.test(line)){
+      flushBuf();
+      const label=line.replace(/^[-—\s]+|[-—\s]+$/g,"").trim();
+      els.push(<div key={els.length} style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:1,marginTop:els.length?12:0,marginBottom:4,paddingBottom:3,borderBottom:"1px solid #f0f0f0"}}>{label}</div>);
+      return;
+    }
+    // Bullet: starts with • or - or *
+    if(/^[•\-\*]\s/.test(line)){
+      flushBuf();
+      const content=line.replace(/^[•\-\*]\s+/,"");
+      els.push(<div key={els.length} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"2px 0"}}><span style={{color:"#1D9E75",fontWeight:700,flexShrink:0,marginTop:1}}>•</span><span style={{fontSize:13,color:"#333",lineHeight:1.7,flex:1}}>{content}</span></div>);
+      return;
+    }
+    // Empty line
+    if(!line){flushBuf();return;}
+    buf.push(line);
+  });
+  flushBuf();
+  return<div>{els}</div>;
+}
 
 // ── EMAIL DRAFT ──
 function EmailDraft({r,sups,onClose}){
@@ -314,6 +512,7 @@ function App(){
       </div>
       {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="prescore"&&canEdit&&<Modal onClose={()=>setModal(null)}><PreScoreChecklist supplier={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
       {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
@@ -416,8 +615,19 @@ function SupDetail({s,ctx}){
       </div>
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
+      {/* Pre-score summary if exists */}
+      {Object.keys(s.prescore||{}).length>0&&(()=>{
+        const ps=s.prescore||{};
+        const tot=Object.values(ps).reduce((a,b)=>a+(b||0),0);
+        const v=tot>=24?{label:"Có triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}:tot>=15?{label:"Cần xác minh",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}:{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};
+        return<div style={{background:v.bg,border:`1px solid ${v.c}`,borderRadius:8,padding:"8px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:13}}>{v.icon}</span>
+          <span style={{fontSize:12,fontWeight:600,color:v.c}}>Pre-score: {tot}/30 — {v.label}</span>
+        </div>;
+      })()}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         {canEdit&&<button onClick={()=>setModal({t:"sup-form",d:s})} style={gBtn}>Sửa</button>}
+        {canEdit&&<button onClick={()=>setModal({t:"prescore",d:s})} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>🔍 Pre-score</button>}
         {canEdit&&<button onClick={()=>setModal({t:"vserf",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>📋 Chấm VSERF</button>}
         <button onClick={()=>setModal({t:"brief",d:s})} style={{...pBtn,background:"#185FA5"}}>Xuất Brief</button>
         {canEdit&&<button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
@@ -469,34 +679,150 @@ function SupForm({s,ctx}){
   );
 }
 
+// ── SHARED CHECKLIST ENGINE ──
+function ChecklistEngine({criteria,scores,setScores,maxPer=5,mandatoryIds=[],title,accentColor="#1D9E75",accentBg="#EAF3DE"}){
+  const [hints,setHints]=useState({});
+  const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
+  const answered=criteria.filter(c=>scores[c.id]!==undefined).length;
+  const pct=Math.round(answered/criteria.length*100);
+  const isMandatoryFail=mandatoryIds.some(id=>(scores[id]??0)<3);
+  const maxTotal=criteria.length*maxPer;
+  return(
+    <div>
+      {/* Progress */}
+      <div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
+          <span style={{color:"#777"}}>{answered}/{criteria.length} tiêu chí đã chấm</span>
+          <span style={{fontWeight:700,color:accentColor}}>{total}/{maxTotal} điểm</span>
+        </div>
+        <div style={{height:6,background:"#e5e5e5",borderRadius:3,overflow:"hidden"}}>
+          <div style={{height:"100%",width:pct+"%",background:accentColor,borderRadius:3,transition:"width .3s"}}/>
+        </div>
+      </div>
+      {isMandatoryFail&&<div style={{background:"#FCEBEB",border:"1px solid #E24B4A",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#A32D2D"}}>
+        ⚠ Tiêu chí bắt buộc chưa đạt ≥ 3 điểm → kết quả sẽ là <b>Not Qualified</b>
+      </div>}
+      {/* Criteria */}
+      {criteria.map(c=>{
+        const val=scores[c.id];
+        const done=val!==undefined;
+        const isMand=mandatoryIds.includes(c.id);
+        const isWarn=isMand&&(val??0)<3&&done;
+        return(
+          <div key={c.id} style={{border:`1.5px solid ${isWarn?"#E24B4A":done?accentColor:"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",marginBottom:8,background:done?accentBg:"#fff",transition:"all .2s"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:done?accentColor:"#f0f0f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:done?"#fff":"#aaa",flexShrink:0}}>{done?val:"?"}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:13,fontWeight:600}}>{c.icon} {c.label}</span>
+                  {isMand&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>bắt buộc ≥3</span>}
+                  {done&&<span style={{fontSize:11,padding:"1px 7px",borderRadius:3,background:accentColor,color:"#fff",fontWeight:600,marginLeft:"auto"}}>{val}/{maxPer}</span>}
+                </div>
+                <div style={{fontSize:11,color:"#999",marginTop:2}}>{c.desc}</div>
+              </div>
+              <button onClick={()=>setHints(h=>({...h,[c.id]:!h[c.id]}))} style={{fontSize:11,padding:"2px 7px",borderRadius:4,border:"1px solid #e5e5e5",background:"none",cursor:"pointer",color:"#aaa",flexShrink:0}}>💡</button>
+            </div>
+            {hints[c.id]&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:7,padding:"8px 11px",marginBottom:8,fontSize:12,color:"#5C4000",lineHeight:1.6}}>{c.hint}</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {c.opts.map(opt=>{
+                const sel=val===opt.p;
+                return(
+                  <label key={opt.p} onClick={()=>setScores(s=>({...s,[c.id]:opt.p}))} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",borderRadius:7,border:`1px solid ${sel?accentColor:"#e5e5e5"}`,background:sel?"#fff":"#fff",cursor:"pointer",opacity:sel?1:0.85}}>
+                    <input type="radio" readOnly checked={sel} style={{marginTop:3,accentColor,flexShrink:0}}/>
+                    <span style={{fontSize:12,lineHeight:1.5,flex:1,color:"#333"}}>{opt.t}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:sel?accentColor:"#ccc",flexShrink:0,minWidth:40,textAlign:"right"}}>{opt.p} đ</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function VSERFChecklist({supplier,ctx}){
   const {upsS,setModal,toast2}=ctx;
   const initV=supplier.vserf||{};
-  const [scores,setScores]=useState({phap_ly:initV.phap_ly||0,san_xuat:initV.san_xuat||0,chat_luong:initV.chat_luong||0,xuat_khau:initV.xuat_khau||0,chung_tu:initV.chung_tu||0,rfq:initV.rfq||0,oem_odm:initV.oem_odm||0,giao_tiep:initV.giao_tiep||0,minh_bach:initV.minh_bach||0});
-  const total=Object.values(scores).reduce((a,b)=>a+b,0);
-  const ti=calcTier(scores);
-  const handleSave=async()=>{await upsS({...supplier,vserf:scores});toast2&&toast2("Đã lưu VSERF");};
+  const initScores=Object.fromEntries(VSERF_CRITERIA.map(c=>[c.id,initV[c.id]!==undefined?initV[c.id]:undefined]));
+  const [scores,setScores]=useState(initScores);
+  const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
+  const answered=VSERF_CRITERIA.filter(c=>scores[c.id]!==undefined).length;
+  const ti=calcTier(Object.fromEntries(Object.entries(scores).map(([k,v])=>[k,v??0])));
+  const handleSave=async()=>{
+    const merged={...Object.fromEntries(VSERF_CRITERIA.map(c=>[c.id,scores[c.id]??0]))};
+    await upsS({...supplier,vserf:merged});
+    toast2&&toast2("Đã lưu VSERF");
+  };
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
-      <h2 style={{fontSize:16,fontWeight:600,margin:"0 0 14px"}}>📋 VSERF — {supplier.name}</h2>
-      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:8,background:ti.bg,border:`1.5px solid ${ti.c}`,marginBottom:14}}>
-        <div style={{fontSize:24,fontWeight:800,color:ti.c}}>{total}/45</div>
-        <div style={{fontSize:14,fontWeight:700,color:ti.c}}>{ti.label}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <h2 style={{fontSize:15,fontWeight:600,margin:0}}>📋 VSERF — {supplier.name}</h2>
+        {answered===9&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:8,background:ti.bg,border:`1.5px solid ${ti.c}`}}>
+          <span style={{fontSize:20,fontWeight:800,color:ti.c}}>{total}/45</span>
+          <span style={{fontSize:13,fontWeight:700,color:ti.c}}>{ti.label}</span>
+        </div>}
       </div>
-      {VCOLS.map(c=>(
-        <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,padding:"8px 12px",background:"#f8f8f8",borderRadius:8}}>
-          <span style={{flex:1,fontSize:13,color:"#555"}}>{c.l}</span>
-          <div style={{display:"flex",gap:4}}>
-            {[0,1,2,3,4,5].map(n=>(
-              <button key={n} onClick={()=>setScores(p=>({...p,[c.id]:n}))} style={{width:32,height:32,borderRadius:6,border:`1.5px solid ${scores[c.id]===n?"#1D9E75":"#ddd"}`,background:scores[c.id]===n?"#1D9E75":"#fff",color:scores[c.id]===n?"#fff":"#555",fontSize:12,fontWeight:600,cursor:"pointer"}}>{n}</button>
-            ))}
-          </div>
-          {(c.id==="phap_ly"||c.id==="san_xuat")&&scores[c.id]<3&&<span style={{fontSize:11,color:"#E24B4A"}}>⚠ bắt buộc ≥3</span>}
-        </div>
-      ))}
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12}}>
+      <ChecklistEngine
+        criteria={VSERF_CRITERIA}
+        scores={scores}
+        setScores={setScores}
+        mandatoryIds={["phap_ly","san_xuat"]}
+        accentColor="#1D9E75"
+        accentBg="#F0FDF9"
+      />
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
         <button onClick={handleSave} style={pBtn}>Lưu VSERF</button>
+      </div>
+    </Card>
+  );
+}
+
+function PreScoreChecklist({supplier,ctx}){
+  const {upsS,setModal,toast2}=ctx;
+  const initP=parseJ(supplier.prescore)||{};
+  const initScores=Object.fromEntries(PRESCORE_CRITERIA.map(c=>[c.id,initP[c.id]!==undefined?initP[c.id]:undefined]));
+  const [scores,setScores]=useState(initScores);
+  const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
+  const answered=PRESCORE_CRITERIA.filter(c=>scores[c.id]!==undefined).length;
+  // Pre-score verdict
+  const getVerdict=()=>{
+    if(answered<5)return null;
+    if(total>=24)return{label:"Có triển vọng — đưa vào Longlist",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"};
+    if(total>=15)return{label:"Cần xác minh thêm — theo dõi",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"};
+    return{label:"Loại sớm — không đủ điều kiện",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};
+  };
+  const verdict=getVerdict();
+  const handleSave=async()=>{
+    const merged=Object.fromEntries(PRESCORE_CRITERIA.map(c=>[c.id,scores[c.id]??0]));
+    await upsS({...supplier,prescore:JSON.stringify(merged)});
+    toast2&&toast2("Đã lưu Pre-score");
+  };
+  return(
+    <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,flexWrap:"wrap",gap:8}}>
+        <h2 style={{fontSize:15,fontWeight:600,margin:0}}>🔍 Pre-score — {supplier.name}</h2>
+        {verdict&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",borderRadius:8,background:verdict.bg,border:`1.5px solid ${verdict.c}`}}>
+          <span style={{fontSize:13}}>{verdict.icon}</span>
+          <span style={{fontSize:12,fontWeight:700,color:verdict.c}}>{verdict.label}</span>
+        </div>}
+      </div>
+      <div style={{fontSize:12,color:"#777",marginBottom:12,padding:"8px 12px",background:"#f8f8f8",borderRadius:7}}>
+        📌 Đánh giá từ xa — chỉ dùng thông tin công khai: website, Alibaba, mạng xã hội, báo ngành, tra MST.
+      </div>
+      <ChecklistEngine
+        criteria={PRESCORE_CRITERIA}
+        scores={scores}
+        setScores={setScores}
+        mandatoryIds={[]}
+        accentColor="#534AB7"
+        accentBg="#F5F4FF"
+      />
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
+        <button onClick={handleSave} style={{...pBtn,background:"#534AB7"}}>Lưu Pre-score</button>
       </div>
     </Card>
   );
@@ -673,16 +999,38 @@ function INQDetail({r,ctx}){
   return(
     <Card>
       {showEmail&&<EmailDraft r={r} sups={sups||[]} onClose={()=>setShowEmail(false)}/>}
-      <div style={{marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
-          <div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:10,padding:"2px 7px",borderRadius:4,fontWeight:700,background:"#EEEDFE",color:"#534AB7"}}>INQ</span><span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span></div>
-          <div style={{display:"flex",gap:6}}><span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>{r.urgent&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>🔴</span>}</div>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:10,alignItems:"flex-start"}}>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:"#EEEDFE",color:"#534AB7"}}>INQ</span>
+          <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
+          {r.urgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:700}}>🔴 Gấp</span>}
         </div>
-        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600}}>{r.desc||"(Chưa mô tả)"}</h2>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>{r.sales&&<span>👤 {r.sales}</span>}{mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}{r.deadline&&<span>📅 {r.deadline}</span>}</div>
+        <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600,flexShrink:0}}>{st.label}</span>
       </div>
-      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:13,color:"#333",lineHeight:1.9}}>{r.notes}</div></div>}
-      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:14}}><div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div><button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button></div>}
+      {/* Meta row */}
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:12,color:"#777",marginBottom:12,paddingBottom:12,borderBottom:"1px solid #f0f0f0"}}>
+        {r.sales&&<span>👤 {r.sales}</span>}
+        {mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
+        {r.date&&<span>📅 Nhận: {r.date}</span>}
+        {r.deadline&&<span style={{color:new Date(r.deadline)<new Date()?"#A32D2D":"#777",fontWeight:new Date(r.deadline)<new Date()?600:400}}>⏰ Hạn: {r.deadline}</span>}
+      </div>
+      {/* Main desc — rendered */}
+      <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung inquiry</div>
+        <RFQDesc text={r.desc}/>
+      </div>
+      {/* Notes if any */}
+      {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div>
+        <RFQDesc text={r.notes}/>
+      </div>}
+      {/* Convert */}
+      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div>
+        <button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button>
+      </div>}
+      {/* Actions */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email</button>
         {canEdit&&<button onClick={()=>setModal({t:"inq-form",d:r})} style={gBtn}>✏️ Sửa</button>}
@@ -706,14 +1054,43 @@ function RFQDetail({r,ctx}){
   return(
     <Card>
       {showEmail&&<EmailDraft r={r} sups={sups} onClose={()=>setShowEmail(false)}/>}
-      <div style={{marginBottom:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}><span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span><span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span></div>
-        <h2 style={{margin:"0 0 6px",fontSize:15,fontWeight:600}}>{r.desc||"(Chưa mô tả)"}</h2>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:"#777"}}>{r.sales&&<span>👤 {r.sales}</span>}{mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}{r.deadline&&<span>📅 {r.deadline}</span>}</div>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:10,alignItems:"flex-start"}}>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:"#E6F1FB",color:"#185FA5"}}>RFQ</span>
+          <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{r.code}</span>
+          {r.urgent&&<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#FCEBEB",color:"#A32D2D",fontWeight:700}}>🔴 Gấp</span>}
+        </div>
+        <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600,flexShrink:0}}>{st.label}</span>
       </div>
-      {r.notes&&<div style={{marginBottom:14,background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"12px 16px"}}><div style={{fontSize:13,lineHeight:1.9}}>{r.notes}</div></div>}
-      <div style={{marginBottom:14}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8,display:"flex",justifyContent:"space-between"}}>
+      {/* Meta row */}
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:12,color:"#777",marginBottom:12,paddingBottom:12,borderBottom:"1px solid #f0f0f0"}}>
+        {r.sales&&<span>👤 {r.sales}</span>}
+        {mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
+        {r.date&&<span>📅 Nhận: {r.date}</span>}
+        {r.deadline&&<span style={{color:new Date(r.deadline)<new Date()?"#A32D2D":"#777",fontWeight:new Date(r.deadline)<new Date()?600:400}}>⏰ Hạn BG: {r.deadline}</span>}
+        {r.qty&&<span>📦 MOQ: {r.qty}</span>}
+        {r.price&&<span>💲 Target: {r.price}</span>}
+        {r.incoterm&&<span>🚢 {r.incoterm}</span>}
+      </div>
+      {/* Main desc */}
+      <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung RFQ</div>
+        <RFQDesc text={r.desc}/>
+      </div>
+      {/* Certs */}
+      {r.certs&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#0F6E56",marginBottom:6}}>CHỨNG NHẬN YÊU CẦU</div>
+        <RFQDesc text={r.certs}/>
+      </div>}
+      {/* Notes */}
+      {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div>
+        <RFQDesc text={r.notes}/>
+      </div>}
+      {/* NCC assigned */}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>NCC được gán ({asgn.length})</span>
           {canEdit&&<button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán NCC</button>}
         </div>
@@ -728,6 +1105,7 @@ function RFQDetail({r,ctx}){
           </div>
         );})}
       </div>
+      {/* Actions */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email</button>
         {canEdit&&<button onClick={()=>setModal({t:"rfq-form",d:r})} style={gBtn}>✏️ Sửa</button>}
