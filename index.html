@@ -1201,12 +1201,15 @@ function RFQDetail({r,ctx}){
   // local state for notes/quotes so fields are editable
   const [snotes,setSnotes]=useState(parseJ(r.snotes)||{});
   const [squotes,setSquotes]=useState(parseJ(r.squotes)||{});
-  const saveNotes=(sid,field,val)=>{
+
+  // Chỉ save lên Sheets khi blur, không save mỗi keystroke
+  const handleBlur=(sid,field,val)=>{
     const newSn=field==="note"?{...snotes,[sid]:val}:snotes;
     const newSq=field!=="note"?{...squotes,[sid]:{...(squotes[sid]||{}),[field]:val}}:squotes;
-    if(field==="note")setSnotes(newSn); else setSquotes(newSq);
     upsR({...r,snotes:newSn,squotes:newSq});
   };
+  const setNote=(sid,val)=>setSnotes(p=>({...p,[sid]:val}));
+  const setQuote=(sid,field,val)=>setSquotes(p=>({...p,[sid]:{...(p[sid]||{}),[field]:val}}));
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const sids=parseJ(r.sids)||[];
   const mkts=parseJ(r.markets)||[];
@@ -1274,7 +1277,8 @@ function RFQDetail({r,ctx}){
                   <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:4}}>✅ Báo giá theo product spec</div>
                   <textarea
                     value={sq.spec||""}
-                    onChange={e=>saveNotes(s.id,"spec",e.target.value)}
+                    onChange={e=>setQuote(s.id,"spec",e.target.value)}
+                    onBlur={e=>handleBlur(s.id,"spec",e.target.value)}
                     disabled={!canEdit}
                     placeholder="Điền giá báo đúng spec: đơn giá, MOQ, lead time, điều kiện..."
                     style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}
@@ -1284,7 +1288,8 @@ function RFQDetail({r,ctx}){
                   <div style={{fontSize:11,fontWeight:600,color:"#854F0B",marginBottom:4}}>🔄 Báo giá không theo spec / đề xuất thay thế</div>
                   <textarea
                     value={sq.alt||""}
-                    onChange={e=>saveNotes(s.id,"alt",e.target.value)}
+                    onChange={e=>setQuote(s.id,"alt",e.target.value)}
+                    onBlur={e=>handleBlur(s.id,"alt",e.target.value)}
                     disabled={!canEdit}
                     placeholder="Điền đề xuất thay thế của NCC: thay đổi gì, giá bao nhiêu..."
                     style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}
@@ -1294,7 +1299,8 @@ function RFQDetail({r,ctx}){
                   <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:4}}>📝 Ghi chú nội bộ</div>
                   <input
                     value={note}
-                    onChange={e=>saveNotes(s.id,"note",e.target.value)}
+                    onChange={e=>setNote(s.id,e.target.value)}
+                    onBlur={e=>handleBlur(s.id,"note",e.target.value)}
                     disabled={!canEdit}
                     placeholder="Ghi chú nội bộ về NCC này..."
                     style={{...iSt,fontSize:12}}
