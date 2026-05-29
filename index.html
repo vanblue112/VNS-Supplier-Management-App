@@ -296,7 +296,15 @@ const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],sn
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0});
 
 const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,prescore:typeof s.prescore==="object"?JSON.stringify(s.prescore):s.prescore,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
-const serRfq=r=>({...r,markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes});
+const serRfq=r=>({
+  ...r,
+  date:r.date||today(),
+  deadline:r.deadline||"",
+  markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,
+  sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,
+  snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,
+  squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes,
+});
 
 // ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
@@ -1082,9 +1090,16 @@ function RFQList({ctx}){
 
 function RFQForm({r,ctx}){
   const {upsR,setModal}=ctx;
-  const [f,setF]=useState({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[]});
+  const [f,setF]=useState({
+    ...r,
+    date:r.date||today(),
+    deadline:r.deadline||"",
+    markets:parseJ(r.markets)||[],
+    sids:parseJ(r.sids)||[],
+  });
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const tog=m=>set("markets",f.markets.includes(m)?f.markets.filter(x=>x!==m):[...f.markets,m]);
+  const save=()=>upsR({...f,date:f.date||today(),deadline:f.deadline||""});
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
@@ -1092,9 +1107,9 @@ function RFQForm({r,ctx}){
         <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}><input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/><span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span></label>
       </div>
       <Sec title="Thông tin RFQ">
-        <Rw l="Mã RFQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Mã RFQ"><input value={f.code||""} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
         <Rw l="Sales"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Ngày nhận"><input type="date" value={f.date||today()} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
         <Rw l="Deadline"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Yêu cầu">
@@ -1106,17 +1121,23 @@ function RFQForm({r,ctx}){
         <Rw l="Chứng chỉ"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} style={{...iSt,minHeight:50,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:50,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
-      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR({...f,markets:f.markets,sids:f.sids})} style={pBtn}>Lưu RFQ</button></div>
+      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status||"new"} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={save} style={pBtn}>Lưu RFQ</button></div>
     </Card>
   );
 }
 
 function INQForm({r,ctx}){
   const {upsR,setModal}=ctx;
-  const [f,setF]=useState({...r,markets:parseJ(r.markets)||[]});
+  const [f,setF]=useState({
+    ...r,
+    date:r.date||today(),
+    deadline:r.deadline||"",
+    markets:parseJ(r.markets)||[],
+  });
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const tog=m=>set("markets",f.markets.includes(m)?f.markets.filter(x=>x!==m):[...f.markets,m]);
+  const save=()=>upsR({...f,date:f.date||today(),deadline:f.deadline||""});
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
@@ -1124,16 +1145,16 @@ function INQForm({r,ctx}){
         <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}><input type="checkbox" checked={!!f.urgent} onChange={e=>set("urgent",e.target.checked)} style={{accentColor:"#E24B4A"}}/><span style={{color:f.urgent?"#A32D2D":"#777",fontWeight:f.urgent?600:400}}>🔴 Gấp</span></label>
       </div>
       <Sec title="Thông tin">
-        <Rw l="Mã INQ"><input value={f.code} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Mã INQ"><input value={f.code||""} onChange={e=>set("code",e.target.value)} style={iSt}/></Rw>
         <Rw l="Sales / Nguồn"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} style={iSt}/></Rw>
-        <Rw l="Ngày nhận"><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Ngày nhận"><input type="date" value={f.date||today()} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
         <Rw l="Phản hồi trước"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
         <Rw l="Mô tả *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Thị trường"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets.includes(m)?"#534AB7":"#ddd"}`,background:f.markets.includes(m)?"#EEEDFE":"none",color:f.markets.includes(m)?"#534AB7":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:50,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
-      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status} onChange={e=>set("status",e.target.value)} style={iSt}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsR(f)} style={pBtn}>Lưu INQ</button></div>
+      <Sec title="Trạng thái"><Rw l="Status"><select value={f.status||"inq_new"} onChange={e=>set("status",e.target.value)} style={iSt}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={save} style={pBtn}>Lưu INQ</button></div>
     </Card>
   );
 }
