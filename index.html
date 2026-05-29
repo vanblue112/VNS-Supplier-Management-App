@@ -80,7 +80,7 @@ const VCOLS=[
   {id:"oem_odm",l:"07 OEM/ODM"},{id:"giao_tiep",l:"08 Giao tiếp"},{id:"minh_bach",l:"09 Minh bạch"},
 ];
 const KRALJIC_QUADRANTS=[
-  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cao",strategy:"Quan hệ đối tác dài hạn"},
+  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi cao",strategy:"Quan hệ đối tác dài hạn"},
   {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",icon:"💪",desc:"Tác động tài chính cao · Rủi ro thấp",strategy:"Tận dụng sức mua, thương lượng"},
   {id:"bottleneck",label:"Bottleneck",labelVi:"Nút thắt",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️",desc:"Tác động tài chính thấp · Rủi ro cao",strategy:"Dự trữ, tìm nguồn thay thế"},
   {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro thấp",strategy:"Tự động hóa, tối ưu chi phí"},
@@ -117,12 +117,10 @@ const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slic
 const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
-// Normalize record (parse JSON fields)
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},perf:parseJ(s.perf)||{}});
 const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE"});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0});
 
-// Serialize for API
 const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
 const serRfq=r=>({...r,markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes});
 
@@ -206,8 +204,7 @@ function App(){
   const toast2=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
 
   const upsS=async s=>{
-    const u={...s,ua:now()};
-    setSaving(true);
+    const u={...s,ua:now()};setSaving(true);
     try{
       await apiUpsert("Suppliers",serSup(u));
       setSups(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});
@@ -216,14 +213,12 @@ function App(){
     setModal(null);
   };
   const delS=async id=>{
-    if(!confirm("Xóa supplier này?"))return;
-    setSaving(true);
+    if(!confirm("Xóa supplier này?"))return;setSaving(true);
     try{await apiDelete("Suppliers",id);setSups(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}
     setModal(null);toast2("Đã xóa");
   };
   const upsR=async r=>{
-    const u={...r,ua:now()};
-    setSaving(true);
+    const u={...r,ua:now()};setSaving(true);
     try{
       await apiUpsert("RFQs",serRfq(u));
       setRfqs(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});
@@ -232,14 +227,12 @@ function App(){
     setModal(null);
   };
   const delR=async id=>{
-    if(!confirm("Xóa?"))return;
-    setSaving(true);
+    if(!confirm("Xóa?"))return;setSaving(true);
     try{await apiDelete("RFQs",id);setRfqs(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}
     setModal(null);toast2("Đã xóa");
   };
   const upsO=async o=>{
-    const u={...o,ua:now()};
-    setSaving(true);
+    const u={...o,ua:now()};setSaving(true);
     try{
       await apiUpsert("Orders",u);
       setOrders(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});
@@ -248,8 +241,7 @@ function App(){
     setModal(null);
   };
   const delO=async id=>{
-    if(!confirm("Xóa order?"))return;
-    setSaving(true);
+    if(!confirm("Xóa order?"))return;setSaving(true);
     try{await apiDelete("Orders",id);setOrders(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}
     setModal(null);toast2("Đã xóa");
   };
@@ -265,9 +257,13 @@ function App(){
       {saving&&<div style={{position:"fixed",bottom:14,right:14,background:"#185FA5",color:"#fff",padding:"7px 14px",borderRadius:6,fontSize:12,zIndex:9999}}>💾 Đang lưu...</div>}
       {syncErr&&<div style={{background:"#FCEBEB",borderBottom:"1px solid #E24B4A",padding:"8px 1rem",fontSize:13,color:"#A32D2D",textAlign:"center"}}>⚠ Không kết nối được Google Sheets</div>}
       {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
+
+      {/* ── NAV BAR ── */}
       <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
         <div style={{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
           <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
+
+          {/* Internal tabs */}
           {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"orders",l:"Orders"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
               {t.l}
@@ -275,6 +271,18 @@ function App(){
               {t.id==="orders"&&orders.filter(o=>o.stage!=="closed").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#534AB7",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{orders.filter(o=>o.stage!=="closed").length}</span>}
             </button>
           ))}
+
+          {/* ── Divider + External tool links ── */}
+          <div style={{width:1,height:20,background:"#e5e5e5",margin:"0 8px",flexShrink:0}}/>
+          <a href="qc-tracker.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #BA7517",color:"#BA7517",fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="#FFF3DC";}} onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
+            🔍 QC Tracker
+          </a>
+          <a href="bienban.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #185FA5",color:"#185FA5",fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="#E6F1FB";}} onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
+            📄 Biên bản
+          </a>
+
           <div style={{flex:1}}/>
           {canEdit?(<>
             <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
@@ -285,6 +293,7 @@ function App(){
           </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
         </div>
       </div>
+
       <div style={{maxWidth:960,margin:"0 auto",padding:"1rem"}}>
         {tab==="list"&&<SupList ctx={ctx}/>}
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
@@ -326,7 +335,7 @@ function LoginBanner({onLogin}){
 }
 
 function SupList({ctx}){
-  const {sups,setModal,canEdit}=ctx;
+  const {sups,setModal}=ctx;
   const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
   const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))];
   const fl=useMemo(()=>sups.filter(s=>{
@@ -862,11 +871,17 @@ function OrderDetail({o,ctx}){
           {o.qualityRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>Quality: </span><b>{o.qualityRate}%</b></span>}
         </div>
       </div>}
-      {/* QC Tracker link */}
-      <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"12px 14px",marginBottom:14}}>
-        <div style={{fontSize:12,fontWeight:600,color:"#0F6E56",marginBottom:6}}>🔍 QC Tracker</div>
-        <div style={{fontSize:12,color:"#555",marginBottom:8}}>Theo dõi toàn trình QC: IPI → DUPRO → FRI/PSI → CLI → Post-delivery</div>
-        <button onClick={()=>window.open(`qc-tracker.html?orderId=${o.id}`,`qc_${o.id}`,'width=1000,height=800')} style={{...pBtn,background:"#0F6E56",fontSize:12}}>🔍 Mở QC Tracker</button>
+
+      {/* QC Tracker + Biên bản links */}
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <a href={`qc-tracker.html?orderId=${o.id}&orderCode=${o.code}`} target="_blank" rel="noopener noreferrer"
+          style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 14px",borderRadius:8,background:"#FFF3DC",border:"1px solid #BA7517",color:"#854F0B",fontWeight:600,fontSize:13,textDecoration:"none"}}>
+          🔍 Mở QC Tracker
+        </a>
+        <a href={`bienban.html?orderId=${o.id}&orderCode=${o.code}&supplier=${encodeURIComponent(sup?.name||"")}&desc=${encodeURIComponent(rfq?.desc||"")}`} target="_blank" rel="noopener noreferrer"
+          style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 14px",borderRadius:8,background:"#E6F1FB",border:"1px solid #185FA5",color:"#185FA5",fontWeight:600,fontSize:13,textDecoration:"none"}}>
+          📄 Xuất Biên bản
+        </a>
       </div>
 
       {canEdit&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
@@ -949,71 +964,34 @@ function Dash({ctx}){
   const av=vc?Math.round(tv/vc):0;const t12=sups.length?Math.round((ti.t1+ti.t2)/sups.length*100):0;
   const sc={};sups.forEach(s=>{sc[s.stage]=(sc[s.stage]||0)+1;});
   const ind={};sups.forEach(s=>{if(s.industry)ind[s.industry]=(ind[s.industry]||0)+1;});
-
-  // Partner type chart data
-  const ptCount={};
-  sups.forEach(s=>{const k=s.partnerType||"Chưa xác định";ptCount[k]=(ptCount[k]||0)+1;});
+  const ptCount={};sups.forEach(s=>{const k=s.partnerType||"Chưa xác định";ptCount[k]=(ptCount[k]||0)+1;});
   const ptData=Object.entries(ptCount).sort((a,b)=>b[1]-a[1]);
   const ptColors={"Đối tác trực tiếp":"#1D9E75","Đối tác nền tảng":"#185FA5","Cả hai hình thức":"#534AB7","Chưa xác định":"#aaa"};
-
-  // Industry chart data
   const indData=Object.entries(ind).sort((a,b)=>b[1]-a[1]);
   const indMax=indData.length?indData[0][1]:1;
-
-  const ptMax=ptData.length?ptData[0][1]:1;
-
   const kpis=[{l:"Tổng supplier",v:sups.length,c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"Orders active",v:(orders||[]).filter(o=>o.stage!=="closed").length,c:"#534AB7"},{l:"RFQ đang mở",v:rfqs.filter(r=>!["closed","inq_closed","inq_converted"].includes(r.status)).length,c:"#854F0B"}];
-
   return(
     <div>
       <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Dashboard</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>{kpis.map(k=><div key={k.l} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"14px 16px"}}><div style={{fontSize:11,color:"#aaa",marginBottom:4}}>{k.l}</div><div style={{fontSize:22,fontWeight:700,color:k.c}}>{k.v}</div></div>)}</div>
-
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1",v:ti.t1,c:"#1D9E75"},{l:"Tier 2",v:ti.t2,c:"#185FA5"},{l:"Tier 3",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Orders theo stage</div>{ORDER_STAGES.map(st=>{const cnt=(orders||[]).filter(o=>o.stage===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:13}}>{st.icon}</span><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}</div>
       </div>
-
-      {/* HT hợp tác — bar chart ngang */}
       <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
         <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Hình thức hợp tác VNS</div>
         {ptData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:ptData.map(([k,v])=>{
-          const pct=sups.length?Math.round(v/sups.length*100):0;
-          const c=ptColors[k]||"#aaa";
-          return(
-            <div key={k} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-                <span style={{color:"#555",fontWeight:500}}>{k}</span>
-                <span style={{color:"#777"}}>{v} supplier · <b style={{color:c}}>{pct}%</b></span>
-              </div>
-              <div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}>
-                <div style={{height:"100%",width:pct+"%",background:c,borderRadius:5,transition:"width .4s"}}/>
-              </div>
-            </div>
-          );
+          const pct=sups.length?Math.round(v/sups.length*100):0;const c=ptColors[k]||"#aaa";
+          return(<div key={k} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:"#555",fontWeight:500}}>{k}</span><span style={{color:"#777"}}>{v} supplier · <b style={{color:c}}>{pct}%</b></span></div><div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:c,borderRadius:5}}/></div></div>);
         })}
       </div>
-
-      {/* Ngành hàng — bar chart ngang */}
       <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
         <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Phân bổ ngành hàng</div>
         {indData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:indData.map(([k,v])=>{
-          const pct=sups.length?Math.round(v/sups.length*100):0;
-          const barW=Math.round(v/indMax*100);
-          return(
-            <div key={k} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-                <span style={{color:"#555",fontWeight:500}}>{k}</span>
-                <span style={{color:"#777"}}>{v} supplier · <b style={{color:"#534AB7"}}>{pct}%</b></span>
-              </div>
-              <div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}>
-                <div style={{height:"100%",width:barW+"%",background:"#534AB7",borderRadius:5,transition:"width .4s"}}/>
-              </div>
-            </div>
-          );
+          const pct=sups.length?Math.round(v/sups.length*100):0;const barW=Math.round(v/indMax*100);
+          return(<div key={k} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:"#555",fontWeight:500}}>{k}</span><span style={{color:"#777"}}>{v} supplier · <b style={{color:"#534AB7"}}>{pct}%</b></span></div><div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}><div style={{height:"100%",width:barW+"%",background:"#534AB7",borderRadius:5}}/></div></div>);
         })}
       </div>
-
       <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline Supplier</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}</div>
     </div>
   );
