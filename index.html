@@ -618,9 +618,10 @@ function SupDetail({s,ctx}){
       {/* Pre-score summary if exists */}
       {Object.keys(s.prescore||{}).length>0&&(()=>{
         const ps=s.prescore||{};
-        const vals=Object.values(ps).map(v=>parseInt(v)||0);
+        const PRESCORE_IDS=PRESCORE_CRITERIA.map(c=>c.id);
+        const vals=PRESCORE_IDS.map(id=>parseInt(ps[id])||0);
+        const answered=PRESCORE_IDS.filter(id=>ps[id]!==undefined&&ps[id]!==null&&ps[id]!=="").length;
         const tot=vals.reduce((a,b)=>a+b,0);
-        const answered=vals.length;
         if(answered===0)return null;
         const v=tot>=24?{label:"Có triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}
           :tot>=15?{label:"Cần xác minh thêm",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}
