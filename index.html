@@ -463,7 +463,7 @@ function ImportModal({ctx,onClose}){
         <div style={{padding:"16px 18px"}}>
           {/* Instructions */}
           <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#0F6E56",lineHeight:1.7}}>
-            <b>Định dạng CSV:</b> hàng đầu là header, các cột: <span style={{fontFamily:"monospace",background:"#E1F5EE",padding:"1px 4px",borderRadius:3"}}>name, industry, products, province, stage</span>... Tải file mẫu từ nút Export trước để xem đúng format.
+            <b>Định dạng CSV:</b> hàng đầu là header, các cột: <span style={{fontFamily:"monospace",background:"#E1F5EE",padding:"1px 4px",borderRadius:3}}>name, industry, products, province, stage</span>... Tải file mẫu từ nút Export trước để xem đúng format.
           </div>
           <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} style={{display:"none"}}/>
           <button onClick={()=>fileRef.current.click()} style={{...gBtn,width:"100%",marginBottom:12,padding:"10px",textAlign:"center"}}>
@@ -651,9 +651,10 @@ function LoginBanner({onLogin}){
 }
 
 function SupList({ctx}){
-  const {sups,setModal}=ctx;
+  const {sups,setModal,canEdit}=ctx;
   const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
   const [page,setPage]=useState(1);
+  const [showImport,setShowImport]=useState(false);
   const PAGE_SIZE=50;
   const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))];
   const fl=useMemo(()=>sups.filter(s=>{
@@ -669,15 +670,19 @@ function SupList({ctx}){
 
   return(
     <div>
+      {showImport&&<ImportModal ctx={ctx} onClose={()=>setShowImport(false)}/>}
       <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
         <input value={q} onChange={e=>{setQ(e.target.value);setPage(1);}} placeholder="Tìm tên, sản phẩm, tỉnh..." style={{...iSt,flex:1,minWidth:160}}/>
         <Sel val={fT} onChange={setFilter(setFT)} opts={[["all","Tất cả Tier"],["Tier 1","Tier 1"],["Tier 2","Tier 2"],["Tier 3","Tier 3"],["Not","Not Qualified"]]}/>
         <Sel val={fI} onChange={setFilter(setFI)} opts={[["all","Tất cả ngành"],...inds.map(i=>[i,i])]}/>
         <Sel val={fS} onChange={setFilter(setFS)} opts={[["all","Tất cả Stage"],...STAGES.map(s=>[s.id,s.label])]}/>
       </div>
-      <div style={{fontSize:12,color:"#aaa",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span>{fl.length} supplier{fl.length!==sups.length?` (lọc từ ${sups.length})`:""} · Google Sheets</span>
-        {totalPages>1&&<span>Trang {page}/{totalPages}</span>}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:6}}>
+        <span style={{fontSize:12,color:"#aaa"}}>{fl.length} supplier{fl.length!==sups.length?` (lọc từ ${sups.length})`:""} · Google Sheets{totalPages>1?` · Trang ${page}/${totalPages}`:""}</span>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={()=>exportSupCSV(sups)} style={{...gBtn,fontSize:11,padding:"4px 10px",color:"#1D9E75",borderColor:"#1D9E75"}}>⬇ Export CSV</button>
+          {canEdit&&<button onClick={()=>setShowImport(true)} style={{...gBtn,fontSize:11,padding:"4px 10px",color:"#185FA5",borderColor:"#185FA5"}}>⬆ Import CSV</button>}
+        </div>
       </div>
       {fl.length===0&&<Empty text="Không tìm thấy supplier nào."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
