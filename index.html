@@ -308,7 +308,7 @@ const newId=sfx=>Date.now()+sfx;
 const now=()=>new Date().toISOString();
 const today=()=>new Date().toISOString().slice(0,10);
 
-const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
+const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
 const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
@@ -764,7 +764,14 @@ function SupDetail({s,ctx}){
   return(
     <Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:14}}>
-        <div><h2 style={{margin:0,fontSize:18,fontWeight:600}}>{s.name||"(Chưa có tên)"}</h2><div style={{fontSize:13,color:"#777",marginTop:3}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
+        <div>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+            {s.supIdMgt&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#f0f0f0",color:"#555",fontWeight:600,fontFamily:"monospace"}}>MGT: {s.supIdMgt}</span>}
+            {s.supIdPlatform&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#f0f0f0",color:"#555",fontWeight:600,fontFamily:"monospace"}}>PLT: {s.supIdPlatform}</span>}
+          </div>
+          <h2 style={{margin:0,fontSize:18,fontWeight:600}}>{s.name||"(Chưa có tên)"}</h2>
+          <div style={{fontSize:13,color:"#777",marginTop:3}}>{s.industry}{s.province?" · "+s.province:""}</div>
+        </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           <span style={{fontSize:13,padding:"4px 12px",borderRadius:6,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
           <span style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:ptBg,color:ptColor,fontWeight:600}}>{s.partnerType||"Chưa xác định"}</span>
@@ -825,6 +832,8 @@ function SupForm({s,ctx}){
     <Card>
       <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
       <Sec title="Thông tin cơ bản">
+        <Rw l="Supplier ID (Mgt)"><input value={f.supIdMgt||""} onChange={e=>set("supIdMgt",e.target.value)} placeholder="VNS-001..." style={iSt}/></Rw>
+        <Rw l="Supplier ID (Platform)"><input value={f.supIdPlatform||""} onChange={e=>set("supIdPlatform",e.target.value)} placeholder="ALI-xxx / GS-xxx..." style={iSt}/></Rw>
         <Rw l="Tên công ty *"><input value={f.name||""} onChange={e=>set("name",e.target.value)} style={iSt}/></Rw>
         <Rw l="Mô hình KD"><select value={f.bizModel||""} onChange={e=>set("bizModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BIZ_MODELS.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
@@ -1244,15 +1253,26 @@ function RFQDetail({r,ctx}){
   // local state for notes/quotes so fields are editable
   const [snotes,setSnotes]=useState(parseJ(r.snotes)||{});
   const [squotes,setSquotes]=useState(parseJ(r.squotes)||{});
+  const snotesRef=useRef(parseJ(r.snotes)||{});
+  const squotesRef=useRef(parseJ(r.squotes)||{});
 
-  // Chỉ save lên Sheets khi blur, không save mỗi keystroke
   const handleBlur=(sid,field,val)=>{
-    const newSn=field==="note"?{...snotes,[sid]:val}:snotes;
-    const newSq=field!=="note"?{...squotes,[sid]:{...(squotes[sid]||{}),[field]:val}}:squotes;
-    upsR({...r,snotes:newSn,squotes:newSq});
+    // Cập nhật ref với giá trị mới nhất trước khi save
+    if(field==="note"){
+      snotesRef.current={...snotesRef.current,[sid]:val};
+    } else {
+      squotesRef.current={...squotesRef.current,[sid]:{...(squotesRef.current[sid]||{}),[field]:val}};
+    }
+    upsR({...r,snotes:snotesRef.current,squotes:squotesRef.current});
   };
-  const setNote=(sid,val)=>setSnotes(p=>({...p,[sid]:val}));
-  const setQuote=(sid,field,val)=>setSquotes(p=>({...p,[sid]:{...(p[sid]||{}),[field]:val}}));
+  const setNote=(sid,val)=>{
+    setSnotes(p=>({...p,[sid]:val}));
+    snotesRef.current={...snotesRef.current,[sid]:val};
+  };
+  const setQuote=(sid,field,val)=>{
+    setSquotes(p=>({...p,[sid]:{...(p[sid]||{}),[field]:val}}));
+    squotesRef.current={...squotesRef.current,[sid]:{...(squotesRef.current[sid]||{}),[field]:val}};
+  };
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const sids=parseJ(r.sids)||[];
   const mkts=parseJ(r.markets)||[];
