@@ -146,19 +146,58 @@ const calcSupPerf=(supId,orders)=>{
   const avgQuality=quality.length?Math.round(quality.reduce((a,b)=>a+b,0)/quality.length):null;
   return{orders:closed.length,rating:avgRating,onTime:avgOnTime,quality:avgQuality};
 };
+// Nhóm ngành liên quan
+const INDUSTRY_GROUPS=[
+  ["Furniture","Handicraft & Woven","Home & Kitchen"],
+  ["Textiles & Apparel","Fashion Accessories","Footwear","Bags & Luggage"],
+  ["Food & Agriculture"],
+  ["Hardware, Tools & Equipment","Construction Materials"],
+  ["Baby & Toy","Office & Stationery"],
+  ["Packaging","Other"],
+];
+const sameGroup=(a,b)=>{
+  if(!a||!b)return false;
+  return INDUSTRY_GROUPS.some(g=>g.includes(a)&&g.includes(b));
+};
+
 const calcMatch=(sup,r)=>{
   let score=0;
+  const breakdown=[];
+  // Tier (40đ)
   const ti=calcTier(sup.vserf);
-  if(ti.label==="Tier 1")score+=30;else if(ti.label==="Tier 2")score+=20;else if(ti.label==="Tier 3")score+=10;
-  const desc=(r.desc||"").toLowerCase();
-  const prod=(sup.products||"").toLowerCase();
-  const ind=(sup.industry||"").toLowerCase();
-  if(prod&&desc&&prod.split(" ").some(w=>w.length>3&&desc.includes(w)))score+=25;
-  else if(ind&&desc&&desc.includes(ind.split(" ")[0]))score+=15;
-  else if(ind)score+=5;
-  score+=Math.round((sup.vserf?.xuat_khau||0)/5*25);
-  score+=Math.round((sup.vserf?.oem_odm||0)/5*20);
-  return Math.min(100,score);
+  const tierPts=ti.label==="Tier 1"?40:ti.label==="Tier 2"?28:ti.label==="Tier 3"?14:0;
+  score+=tierPts;
+  if(tierPts>0)breakdown.push(`${ti.label} (+${tierPts})`);
+  // Ngành hàng (20đ exact / 10đ liên quan / 0đ + warning)
+  const rInd=r.industry||"";
+  const sInd=sup.industry||"";
+  let indPts=0,indWarn=false,indLabel="";
+  if(rInd&&sInd){
+    if(rInd===sInd){indPts=20;indLabel=`Đúng ngành: ${rInd} (+20)`;}
+    else if(sameGroup(rInd,sInd)){indPts=10;indLabel=`Ngành liên quan (+10)`;}
+    else{indPts=0;indWarn=true;indLabel=`Khác ngành RFQ`;}
+  } else if(!rInd){
+    // Fallback keyword scan nếu RFQ chưa chọn ngành
+    const desc=(r.desc||"").toLowerCase();
+    const prod=(sup.products||"").toLowerCase();
+    const kw=prod.split(" ").filter(w=>w.length>3&&desc.includes(w));
+    if(kw.length>0){indPts=8;indLabel=`Keyword match (+8)`;}
+    else if(sInd){indPts=3;indLabel=`Có ngành hàng (+3)`;}
+  }
+  score+=indPts;
+  if(indLabel)breakdown.push(indLabel);
+  // Xuất khẩu (25đ)
+  const xkPts=Math.round((sup.vserf?.xuat_khau||0)/5*25);
+  score+=xkPts;
+  if(xkPts>0)breakdown.push(`XK exp (+${xkPts})`);
+  // OEM/ODM (15đ) — boost nếu RFQ yêu cầu custom
+  const isCustomRFQ=r.isCustom===true||r.isCustom==="true"||r.isCustom==="TRUE";
+  const oemScore=sup.vserf?.oem_odm||0;
+  const oemMax=isCustomRFQ?20:15;
+  const oemPts=Math.round(oemScore/5*oemMax);
+  score+=oemPts;
+  if(oemPts>0)breakdown.push(`OEM/ODM (+${oemPts})${isCustomRFQ?" ×custom":""}`);
+  return{score:Math.min(100,score),breakdown,indWarn};
 };
 const parseJ=v=>{if(!v)return null;if(typeof v==="object")return v;try{return JSON.parse(v);}catch{return null;}};
 const newId=sfx=>Date.now()+sfx;
@@ -187,16 +226,16 @@ const genCode=(prefix,existing)=>{
   },0);
   return`${prefix}-${dateStr}-${String(maxSeq+1).padStart(3,"0")}`;
 };({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
-const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
+const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",industry:"",isCustom:false,deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
 const newINQ=(rfqs=[])=>({id:newId("i"),type:"inq",code:genCode("INQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
-const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},feasibility:parseJ(r.feasibility)||{},rejected:parseJ(r.rejected)||{},selReasons:parseJ(r.selReasons)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
+const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},feasibility:parseJ(r.feasibility)||{},rejected:parseJ(r.rejected)||{},selReasons:parseJ(r.selReasons)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",isCustom:r.isCustom===true||r.isCustom==="true"||r.isCustom==="TRUE",industry:r.industry||"",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0,poDate:normDate(o.poDate),etd:normDate(o.etd),eta:normDate(o.eta),prodStart:normDate(o.prodStart),qcDate:normDate(o.qcDate),depositDate:normDate(o.depositDate),balanceDate:normDate(o.balanceDate)});
 
 const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,prescore:typeof s.prescore==="object"?JSON.stringify(s.prescore):s.prescore,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
-const serRfq=r=>({...r,date:r.date||today(),deadline:r.deadline||"",markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes,feasibility:typeof r.feasibility==="object"?JSON.stringify(r.feasibility):r.feasibility,rejected:typeof r.rejected==="object"?JSON.stringify(r.rejected):r.rejected,selReasons:typeof r.selReasons==="object"?JSON.stringify(r.selReasons):r.selReasons});
+const serRfq=r=>({...r,date:r.date||today(),deadline:r.deadline||"",industry:r.industry||"",isCustom:r.isCustom||false,markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes,feasibility:typeof r.feasibility==="object"?JSON.stringify(r.feasibility):r.feasibility,rejected:typeof r.rejected==="object"?JSON.stringify(r.rejected):r.rejected,selReasons:typeof r.selReasons==="object"?JSON.stringify(r.selReasons):r.selReasons});
 
 // ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
@@ -831,7 +870,11 @@ function RFQList({ctx}){
                   {r.status==="feasibility_check"&&<span style={{fontSize:10,flexShrink:0}}>🔎</span>}
                   <span style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.desc||"(Chưa mô tả)"}</span>
                 </div>
-                {r.sales&&<div style={{fontSize:11,color:"#aaa",marginTop:2}}>👤 {r.sales}</div>}
+                <div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>
+                  {r.sales&&<span style={{fontSize:10,color:"#aaa"}}>👤 {r.sales}</span>}
+                  {r.industry&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>{r.industry}</span>}
+                  {r.isCustom&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#FFF0D6",color:"#B35A00",fontWeight:600}}>🔧 Custom</span>}
+                </div>
               </div>
               <div><span style={{fontSize:11,padding:"3px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600,whiteSpace:"nowrap"}}>{st.label}</span></div>
               <div style={{fontSize:11,color:"#777",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{mkts.length>0?mkts.join(", "):"—"}</div>
@@ -862,6 +905,8 @@ function RFQForm({r,ctx}){
         <Rw l="Sales"><input value={f.sales||""} onChange={e=>set("sales",e.target.value)} style={iSt}/></Rw>
         <Rw l="Ngày nhận"><input type="date" value={f.date||today()} onChange={e=>set("date",e.target.value)} style={iSt}/></Rw>
         <Rw l="Deadline"><input type="date" value={f.deadline||""} onChange={e=>set("deadline",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Ngành hàng"><select value={f.industry||""} onChange={e=>set("industry",e.target.value)} style={iSt}><option value="">-- Chọn ngành --</option>{INDUSTRIES.map(i=><option key={i}>{i}</option>)}</select></Rw>
+        <Rw l="Custom / OEM / ODM"><label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13}}><input type="checkbox" checked={!!f.isCustom} onChange={e=>set("isCustom",e.target.checked)} style={{accentColor:"#E8922A"}}/><span style={{color:f.isCustom?"#B35A00":"#777",fontWeight:f.isCustom?600:400}}>🔧 Yêu cầu Custom / OEM / ODM</span></label></Rw>
       </Sec>
       <Sec title="Yêu cầu">
         <Rw l="Mô tả *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} style={{...iSt,minHeight:70,resize:"vertical",boxSizing:"border-box"}}/></Rw>
@@ -1027,14 +1072,16 @@ function RFQDetail({r,ctx}){
         </div>
         {asgn.map(s=>{
           const ti=calcTier(s.vserf);const note=snotes[s.id]||"";const sq=squotes[s.id]||{};
-          const m=calcMatch(s,r);const mc=m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#aaa";const mb=m>=70?"#EAF3DE":m>=50?"#E6F1FB":m>=30?"#FAEEDA":"#f5f5f5";
+          const matchRes=calcMatch(s,r);const m=matchRes.score;const breakdown=matchRes.breakdown;const indWarn=matchRes.indWarn;
+          const mc=m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#aaa";const mb=m>=70?"#EAF3DE":m>=50?"#E6F1FB":m>=30?"#FAEEDA":"#f5f5f5";
           const sr=(parseJ(r.selReasons)||{})[s.id]||[];
           return(
             <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
               <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
                 <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
                 <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label}</span>
-                <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb,color:mc,fontWeight:700}}>Match {m}%</span>
+                <span title={breakdown.join(" | ")} style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb,color:mc,fontWeight:700,cursor:"help"}}>Match {m}%</span>
+                {indWarn&&<span style={{fontSize:10,color:"#A32D2D",fontWeight:600}}>⚠ Khác ngành</span>}
                 {s.zalo&&<span style={{fontSize:12,color:"#777"}}>📱 {s.zalo}</span>}
                 {sr.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{sr.map(reason=><span key={reason} style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#EAF3DE",color:"#1D9E75",fontWeight:600}}>{reason}</span>)}</div>}
                 <div style={{marginLeft:"auto",display:"flex",gap:5,flexShrink:0}}>
@@ -1102,7 +1149,7 @@ function RFQAssign({r,ctx}){
   const [rejected,setRejected]=useState(parseJ(r.rejected)||{});
   const [selReasons,setSelReasons]=useState(parseJ(r.selReasons)||{});
   const [q,setQ]=useState("");const [tab,setTab]=useState("ranked");
-  const scored=sups.map(s=>({...s,_match:calcMatch(s,r)})).sort((a,b)=>b._match-a._match);
+  const scored=sups.map(s=>{const res=calcMatch(s,r);return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};}).sort((a,b)=>b._match-a._match);
   const fl=scored.filter(s=>tab==="ranked"?s._match>=30:true).filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const togReason=(sid,reason)=>setSelReasons(p=>({...p,[sid]:(p[sid]||[]).includes(reason)?(p[sid]||[]).filter(r=>r!==reason):[...(p[sid]||[]),reason]}));
@@ -1121,7 +1168,7 @@ function RFQAssign({r,ctx}){
       <div style={{maxHeight:420,overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
         {fl.length===0&&<Empty text="Không tìm thấy NCC phù hợp."/>}
         {fl.map(s=>{
-          const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
+          const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;const breakdown=s._breakdown||[];const indWarn=s._indWarn;const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
           return(
             <div key={s.id} style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden"}}>
               <div onClick={()=>{if(!rj.reason)tog(s.id);}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
@@ -1130,15 +1177,16 @@ function RFQAssign({r,ctx}){
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
                   <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.products?.slice(0,40)} · {s.province}</div>
+                  {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:2}}>⚠ Khác ngành RFQ{r.industry?` (RFQ: ${r.industry})`:""}</div>}
                 </div>
-                <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb(m),color:mc(m),fontWeight:700,flexShrink:0}}>Match {m}%</span>
+                {/* Match badge với tooltip */}
+                <div style={{position:"relative",flexShrink:0}} title={breakdown.join(" | ")}>
+                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mc(m),color:m>=30?"#fff":"#777",fontWeight:700,cursor:"help"}}>Match {m}%</span>
+                </div>
                 <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
               </div>
-              {(chk||tab==="ranked")&&m>0&&<div style={{padding:"6px 12px 8px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:12,flexWrap:"wrap",fontSize:11,color:"#777"}}>
-                <span>Tier: <b style={{color:ti.c}}>{ti.t}/45</b></span>
-                <span>XK: <b>{s.vserf?.xuat_khau||0}/5</b></span>
-                <span>OEM: <b>{s.vserf?.oem_odm||0}/5</b></span>
-                {s.industry&&<span>Ngành: <b>{s.industry}</b></span>}
+              {(chk||tab==="ranked")&&breakdown.length>0&&<div style={{padding:"6px 12px 8px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:8,flexWrap:"wrap",fontSize:10,color:"#777"}}>
+                {breakdown.map((b,i)=><span key={i} style={{padding:"1px 6px",borderRadius:3,background:b.includes("Khác")||b.includes("warn")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555",fontWeight:600}}>{b}</span>)}
               </div>}
               {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
                 <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
