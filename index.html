@@ -888,7 +888,10 @@ function SupForm({s,ctx}){
         <Rw l="Stage"><select value={f.stage||"B1"} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsS(f)} style={pBtn}>Lưu</button></div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+        <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
+        <button onClick={()=>upsS(f)} disabled={mgtDup||pltDup} style={{...pBtn,opacity:mgtDup||pltDup?.5:1}}>Lưu</button>
+      </div>
     </Card>
   );
 }
