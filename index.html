@@ -954,11 +954,33 @@ function SupDetail({s,ctx}){
           :tot>=15?{label:"Cần xác minh thêm",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}
           :{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};
         return(
-          <div style={{background:v.bg,border:`1px solid ${v.c}`,borderRadius:8,padding:"8px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            <span style={{fontSize:16}}>{v.icon}</span>
-            <div>
-              <div style={{fontSize:12,fontWeight:700,color:v.c}}>Pre-score: {tot}/30 — {v.label}</div>
-              <div style={{fontSize:11,color:"#777",marginTop:1}}>{answered}/6 tiêu chí đã chấm · bấm "Pre-score" để xem chi tiết</div>
+          <div style={{border:`1px solid ${v.c}`,borderRadius:10,marginBottom:12,overflow:"hidden"}}>
+            {/* Header */}
+            <div style={{background:v.bg,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:16}}>{v.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:v.c}}>Pre-score: {tot}/30 — {v.label}</div>
+                <div style={{fontSize:11,color:"#777",marginTop:1}}>{answered}/6 tiêu chí đã chấm</div>
+              </div>
+              {canEdit&&<button onClick={()=>setModal({t:"prescore",d:s})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${v.c}`,background:"#fff",color:v.c,cursor:"pointer",fontWeight:600}}>Cập nhật</button>}
+            </div>
+            {/* Breakdown từng tiêu chí */}
+            <div style={{padding:"10px 14px",background:"#fff",display:"grid",gap:6}}>
+              {PRESCORE_CRITERIA.map(c=>{
+                const score=parseInt(ps[c.id])||0;
+                const hasVal=ps[c.id]!==undefined&&ps[c.id]!=="";
+                const pct=Math.round(score/5*100);
+                const barC=score>=4?"#1D9E75":score>=3?"#185FA5":score>=2?"#854F0B":"#E24B4A";
+                return(
+                  <div key={c.id} style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:12,color:"#555",width:220,flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.icon} {c.label}</span>
+                    <div style={{flex:1,height:6,background:"#f0f0f0",borderRadius:3,overflow:"hidden"}}>
+                      {hasVal&&<div style={{height:"100%",width:pct+"%",background:barC,borderRadius:3,transition:"width .3s"}}/>}
+                    </div>
+                    <span style={{fontSize:12,fontWeight:700,width:28,textAlign:"right",flexShrink:0,color:hasVal?barC:"#ccc"}}>{hasVal?`${score}/5`:"—"}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
