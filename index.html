@@ -1637,6 +1637,12 @@ function RFQDetail({r,ctx}){
   );
 }
 
+        {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
+      </div>
+    </Card>
+  );
+}
+
 function RFQAssign({r,ctx}){
   const {sups,upsR,setModal}=ctx;
   const [sel,setSel]=useState(parseJ(r.sids)||[]);
