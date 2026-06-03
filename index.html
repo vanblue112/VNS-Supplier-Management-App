@@ -1015,18 +1015,19 @@ function RFQDetail({r,ctx}){
       {/* Pre-feasibility summary */}
       {r.feasibility&&Object.keys(r.feasibility).length>0&&(()=>{
         const f=r.feasibility;
-        const allYes=FEASIBILITY_QS.every(q=>f[q.id]===true);
-        const noCount=FEASIBILITY_QS.filter(q=>f[q.id]===false).length;
+        const isPass=q=>f[q.id]===null||f[q.id]===undefined?false:(q.yesOk?f[q.id]===true:f[q.id]===false);
+        const allPass=FEASIBILITY_QS.every(q=>isPass(q));
+        const noCount=FEASIBILITY_QS.filter(q=>!isPass(q)&&f[q.id]!==null&&f[q.id]!==undefined).length;
         return(
-          <div style={{background:allYes?"#EAF3DE":"#FFF5F5",border:`1px solid ${allYes?"#1D9E75":"#E24B4A"}`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+          <div style={{background:allPass?"#EAF3DE":"#FFF5F5",border:`1px solid ${allPass?"#1D9E75":"#E24B4A"}`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:12,fontWeight:700,color:allYes?"#1D9E75":"#E24B4A"}}>{allYes?"✅ Pre-feasibility: 4/4 Pass":`⚠ Pre-feasibility: ${noCount} điểm cần lưu ý`}</span>
+              <span style={{fontSize:12,fontWeight:700,color:allPass?"#1D9E75":"#E24B4A"}}>{allPass?"✅ Pre-feasibility: 4/4 Pass":`⚠ Pre-feasibility: ${noCount} điểm cần lưu ý`}</span>
               {canEdit&&<button onClick={()=>setShowFeasibility(true)} style={{fontSize:11,padding:"2px 8px",borderRadius:4,border:"1px solid #ddd",background:"#fff",cursor:"pointer",color:"#555"}}>Cập nhật</button>}
             </div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               {FEASIBILITY_QS.map(q=>(
                 <div key={q.id} style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
-                  <span style={{color:f[q.id]===true?"#1D9E75":"#E24B4A",fontWeight:700}}>{f[q.id]===true?"✓":"✗"}</span>
+                  <span style={{color:isPass(q)?"#1D9E75":"#E24B4A",fontWeight:700}}>{isPass(q)?"✓":"✗"}</span>
                   <span style={{color:"#555"}}>{q.label.split(" ").slice(0,3).join(" ")}...</span>
                 </div>
               ))}
@@ -1148,63 +1149,106 @@ function RFQAssign({r,ctx}){
   const [sel,setSel]=useState(parseJ(r.sids)||[]);
   const [rejected,setRejected]=useState(parseJ(r.rejected)||{});
   const [selReasons,setSelReasons]=useState(parseJ(r.selReasons)||{});
-  const [q,setQ]=useState("");const [tab,setTab]=useState("ranked");
-  const scored=sups.map(s=>{const res=calcMatch(s,r);return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};}).sort((a,b)=>b._match-a._match);
-  const fl=scored.filter(s=>tab==="ranked"?s._match>=30:true).filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+  const [q,setQ]=useState("");
+  const [showAll,setShowAll]=useState(false);
+
+  const scored=sups.map(s=>{
+    const res=calcMatch(s,r);
+    return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};
+  }).sort((a,b)=>b._match-a._match);
+
+  // Phân nhóm
+  const rInd=r.industry||"";
+  const exactMatch=scored.filter(s=>rInd&&s.industry===rInd);
+  const related=scored.filter(s=>rInd&&s.industry!==rInd&&sameGroup(rInd,s.industry));
+  const others=scored.filter(s=>!rInd||(s.industry!==rInd&&!sameGroup(rInd,s.industry)));
+
+  // Danh sách hiển thị
+  const baseList=showAll?scored:[...exactMatch,...related];
+  const fl=baseList.filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+
   const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const togReason=(sid,reason)=>setSelReasons(p=>({...p,[sid]:(p[sid]||[]).includes(reason)?(p[sid]||[]).filter(r=>r!==reason):[...(p[sid]||[]),reason]}));
   const setRejReason=(sid,reason)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),reason}}));
   const setRejNote=(sid,note)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),note}}));
-  const mc=m=>m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#aaa";
-  const mb=m=>m>=70?"#EAF3DE":m>=50?"#E6F1FB":m>=30?"#FAEEDA":"#f5f5f5";
+  const mc=m=>m>=70?"#fff":m>=30?"#fff":"#777";
+  const mb=m=>m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#e5e5e5";
+
+  const renderSupplier=(s,groupLabel)=>{
+    const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;
+    const breakdown=s._breakdown||[];const indWarn=s._indWarn;
+    const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
+    return(
+      <div key={s.id} style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden",opacity:indWarn&&!showAll?.7:1}}>
+        <div onClick={()=>{if(!rj.reason)tog(s.id);}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
+          {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}</div>}
+          {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
+            <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.industry||"—"} · {s.province}</div>
+            {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:1}}>⚠ Khác ngành RFQ{rInd?` (RFQ: ${rInd})`:""}</div>}
+          </div>
+          <div style={{position:"relative",flexShrink:0}} title={breakdown.join(" | ")}>
+            <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb(m),color:mc(m),fontWeight:700,cursor:"help"}}>Match {m}%</span>
+          </div>
+          <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+        </div>
+        {(chk||!rj.reason)&&breakdown.length>0&&<div style={{padding:"5px 12px 6px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:5,flexWrap:"wrap"}}>
+          {breakdown.map((b,i)=><span key={i} style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:b.includes("Khác")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555",fontWeight:600}}>{b}</span>)}
+        </div>}
+        {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
+          <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+            {SELECTION_REASONS.map(reason=><button key={reason} onClick={()=>togReason(s.id,reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>)}
+          </div>
+        </div>}
+        {!chk&&<div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
+          <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>Loại NCC này? Chọn lý do:</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:rj.reason?6:0}}>
+            {REJECTION_REASONS.map(reason=><button key={reason} onClick={()=>setRejReason(s.id,rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>)}
+          </div>
+          {rj.reason&&<input value={rj.note||""} onChange={e=>setRejNote(s.id,e.target.value)} placeholder="Ghi chú thêm (tuỳ chọn)..." style={{...iSt,fontSize:11,marginTop:2}}/>}
+        </div>}
+      </div>
+    );
+  };
+
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
-      <h2 style={{margin:"0 0 12px",fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
-      <div style={{display:"flex",gap:6,marginBottom:10}}>
-        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,flex:1}}/>
-        <button onClick={()=>setTab("ranked")} style={{...gBtn,fontSize:11,background:tab==="ranked"?"#1D9E75":"none",color:tab==="ranked"?"#fff":"#555",border:tab==="ranked"?"none":"1px solid #ddd"}}>⭐ Top Match</button>
-        <button onClick={()=>setTab("all")} style={{...gBtn,fontSize:11,background:tab==="all"?"#534AB7":"none",color:tab==="all"?"#fff":"#555",border:tab==="all"?"none":"1px solid #ddd"}}>Tất cả</button>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+        <h2 style={{margin:0,fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
+        {rInd&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>{rInd}</span>}
+        {r.isCustom&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#FFF0D6",color:"#B35A00",fontWeight:600}}>🔧 Custom</span>}
       </div>
-      <div style={{maxHeight:420,overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
+      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10}}/>
+
+      {/* Summary */}
+      {rInd&&<div style={{display:"flex",gap:8,marginBottom:10,fontSize:12,color:"#777",flexWrap:"wrap"}}>
+        <span style={{padding:"3px 10px",borderRadius:5,background:"#EAF3DE",color:"#1D9E75",fontWeight:600}}>✅ Đúng ngành: {exactMatch.length}</span>
+        {related.length>0&&<span style={{padding:"3px 10px",borderRadius:5,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>🔗 Liên quan: {related.length}</span>}
+        {!showAll&&others.length>0&&<button onClick={()=>setShowAll(true)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>+ Hiện {others.length} NCC khác ngành</button>}
+        {showAll&&<button onClick={()=>setShowAll(false)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>Ẩn bớt</button>}
+      </div>}
+
+      <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
         {fl.length===0&&<Empty text="Không tìm thấy NCC phù hợp."/>}
-        {fl.map(s=>{
-          const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;const breakdown=s._breakdown||[];const indWarn=s._indWarn;const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
-          return(
-            <div key={s.id} style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden"}}>
-              <div onClick={()=>{if(!rj.reason)tog(s.id);}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
-                {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}</div>}
-                {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-                  <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.products?.slice(0,40)} · {s.province}</div>
-                  {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:2}}>⚠ Khác ngành RFQ{r.industry?` (RFQ: ${r.industry})`:""}</div>}
-                </div>
-                {/* Match badge với tooltip */}
-                <div style={{position:"relative",flexShrink:0}} title={breakdown.join(" | ")}>
-                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mc(m),color:m>=30?"#fff":"#777",fontWeight:700,cursor:"help"}}>Match {m}%</span>
-                </div>
-                <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-              </div>
-              {(chk||tab==="ranked")&&breakdown.length>0&&<div style={{padding:"6px 12px 8px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:8,flexWrap:"wrap",fontSize:10,color:"#777"}}>
-                {breakdown.map((b,i)=><span key={i} style={{padding:"1px 6px",borderRadius:3,background:b.includes("Khác")||b.includes("warn")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555",fontWeight:600}}>{b}</span>)}
-              </div>}
-              {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
-                <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                  {SELECTION_REASONS.map(reason=><button key={reason} onClick={()=>togReason(s.id,reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>)}
-                </div>
-              </div>}
-              {!chk&&<div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
-                <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>Loại NCC này? Chọn lý do:</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:rj.reason?6:0}}>
-                  {REJECTION_REASONS.map(reason=><button key={reason} onClick={()=>setRejReason(s.id,rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>)}
-                </div>
-                {rj.reason&&<input value={rj.note||""} onChange={e=>setRejNote(s.id,e.target.value)} placeholder="Ghi chú thêm (tuỳ chọn)..." style={{...iSt,fontSize:11,marginTop:2}}/>}
-              </div>}
-            </div>
-          );
-        })}
+
+        {/* Nhóm đúng ngành */}
+        {!q&&rInd&&exactMatch.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginBottom:2}}>✅ Đúng ngành — {rInd}</div>}
+        {(q?fl:fl.filter(s=>s.industry===rInd||(rInd&&!sameGroup(rInd,s.industry)?false:true))).filter(s=>!rInd||s.industry===rInd).map(s=>renderSupplier(s))}
+
+        {/* Nhóm liên quan */}
+        {!q&&rInd&&fl.filter(s=>sameGroup(rInd,s.industry)&&s.industry!==rInd).length>0&&<div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>🔗 Ngành liên quan</div>}
+        {(q?[]:fl.filter(s=>rInd&&sameGroup(rInd,s.industry)&&s.industry!==rInd)).map(s=>renderSupplier(s))}
+
+        {/* Nhóm khác ngành (chỉ hiện khi showAll) */}
+        {!q&&showAll&&fl.filter(s=>rInd&&!sameGroup(rInd,s.industry)&&s.industry!==rInd).length>0&&<div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>⚠ Khác ngành</div>}
+        {(q?[]:showAll?fl.filter(s=>rInd&&!sameGroup(rInd,s.industry)&&s.industry!==rInd):[]).map(s=>renderSupplier(s))}
+
+        {/* Khi search thì hiện hết kết quả không phân nhóm */}
+        {q&&fl.map(s=>renderSupplier(s))}
       </div>
+
       <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn · {Object.values(rejected).filter(r=>r.reason).length} bị loại</span>
         <div style={{display:"flex",gap:8}}>
