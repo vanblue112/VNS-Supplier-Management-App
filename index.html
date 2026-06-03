@@ -19,27 +19,21 @@ input,select,textarea,button{font-family:inherit;outline:none}
 <script type="text/babel">
 const {useState,useEffect,useCallback,useRef,useMemo}=React;
 
-// ── CONFIG ──
 const API_URL="https://script.google.com/macros/s/AKfycbyyHiNH2lj8eiZqcgtR3vdNufbefe2kBxhlDppqzJ20m6WmBiVIqlRrYiNTc-wyHSRX/exec";
 const EDIT_PW="vinasources2026";
 const AUTH_KEY="vns_auth_v2";
 
-// ── API ──
 async function api(action,sheet,body={}){
-  if(action==="getAll"||action==="getOne"||action==="getByField"){
+  if(["getAll","getOne","getByField"].includes(action)){
     const p=new URLSearchParams({action,sheet,...body});
-    const r=await fetch(`${API_URL}?${p}`);
-    return r.json();
+    return(await fetch(`${API_URL}?${p}`)).json();
   }
-  const r=await fetch(API_URL,{method:"POST",body:JSON.stringify({action,sheet,...body})});
-  return r.json();
+  return(await fetch(API_URL,{method:"POST",body:JSON.stringify({action,sheet,...body})})).json();
 }
 const apiGetAll=sheet=>api("getAll",sheet);
 const apiUpsert=(sheet,record)=>api("upsert",sheet,{record});
 const apiDelete=(sheet,id)=>api("delete",sheet,{id});
-const apiGetByField=(sheet,field,value)=>api("getByField",sheet,{field,value});
 
-// ── CONSTANTS ──
 const INDUSTRIES=["Accessories","Baby & Toy","Bags & Luggage","Construction Materials","Fashion Accessories","Food & Agriculture","Footwear","Furniture","Handicraft & Woven","Hardware, Tools & Equipment","Home & Kitchen","Office & Stationery","Packaging","Pet Supplies","Textiles & Apparel","Other"];
 const BIZ_MODELS=["Manufacturer","Wholesaler","Trader","Service Provider","Manufacturer + Trader","Other"];
 const LEGAL_TYPES=["Công ty TNHH MTV","Công ty TNHH 2TV trở lên","Công ty Cổ phần","Doanh nghiệp tư nhân","Hộ kinh doanh","Hợp tác xã","Văn phòng đại diện","Khác"];
@@ -75,215 +69,63 @@ const ORDER_STAGES=[
   {id:"payment",label:"Payment",c:"#0F6E56",bg:"#E1F5EE",icon:"💰"},
   {id:"closed",label:"Closed",c:"#555",bg:"#F0F0F0",icon:"✅"},
 ];
+const PROD_STATUS=[
+  {id:"on_track",label:"Đúng tiến độ",c:"#1D9E75",bg:"#EAF3DE",icon:"🟢",action:"Báo cáo định kỳ, không cần action thêm",who:""},
+  {id:"delay_minor",label:"Chậm 5–10%",c:"#856A00",bg:"#FFF9D6",icon:"🟡",action:"Supply liên hệ supplier ngay — tìm nguyên nhân. Chưa báo Sales/Buyer.",who:"Supply"},
+  {id:"delay_moderate",label:"Chậm 10–20%",c:"#C05A00",bg:"#FFF0E0",icon:"🟠",action:"Supply lên kế hoạch catch-up, thông báo Sales (chưa báo Buyer). Chuẩn bị backup option.",who:"Supply + Sales"},
+  {id:"delay_critical",label:"Chậm >20% / Miss milestone",c:"#A32D2D",bg:"#FCEBEB",icon:"🔴",action:"Escalate GD. Sales đàm phán với Buyer: gia hạn lead time, partial shipment, hoặc bồi thường.",who:"GD + Sales + Buyer"},
+];
 const VCOLS=[
   {id:"phap_ly",l:"01 Pháp lý"},{id:"san_xuat",l:"02 Sản xuất"},{id:"chat_luong",l:"03 Chất lượng"},
   {id:"xuat_khau",l:"04 Xuất khẩu"},{id:"chung_tu",l:"05 Chứng từ"},{id:"rfq",l:"06 Phản hồi RFQ"},
   {id:"oem_odm",l:"07 OEM/ODM"},{id:"giao_tiep",l:"08 Giao tiếp"},{id:"minh_bach",l:"09 Minh bạch"},
 ];
-
 const VSERF_CRITERIA=[
-  {id:"phap_ly",icon:"⚖️",label:"Pháp lý",desc:"Giấy phép kinh doanh, MST còn hiệu lực, giấy phép chuyên ngành nếu hàng có điều kiện",
-   hint:"Tra MST tại tracuunnt.mst.gov.vn — 'đang hoạt động' là hợp lệ.",
-   opts:[
-    {p:0,t:"Không tìm thấy thông tin pháp lý, hoặc doanh nghiệp đã ngừng hoạt động / giải thể"},
-    {p:1,t:"Có đăng ký kinh doanh nhưng MST tra ra 'ngừng hoạt động' hoặc thông tin không khớp"},
-    {p:2,t:"Giấy phép và MST hợp lệ, nhưng không cung cấp được khi được hỏi — phải tự tra"},
-    {p:3,t:"Giấy phép và MST hợp lệ, cung cấp được khi yêu cầu — chưa có giấy phép chuyên ngành (nếu hàng cần)"},
-    {p:4,t:"Hồ sơ pháp lý đầy đủ, chủ động cung cấp — giấy phép chuyên ngành có nhưng chưa cập nhật mới nhất"},
-    {p:5,t:"Hồ sơ đầy đủ, MST đang hoạt động, chủ động cung cấp — có đủ giấy phép chuyên ngành còn hiệu lực"},
-  ]},
-  {id:"san_xuat",icon:"🏭",label:"Sản xuất",desc:"Nhà xưởng, máy móc, công suất thực tế",
-   hint:"Hỏi: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu? Có ảnh/video xưởng không?'",
-   opts:[
-    {p:0,t:"Không có xưởng, toàn bộ đặt gia công ngoài — thực chất là trading"},
-    {p:1,t:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài — khó kiểm soát chất lượng và tiến độ"},
-    {p:2,t:"Có xưởng nhưng máy móc thiếu, công suất thấp — chỉ đáp ứng đơn nhỏ"},
-    {p:3,t:"Có xưởng riêng, máy móc cơ bản, đáp ứng được MOQ buyer — còn 1–2 công đoạn thuê ngoài"},
-    {p:4,t:"Xưởng riêng, máy móc đầy đủ, công suất ổn định — hầu hết tự sản xuất"},
-    {p:5,t:"Nhà xưởng riêng, máy móc đủ toàn bộ quy trình, công suất ≥ MOQ buyer, không thuê ngoài công đoạn chính"},
-  ]},
-  {id:"chat_luong",icon:"✅",label:"Chất lượng",desc:"Hệ thống kiểm soát chất lượng, chứng nhận quốc tế",
-   hint:"Hỏi: 'Ai kiểm tra hàng trước khi xuất? Có checklist QC không? Có ISO hay chứng nhận không?'",
-   opts:[
-    {p:0,t:"Không có quy trình QC nào — hàng làm xong là đóng gói, không kiểm tra"},
-    {p:1,t:"Có kiểm tra hàng nhưng theo cảm tính, không có tiêu chuẩn hay checklist cụ thể"},
-    {p:2,t:"Có checklist QC cơ bản, kiểm tra đầu ra (FQC) — chưa kiểm tra trong quá trình sản xuất"},
-    {p:3,t:"Có QC trong quá trình (IPQC) và đầu ra (FQC), chưa có chứng nhận quốc tế"},
-    {p:4,t:"Có QC 3 lớp (IPQC/FQC/OQC), đang trong quá trình lấy ISO hoặc có chứng nhận tương đương"},
-    {p:5,t:"Có ISO 9001 hoặc tương đương còn hiệu lực, QC nội bộ 3 lớp đầy đủ (IPQC/FQC/OQC)"},
-  ]},
-  {id:"xuat_khau",icon:"🚢",label:"Kinh nghiệm xuất khẩu",desc:"Số năm XK thực tế, thị trường đã bán, thành thạo Incoterms",
-   hint:"Hỏi: 'Đã xuất khẩu sang thị trường nào? Giao hàng theo điều kiện gì — FOB hay CIF?'",
-   opts:[
-    {p:0,t:"Chưa từng xuất khẩu, chỉ bán nội địa"},
-    {p:1,t:"Đã xuất khẩu 1–2 lần nhưng qua trung gian hoàn toàn — không trực tiếp làm việc với buyer ngoài"},
-    {p:2,t:"Có xuất khẩu trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},
-    {p:3,t:"Xuất khẩu 1–2 năm, biết FOB/CIF, đã có ít nhất 1 thị trường ổn định"},
-    {p:4,t:"Xuất khẩu ≥ 2 năm, thành thạo Incoterms phổ biến, đã bán vào 2–3 thị trường khác nhau"},
-    {p:5,t:"Xuất khẩu ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm đa thị trường và nhiều dạng buyer"},
-  ]},
-  {id:"chung_tu",icon:"📄",label:"Chứng từ xuất khẩu",desc:"Tự chuẩn bị CO, packing list, commercial invoice tiếng Anh, HS code",
-   hint:"Hỏi thẳng: 'Tự làm chứng từ hay nhờ logistics làm hộ?' và 'HS code của sản phẩm này là gì?'",
-   opts:[
-    {p:0,t:"Không biết chứng từ xuất khẩu là gì, chưa bao giờ làm"},
-    {p:1,t:"Biết các loại chứng từ nhưng hoàn toàn nhờ logistics hoặc môi giới làm hộ"},
-    {p:2,t:"Tự làm được packing list và invoice đơn giản, không biết HS code hoặc cách xin CO"},
-    {p:3,t:"Tự làm được hầu hết chứng từ, biết HS code — đôi khi cần hỗ trợ xác nhận CO"},
-    {p:4,t:"Tự làm đầy đủ bộ chứng từ tiếng Anh, HS code chính xác — quy trình chưa hoàn toàn chuẩn hóa"},
-    {p:5,t:"Tự lập hoàn toàn: CO, packing list, commercial invoice tiếng Anh chuẩn, HS code đúng"},
-  ]},
-  {id:"rfq",icon:"⚡",label:"Phản hồi & báo giá",desc:"Tốc độ phản hồi RFQ, chất lượng và chi tiết báo giá",
-   hint:"Gửi thử 1 RFQ và đo thời gian phản hồi. Xem báo giá có ghi rõ đơn giá, MOQ, Incoterms, lead time không.",
-   opts:[
-    {p:0,t:"Không phản hồi RFQ, hoặc phản hồi sau hơn 3 ngày"},
-    {p:1,t:"Phản hồi sau 48–72 giờ, báo giá chỉ 1 con số, không có thông tin kèm theo"},
-    {p:2,t:"Phản hồi trong 24–48 giờ, có báo giá nhưng thiếu MOQ, lead time hoặc điều kiện giao hàng"},
-    {p:3,t:"Phản hồi trong 24 giờ, báo giá có đủ thông tin cơ bản — chưa có cost breakdown chi tiết"},
-    {p:4,t:"Phản hồi < 24 giờ, báo giá chi tiết — đôi khi vẫn gộp chung một số hạng mục chi phí"},
-    {p:5,t:"Phản hồi < 24 giờ, cost breakdown rõ ràng: đơn giá, MOQ, lead time, Incoterms, điều kiện thanh toán"},
-  ]},
-  {id:"oem_odm",icon:"🔧",label:"OEM / ODM",desc:"Khả năng làm mẫu, tùy chỉnh sản phẩm theo yêu cầu buyer",
-   hint:"Hỏi: 'Nếu buyer muốn thay kích thước/màu sắc/logo, mất bao lâu để có mẫu?'",
-   opts:[
-    {p:0,t:"Chỉ bán hàng có sẵn, không nhận yêu cầu tùy chỉnh bất kỳ"},
-    {p:1,t:"Có thể in logo hoặc thay đổi bao bì — không tùy chỉnh được sản phẩm"},
-    {p:2,t:"Nhận OEM cơ bản (thay màu, kích thước đơn giản), thời gian làm mẫu >3 tuần"},
-    {p:3,t:"Có OEM/ODM, làm mẫu trong 2–3 tuần, tùy chỉnh mức trung bình — chưa có team R&D riêng"},
-    {p:4,t:"Có nhân sự R&D, làm mẫu trong 10–14 ngày, đáp ứng hầu hết yêu cầu tùy chỉnh của buyer"},
-    {p:5,t:"Có team R&D, làm mẫu trong 7–10 ngày, sẵn sàng tùy chỉnh sâu theo spec của buyer"},
-  ]},
-  {id:"giao_tiep",icon:"🌐",label:"Giao tiếp tiếng Anh",desc:"Giao tiếp trực tiếp với buyer nước ngoài, không cần phiên dịch",
-   hint:"Gửi 1 email tiếng Anh và đánh giá phản hồi: có hiểu đúng không? Diễn đạt có rõ không?",
-   opts:[
-    {p:0,t:"Không có ai giao tiếp được tiếng Anh, mọi liên lạc cần phiên dịch"},
-    {p:1,t:"Đọc hiểu email đơn giản nhưng không tự viết được — dùng Google Dịch là chính"},
-    {p:2,t:"Viết được email cơ bản, hiểu ý buyer — diễn đạt còn nhiều lỗi, dễ gây hiểu nhầm"},
-    {p:3,t:"Giao tiếp được qua email và chat, hiểu và trả lời đúng ý — chưa tự tin trên Zoom/call"},
-    {p:4,t:"Giao tiếp tốt qua email/chat/Zoom, đủ thương lượng và giải quyết vấn đề — đôi khi cần xác nhận lại ý"},
-    {p:5,t:"Tiếng Anh thành thạo qua mọi kênh (email/chat/Zoom/call), không cần phiên dịch"},
-  ]},
-  {id:"minh_bach",icon:"👁️",label:"Minh bạch & hợp tác",desc:"Sẵn sàng cung cấp thông tin, chấp nhận audit và factory visit",
-   hint:"Thái độ khi được hỏi về xưởng và quy trình là chỉ báo quan trọng. Né tránh liên tục = rủi ro cao.",
-   opts:[
-    {p:0,t:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi về năng lực hoặc quy trình sản xuất"},
-    {p:1,t:"Cung cấp thông tin nhỏ giọt, không nhất quán — khó xác minh thực tế"},
-    {p:2,t:"Trả lời câu hỏi khi được hỏi nhưng không chủ động, chưa sẵn sàng cho buyer visit"},
-    {p:3,t:"Chấp nhận trao đổi cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit có biên bản"},
-    {p:4,t:"Chấp nhận buyer visit và audit, có thể cung cấp ảnh/video xưởng — chưa có quy trình chuẩn"},
-    {p:5,t:"Chủ động minh bạch, sẵn sàng buyer visit, factory audit chính thức, cung cấp video khi cần"},
-  ]},
+  {id:"phap_ly",icon:"⚖️",label:"Pháp lý",desc:"Giấy phép kinh doanh, MST còn hiệu lực",hint:"Tra MST tại tracuunnt.mst.gov.vn",opts:[{p:0,t:"Không tìm thấy thông tin pháp lý, hoặc đã ngừng hoạt động"},{p:1,t:"Có đăng ký nhưng MST 'ngừng hoạt động' hoặc thông tin không khớp"},{p:2,t:"Giấy phép hợp lệ nhưng không cung cấp được khi hỏi — phải tự tra"},{p:3,t:"Giấy phép hợp lệ, cung cấp được khi yêu cầu — chưa có GP chuyên ngành"},{p:4,t:"Hồ sơ đầy đủ, chủ động cung cấp — GP chuyên ngành chưa cập nhật mới nhất"},{p:5,t:"Hồ sơ đầy đủ, MST đang hoạt động, chủ động cung cấp — đủ GP chuyên ngành còn hiệu lực"}]},
+  {id:"san_xuat",icon:"🏭",label:"Sản xuất",desc:"Nhà xưởng, máy móc, công suất thực tế",hint:"Hỏi: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu?'",opts:[{p:0,t:"Không có xưởng, toàn bộ gia công ngoài — thực chất là trading"},{p:1,t:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài"},{p:2,t:"Có xưởng nhưng máy móc thiếu, công suất thấp — chỉ đáp ứng đơn nhỏ"},{p:3,t:"Có xưởng riêng, máy móc cơ bản, đáp ứng MOQ buyer — còn 1–2 công đoạn thuê ngoài"},{p:4,t:"Xưởng riêng, máy móc đầy đủ, công suất ổn định — hầu hết tự sản xuất"},{p:5,t:"Xưởng riêng, máy móc đủ toàn bộ quy trình, công suất ≥ MOQ buyer"}]},
+  {id:"chat_luong",icon:"✅",label:"Chất lượng",desc:"Hệ thống QC, chứng nhận quốc tế",hint:"Hỏi: 'Ai kiểm tra hàng trước khi xuất? Có checklist QC không?'",opts:[{p:0,t:"Không có quy trình QC nào"},{p:1,t:"Kiểm tra theo cảm tính, không có tiêu chuẩn"},{p:2,t:"Có checklist QC cơ bản, chỉ kiểm tra đầu ra (FQC)"},{p:3,t:"Có IPQC + FQC, chưa có chứng nhận quốc tế"},{p:4,t:"Có QC 3 lớp, đang lấy ISO hoặc có chứng nhận tương đương"},{p:5,t:"Có ISO 9001 hoặc tương đương còn hiệu lực, QC 3 lớp đầy đủ"}]},
+  {id:"xuat_khau",icon:"🚢",label:"Kinh nghiệm xuất khẩu",desc:"Số năm XK, thị trường đã bán, thành thạo Incoterms",hint:"Hỏi: 'Đã xuất khẩu sang thị trường nào? Giao theo FOB hay CIF?'",opts:[{p:0,t:"Chưa từng xuất khẩu, chỉ bán nội địa"},{p:1,t:"Đã XK 1–2 lần qua trung gian hoàn toàn"},{p:2,t:"Có XK trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},{p:3,t:"XK 1–2 năm, biết FOB/CIF, có ít nhất 1 thị trường ổn định"},{p:4,t:"XK ≥ 2 năm, thành thạo Incoterms, đã bán vào 2–3 thị trường"},{p:5,t:"XK ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm đa thị trường"}]},
+  {id:"chung_tu",icon:"📄",label:"Chứng từ xuất khẩu",desc:"Tự chuẩn bị CO, packing list, invoice tiếng Anh, HS code",hint:"Hỏi thẳng: 'Tự làm chứng từ hay nhờ logistics làm hộ?'",opts:[{p:0,t:"Không biết chứng từ xuất khẩu là gì"},{p:1,t:"Biết nhưng hoàn toàn nhờ logistics làm hộ"},{p:2,t:"Tự làm packing list và invoice đơn giản, không biết HS code"},{p:3,t:"Tự làm được hầu hết chứng từ, biết HS code — đôi khi cần hỗ trợ CO"},{p:4,t:"Tự làm đầy đủ tiếng Anh, HS code chính xác — quy trình chưa chuẩn hóa"},{p:5,t:"Tự lập hoàn toàn: CO, packing list, invoice chuẩn, HS code đúng"}]},
+  {id:"rfq",icon:"⚡",label:"Phản hồi & báo giá",desc:"Tốc độ phản hồi RFQ, chất lượng báo giá",hint:"Gửi thử 1 RFQ và đo thời gian. Xem có ghi rõ đơn giá, MOQ, Incoterms, lead time không.",opts:[{p:0,t:"Không phản hồi RFQ, hoặc phản hồi sau hơn 3 ngày"},{p:1,t:"Phản hồi sau 48–72 giờ, báo giá chỉ 1 con số"},{p:2,t:"Phản hồi 24–48 giờ, có báo giá nhưng thiếu MOQ / lead time"},{p:3,t:"Phản hồi trong 24 giờ, đủ thông tin cơ bản — chưa có cost breakdown"},{p:4,t:"Phản hồi < 24 giờ, báo giá chi tiết — đôi khi gộp một số hạng mục"},{p:5,t:"Phản hồi < 24 giờ, cost breakdown rõ: đơn giá, MOQ, lead time, Incoterms"}]},
+  {id:"oem_odm",icon:"🔧",label:"OEM / ODM",desc:"Khả năng làm mẫu, tùy chỉnh sản phẩm",hint:"Hỏi: 'Nếu buyer muốn thay kích thước/màu/logo, mất bao lâu có mẫu?'",opts:[{p:0,t:"Chỉ bán hàng có sẵn, không nhận tùy chỉnh"},{p:1,t:"Có thể in logo hoặc thay bao bì — không tùy chỉnh sản phẩm"},{p:2,t:"Nhận OEM cơ bản, thời gian làm mẫu >3 tuần"},{p:3,t:"Có OEM/ODM, làm mẫu 2–3 tuần, tùy chỉnh mức trung bình"},{p:4,t:"Có R&D, làm mẫu 10–14 ngày, đáp ứng hầu hết yêu cầu"},{p:5,t:"Có team R&D, làm mẫu 7–10 ngày, tùy chỉnh sâu theo spec buyer"}]},
+  {id:"giao_tiep",icon:"🌐",label:"Giao tiếp tiếng Anh",desc:"Giao tiếp trực tiếp với buyer, không cần phiên dịch",hint:"Gửi 1 email tiếng Anh và đánh giá phản hồi.",opts:[{p:0,t:"Không có ai giao tiếp được tiếng Anh"},{p:1,t:"Đọc hiểu email đơn giản nhưng không tự viết được"},{p:2,t:"Viết được email cơ bản — diễn đạt còn nhiều lỗi"},{p:3,t:"Giao tiếp được qua email/chat, chưa tự tin trên Zoom"},{p:4,t:"Giao tiếp tốt qua email/chat/Zoom — đôi khi cần xác nhận lại ý"},{p:5,t:"Tiếng Anh thành thạo mọi kênh, không cần phiên dịch"}]},
+  {id:"minh_bach",icon:"👁️",label:"Minh bạch & hợp tác",desc:"Sẵn sàng cung cấp thông tin, chấp nhận audit",hint:"Thái độ khi được hỏi về xưởng và quy trình là chỉ báo quan trọng.",opts:[{p:0,t:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi"},{p:1,t:"Cung cấp thông tin nhỏ giọt, không nhất quán"},{p:2,t:"Trả lời khi được hỏi nhưng không chủ động, chưa sẵn sàng buyer visit"},{p:3,t:"Cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit"},{p:4,t:"Chấp nhận buyer visit và audit, có ảnh/video xưởng"},{p:5,t:"Chủ động minh bạch, sẵn sàng factory audit chính thức"}]},
 ];
-
-// Pre-score criteria — đánh giá từ xa qua thông tin công khai
 const PRESCORE_CRITERIA=[
-  {id:"ps_online",icon:"🌐",label:"Hiện diện online",
-   desc:"Website, Alibaba/Global Sources profile, mạng xã hội doanh nghiệp",
-   hint:"Tìm tên công ty + 'export' / 'manufacturer' trên Google, Alibaba, Facebook. Xem độ cập nhật và chuyên nghiệp.",
-   opts:[
-    {p:0,t:"Không tìm thấy bất kỳ thông tin online nào"},
-    {p:1,t:"Chỉ có Facebook cá nhân hoặc trang rất sơ sài, không có thông tin xuất khẩu"},
-    {p:2,t:"Có website hoặc Alibaba profile nhưng ít nội dung, không cập nhật"},
-    {p:3,t:"Có website/Alibaba đủ thông tin cơ bản: sản phẩm, năng lực, liên hệ — chưa có nội dung xuất khẩu rõ"},
-    {p:4,t:"Profile chuyên nghiệp, có ảnh xưởng/sản phẩm thực tế, đề cập thị trường xuất khẩu"},
-    {p:5,t:"Profile đầy đủ và cập nhật: website EN+VI, Alibaba verified, ảnh xưởng thực, list thị trường XK rõ ràng"},
-  ]},
-  {id:"ps_legal",icon:"⚖️",label:"Pháp lý tra cứu được",
-   desc:"MST tra được tại tracuunnt.mst.gov.vn, thông tin khớp với hồ sơ",
-   hint:"Tra MST: status 'đang hoạt động', tên công ty và địa chỉ khớp với thông tin họ cung cấp.",
-   opts:[
-    {p:0,t:"Không tra được MST, hoặc tra ra 'đã giải thể / ngừng hoạt động'"},
-    {p:1,t:"Có MST nhưng tên công ty / địa chỉ không khớp với thông tin họ cung cấp"},
-    {p:2,t:"MST hợp lệ và đang hoạt động — thông tin còn thiếu (không rõ ngành nghề hoặc địa chỉ)"},
-    {p:3,t:"MST hợp lệ, đang hoạt động, thông tin cơ bản khớp — chưa xác minh được giấy phép chuyên ngành"},
-    {p:4,t:"MST hợp lệ, thông tin đầy đủ và khớp — có dấu hiệu giấy phép chuyên ngành (đề cập trên web/profile)"},
-    {p:5,t:"MST hợp lệ, thông tin đầy đủ và nhất quán trên tất cả nguồn, có bằng chứng giấy phép chuyên ngành"},
-  ]},
-  {id:"ps_product",icon:"📦",label:"Sản phẩm & năng lực",
-   desc:"Sản phẩm thực tế khớp RFQ, có ảnh/video thực, thông số kỹ thuật rõ",
-   hint:"Xem catalog, ảnh sản phẩm có watermark thực hay stock photo? Thông số kỹ thuật có đủ không?",
-   opts:[
-    {p:0,t:"Không tìm thấy thông tin sản phẩm, hoặc sản phẩm hoàn toàn không khớp với RFQ"},
-    {p:1,t:"Có đề cập sản phẩm tương tự nhưng chỉ là ảnh stock, không có thông số kỹ thuật"},
-    {p:2,t:"Có ảnh sản phẩm thực, thiếu thông số kỹ thuật hoặc catalog — năng lực chưa rõ"},
-    {p:3,t:"Có catalog / thông số cơ bản, sản phẩm khớp RFQ — chưa có video xưởng hay chứng minh năng lực thực"},
-    {p:4,t:"Có catalog chi tiết, ảnh/video sản phẩm thực, thông số kỹ thuật đủ — đề cập MOQ / lead time"},
-    {p:5,t:"Catalog đầy đủ, ảnh/video xưởng và sản phẩm thực, thông số kỹ thuật rõ, MOQ và lead time cụ thể"},
-  ]},
-  {id:"ps_export",icon:"🚢",label:"Dấu hiệu xuất khẩu",
-   desc:"Đề cập thị trường đã xuất, chứng nhận quốc tế, logo buyer / reference",
-   hint:"Tìm: 'exported to', tên thị trường, logo chứng nhận ISO/BSCI/SA8000 trên website. Chứng nhận có thể verify online.",
-   opts:[
-    {p:0,t:"Không có bất kỳ dấu hiệu xuất khẩu nào"},
-    {p:1,t:"Có đề cập 'xuất khẩu' nhưng không rõ thị trường hay buyer cụ thể"},
-    {p:2,t:"Có đề cập 1 thị trường xuất khẩu, không có chứng nhận quốc tế"},
-    {p:3,t:"Có đề cập 2+ thị trường xuất khẩu, có ít nhất 1 chứng nhận quốc tế (có thể verify)"},
-    {p:4,t:"Có reference buyer / thị trường rõ ràng, 2+ chứng nhận quốc tế còn hiệu lực"},
-    {p:5,t:"Có tên buyer / thị trường cụ thể, 3+ chứng nhận quốc tế verify được, lịch sử xuất khẩu rõ ràng"},
-  ]},
-  {id:"ps_consistency",icon:"🔍",label:"Nhất quán thông tin",
-   desc:"Thông tin trên các nguồn (web, Alibaba, Facebook, báo) có khớp nhau không",
-   hint:"So sánh: tên công ty, địa chỉ, năng lực, sản phẩm giữa các nguồn. Mâu thuẫn lớn = red flag.",
-   opts:[
-    {p:0,t:"Thông tin mâu thuẫn nghiêm trọng giữa các nguồn (địa chỉ khác, sản phẩm khác, tên khác)"},
-    {p:1,t:"Có mâu thuẫn rõ ở 1–2 điểm quan trọng — đáng ngờ, cần xác minh trực tiếp"},
-    {p:2,t:"Thông tin cơ bản khớp nhưng năng lực / quy mô không nhất quán giữa các nguồn"},
-    {p:3,t:"Thông tin chủ yếu nhất quán, có 1–2 điểm không rõ nhưng không đáng ngờ"},
-    {p:4,t:"Thông tin nhất quán trên tất cả nguồn — một số chi tiết chưa verify được nhưng không mâu thuẫn"},
-    {p:5,t:"Thông tin nhất quán hoàn toàn trên tất cả nguồn công khai, không có red flag"},
-  ]},
-  {id:"ps_certs",icon:"🏅",label:"Chứng nhận nhà máy & sản phẩm",
-   desc:"Chứng nhận hệ thống (ISO, BSCI, SA8000...) và chứng nhận sản phẩm (CE, FDA, Organic, REACH...)",
-   hint:"Tìm logo chứng nhận trên website/Alibaba. Verify tại cơ sở dữ liệu của tổ chức cấp (iaf.nu, bsigroup.com, ul.com). Phân biệt: chứng nhận hệ thống (nhà máy) vs. chứng nhận sản phẩm (từng SKU) — cả hai quan trọng tùy thị trường buyer.",
-   opts:[
-    {p:0,t:"Không tìm thấy bất kỳ chứng nhận nào — không đề cập trên bất kỳ kênh nào"},
-    {p:1,t:"Có đề cập chứng nhận nhưng không rõ loại, không có số chứng chỉ, không verify được"},
-    {p:2,t:"Có ít nhất 1 chứng nhận hệ thống (ISO 9001 / BSCI / SA8000...) — chưa có chứng nhận sản phẩm"},
-    {p:3,t:"Có 1–2 chứng nhận hệ thống verify được + đề cập chứng nhận sản phẩm (CE / FDA / Organic...) nhưng chưa verify"},
-    {p:4,t:"Có 2+ chứng nhận hệ thống còn hiệu lực + ít nhất 1 chứng nhận sản phẩm verify được, phù hợp thị trường buyer"},
-    {p:5,t:"Đầy đủ cả hai nhóm: chứng nhận hệ thống (ISO/BSCI...) + chứng nhận sản phẩm (CE/FDA/Organic...) — tất cả còn hiệu lực và verify được"},
-  ]},
+  {id:"ps_online",icon:"🌐",label:"Hiện diện online",desc:"Website, Alibaba/Global Sources profile, mạng xã hội",hint:"Tìm tên công ty + 'export'/'manufacturer' trên Google, Alibaba, Facebook.",opts:[{p:0,t:"Không tìm thấy bất kỳ thông tin online nào"},{p:1,t:"Chỉ có Facebook cá nhân hoặc trang rất sơ sài"},{p:2,t:"Có website hoặc Alibaba profile nhưng ít nội dung, không cập nhật"},{p:3,t:"Có website/Alibaba đủ thông tin cơ bản — chưa có nội dung XK rõ"},{p:4,t:"Profile chuyên nghiệp, có ảnh xưởng/sản phẩm thực, đề cập thị trường XK"},{p:5,t:"Profile đầy đủ: website EN+VI, Alibaba verified, ảnh xưởng thực, list thị trường XK"}]},
+  {id:"ps_legal",icon:"⚖️",label:"Pháp lý tra cứu được",desc:"MST tra được tại tracuunnt.mst.gov.vn, thông tin khớp",hint:"Tra MST: status 'đang hoạt động', tên và địa chỉ khớp thông tin họ cung cấp.",opts:[{p:0,t:"Không tra được MST, hoặc tra ra 'đã giải thể / ngừng hoạt động'"},{p:1,t:"Có MST nhưng tên/địa chỉ không khớp"},{p:2,t:"MST hợp lệ — thông tin còn thiếu"},{p:3,t:"MST hợp lệ, thông tin cơ bản khớp — chưa xác minh GP chuyên ngành"},{p:4,t:"MST hợp lệ, đầy đủ — có dấu hiệu GP chuyên ngành"},{p:5,t:"MST hợp lệ, nhất quán trên tất cả nguồn, có bằng chứng GP chuyên ngành"}]},
+  {id:"ps_product",icon:"📦",label:"Sản phẩm & năng lực",desc:"Sản phẩm khớp RFQ, có ảnh/video thực, thông số kỹ thuật rõ",hint:"Xem catalog, ảnh có watermark thực hay stock photo? Thông số kỹ thuật có đủ không?",opts:[{p:0,t:"Không tìm thấy thông tin sản phẩm, hoặc không khớp RFQ"},{p:1,t:"Có đề cập sản phẩm tương tự nhưng chỉ ảnh stock"},{p:2,t:"Có ảnh sản phẩm thực, thiếu thông số kỹ thuật"},{p:3,t:"Có catalog/thông số cơ bản, sản phẩm khớp RFQ — chưa có video xưởng"},{p:4,t:"Có catalog chi tiết, ảnh/video thực, đề cập MOQ/lead time"},{p:5,t:"Catalog đầy đủ, video xưởng và sản phẩm thực, thông số rõ, MOQ/lead time cụ thể"}]},
+  {id:"ps_export",icon:"🚢",label:"Dấu hiệu xuất khẩu",desc:"Đề cập thị trường đã xuất, chứng nhận quốc tế, reference buyer",hint:"Tìm: 'exported to', tên thị trường, logo chứng nhận ISO/BSCI trên website.",opts:[{p:0,t:"Không có bất kỳ dấu hiệu xuất khẩu nào"},{p:1,t:"Có đề cập 'xuất khẩu' nhưng không rõ thị trường"},{p:2,t:"Có đề cập 1 thị trường XK, không có chứng nhận quốc tế"},{p:3,t:"Có 2+ thị trường XK, có ít nhất 1 chứng nhận quốc tế verify được"},{p:4,t:"Có reference buyer/thị trường rõ, 2+ chứng nhận còn hiệu lực"},{p:5,t:"Buyer/thị trường cụ thể, 3+ chứng nhận verify được, lịch sử XK rõ"}]},
+  {id:"ps_consistency",icon:"🔍",label:"Nhất quán thông tin",desc:"Thông tin trên web, Alibaba, Facebook có khớp nhau không",hint:"So sánh tên, địa chỉ, năng lực, sản phẩm giữa các nguồn. Mâu thuẫn lớn = red flag.",opts:[{p:0,t:"Thông tin mâu thuẫn nghiêm trọng giữa các nguồn"},{p:1,t:"Có mâu thuẫn rõ ở 1–2 điểm quan trọng — đáng ngờ"},{p:2,t:"Thông tin cơ bản khớp nhưng năng lực/quy mô không nhất quán"},{p:3,t:"Chủ yếu nhất quán, có 1–2 điểm không rõ nhưng không đáng ngờ"},{p:4,t:"Nhất quán trên tất cả nguồn — vài chi tiết chưa verify được"},{p:5,t:"Nhất quán hoàn toàn, không có red flag"}]},
+  {id:"ps_certs",icon:"🏅",label:"Chứng nhận nhà máy & sản phẩm",desc:"Chứng nhận hệ thống (ISO, BSCI...) và chứng nhận sản phẩm (CE, FDA, Organic...)",hint:"Tìm logo chứng nhận trên website/Alibaba. Verify tại iaf.nu, bsigroup.com, ul.com.",opts:[{p:0,t:"Không tìm thấy bất kỳ chứng nhận nào"},{p:1,t:"Có đề cập chứng nhận nhưng không rõ loại, không verify được"},{p:2,t:"Có ít nhất 1 chứng nhận hệ thống — chưa có chứng nhận sản phẩm"},{p:3,t:"Có 1–2 chứng nhận hệ thống verify được + đề cập chứng nhận SP chưa verify"},{p:4,t:"Có 2+ chứng nhận hệ thống + ít nhất 1 chứng nhận sản phẩm verify được"},{p:5,t:"Đầy đủ cả hai nhóm: hệ thống + sản phẩm — tất cả còn hiệu lực và verify được"}]},
 ];
-const PROD_STATUS=[
-  {id:"on_track",label:"Đúng tiến độ",labelShort:"On track",c:"#1D9E75",bg:"#EAF3DE",icon:"🟢",
-   action:"Báo cáo định kỳ, không cần action thêm",who:""},
-  {id:"delay_minor",label:"Chậm 5–10%",labelShort:"Chậm nhẹ",c:"#856A00",bg:"#FFF9D6",icon:"🟡",
-   action:"Supply liên hệ supplier ngay — tìm nguyên nhân. Chưa báo Sales/Buyer.",who:"Supply"},
-  {id:"delay_moderate",label:"Chậm 10–20%",labelShort:"Chậm vừa",c:"#C05A00",bg:"#FFF0E0",icon:"🟠",
-   action:"Supply lên kế hoạch catch-up, thông báo Sales (chưa báo Buyer). Chuẩn bị backup option.",who:"Supply + Sales"},
-  {id:"delay_critical",label:"Chậm >20% / Miss milestone",labelShort:"Nguy hiểm",c:"#A32D2D",bg:"#FCEBEB",icon:"🔴",
-   action:"Escalate GD. Sales đàm phán với Buyer: gia hạn lead time, partial shipment, hoặc bồi thường.",who:"GD + Sales + Buyer"},
-];
-
 const KRALJIC_QUADRANTS=[
-  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi cao",strategy:"Quan hệ đối tác dài hạn"},
+  {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cao",strategy:"Quan hệ đối tác dài hạn"},
   {id:"leverage",label:"Leverage",labelVi:"Đòn bẩy",c:"#3B6D11",bg:"#EAF3DE",icon:"💪",desc:"Tác động tài chính cao · Rủi ro thấp",strategy:"Tận dụng sức mua, thương lượng"},
   {id:"bottleneck",label:"Bottleneck",labelVi:"Nút thắt",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️",desc:"Tác động tài chính thấp · Rủi ro cao",strategy:"Dự trữ, tìm nguồn thay thế"},
   {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro thấp",strategy:"Tự động hóa, tối ưu chi phí"},
 ];
+const FEASIBILITY_QS=[
+  {id:"network",label:"Ngành hàng có trong network không?",hint:"Đã có supplier ngành này trong DB hoặc tìm được trong 3–5 ngày"},
+  {id:"spec",label:"Spec có bất thường không?",hint:"Yêu cầu kỹ thuật quá phức tạp, chứng nhận hiếm, hoặc chưa từng source loại này"},
+  {id:"moq",label:"MOQ có khớp không?",hint:"MOQ buyer yêu cầu phù hợp với năng lực supplier trong network"},
+  {id:"timeline",label:"Timeline có khả thi không?",hint:"Lead time sản xuất + vận chuyển đủ để giao đúng deadline buyer không"},
+];
+const SELECTION_REASONS=["Tier phù hợp","Đã XK thị trường này","Có chứng nhận yêu cầu","Giá cạnh tranh","Lead time ngắn","OEM/ODM tốt","Đã hợp tác trước đây","MOQ phù hợp"];
+const REJECTION_REASONS=["Tier quá thấp","Không có kinh nghiệm XK","Thiếu chứng nhận","Giá quá cao","Lead time quá dài","Không có OEM/ODM","MOQ quá cao","Năng lực sản xuất không đủ","Không phản hồi RFQ"];
 
-// Normalize date từ Sheets: ISO timestamp → YYYY-MM-DD
-// Normalize date từ Sheets: ISO timestamp → YYYY-MM-DD
+// ── Helpers ──
 const normDate=v=>{
   if(!v)return"";
   const s=String(v).trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
   if(s.includes("T")||s.includes("Z")){
     const d=new Date(s);
-    if(!isNaN(d)){
-      const y=d.getFullYear();
-      const m=String(d.getMonth()+1).padStart(2,"0");
-      const dd=String(d.getDate()).padStart(2,"0");
-      return`${y}-${m}-${dd}`;
-    }
+    if(!isNaN(d))return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   }
-  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
-    const[mo,dd,yy]=s.split("/");
-    return`${yy}-${mo.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-  }
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[mo,dd,yy]=s.split("/");return`${yy}-${mo.padStart(2,"0")}-${dd.padStart(2,"0")}`;}
   return s;
 };
-
-// ── Helpers ──
 const calcTier=v=>{
   if(!v)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t:0};
   const t=Object.values(v).reduce((a,b)=>a+(b||0),0);
@@ -304,31 +146,40 @@ const calcSupPerf=(supId,orders)=>{
   const avgQuality=quality.length?Math.round(quality.reduce((a,b)=>a+b,0)/quality.length):null;
   return{orders:closed.length,rating:avgRating,onTime:avgOnTime,quality:avgQuality};
 };
+const calcMatch=(sup,r)=>{
+  let score=0;
+  const ti=calcTier(sup.vserf);
+  if(ti.label==="Tier 1")score+=30;else if(ti.label==="Tier 2")score+=20;else if(ti.label==="Tier 3")score+=10;
+  const desc=(r.desc||"").toLowerCase();
+  const prod=(sup.products||"").toLowerCase();
+  const ind=(sup.industry||"").toLowerCase();
+  if(prod&&desc&&prod.split(" ").some(w=>w.length>3&&desc.includes(w)))score+=25;
+  else if(ind&&desc&&desc.includes(ind.split(" ")[0]))score+=15;
+  else if(ind)score+=5;
+  score+=Math.round((sup.vserf?.xuat_khau||0)/5*25);
+  score+=Math.round((sup.vserf?.oem_odm||0)/5*20);
+  return Math.min(100,score);
+};
 const parseJ=v=>{if(!v)return null;if(typeof v==="object")return v;try{return JSON.parse(v);}catch{return null;}};
 const newId=sfx=>Date.now()+sfx;
 const now=()=>new Date().toISOString();
 const today=()=>new Date().toISOString().slice(0,10);
+const genSupIdMgt=sups=>{
+  const nums=sups.map(s=>{const m=String(s.supIdMgt||"").match(/^VNS-(\d+)$/);return m?parseInt(m[1]):0;});
+  return"VNS-"+String(Math.max(0,...nums)+1).padStart(6,"0");
+};
 
 const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
-const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",ca:now(),ua:now()});
+const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
 const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
-const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},feasibility:parseJ(r.feasibility)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
+const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},feasibility:parseJ(r.feasibility)||{},rejected:parseJ(r.rejected)||{},selReasons:parseJ(r.selReasons)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0,poDate:normDate(o.poDate),etd:normDate(o.etd),eta:normDate(o.eta),prodStart:normDate(o.prodStart),qcDate:normDate(o.qcDate),depositDate:normDate(o.depositDate),balanceDate:normDate(o.balanceDate)});
 
 const serSup=s=>({...s,vserf:typeof s.vserf==="object"?JSON.stringify(s.vserf):s.vserf,prescore:typeof s.prescore==="object"?JSON.stringify(s.prescore):s.prescore,perf:typeof s.perf==="object"?JSON.stringify(s.perf):s.perf});
-const serRfq=r=>({
-  ...r,
-  date:r.date||today(),
-  deadline:r.deadline||"",
-  markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,
-  sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,
-  snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,
-  squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes,
-  feasibility:typeof r.feasibility==="object"?JSON.stringify(r.feasibility):r.feasibility,
-});
+const serRfq=r=>({...r,date:r.date||today(),deadline:r.deadline||"",markets:Array.isArray(r.markets)?JSON.stringify(r.markets):r.markets,sids:Array.isArray(r.sids)?JSON.stringify(r.sids):r.sids,snotes:typeof r.snotes==="object"?JSON.stringify(r.snotes):r.snotes,squotes:typeof r.squotes==="object"?JSON.stringify(r.squotes):r.squotes,feasibility:typeof r.feasibility==="object"?JSON.stringify(r.feasibility):r.feasibility,rejected:typeof r.rejected==="object"?JSON.stringify(r.rejected):r.rejected,selReasons:typeof r.selReasons==="object"?JSON.stringify(r.selReasons):r.selReasons});
 
 // ── UI atoms ──
 const iSt={padding:"7px 10px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#1a1a1a",fontSize:13,width:"100%"};
@@ -345,33 +196,15 @@ function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,b
 function Spin(){return<div style={{width:16,height:16,border:"2px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",display:"inline-block"}}/>;}
 
 // ── RFQ DESC RENDERER ──
-// Parses "— TIÊU ĐỀ —" as section headers, "• item" as bullets, blank lines as spacers
 function RFQDesc({text}){
   if(!text)return<span style={{color:"#ccc"}}>—</span>;
   const lines=text.split("\n");
   const els=[];let buf=[];
-  const flushBuf=()=>{
-    if(!buf.length)return;
-    els.push(<div key={els.length} style={{display:"flex",flexDirection:"column",gap:3,marginBottom:4}}>{buf.map((l,i)=><div key={i} style={{fontSize:13,color:"#333",lineHeight:1.7}}>{l}</div>)}</div>);
-    buf=[];
-  };
-  lines.forEach((raw,i)=>{
+  const flushBuf=()=>{if(!buf.length)return;els.push(<div key={els.length} style={{display:"flex",flexDirection:"column",gap:3,marginBottom:4}}>{buf.map((l,i)=><div key={i} style={{fontSize:13,color:"#333",lineHeight:1.7}}>{l}</div>)}</div>);buf=[];};
+  lines.forEach(raw=>{
     const line=raw.trim();
-    // Section header: — TEXT — or -- TEXT --
-    if(/^[-—]{1,2}\s*.+\s*[-—]{1,2}$/.test(line)){
-      flushBuf();
-      const label=line.replace(/^[-—\s]+|[-—\s]+$/g,"").trim();
-      els.push(<div key={els.length} style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:1,marginTop:els.length?12:0,marginBottom:4,paddingBottom:3,borderBottom:"1px solid #f0f0f0"}}>{label}</div>);
-      return;
-    }
-    // Bullet: starts with • or - or *
-    if(/^[•\-\*]\s/.test(line)){
-      flushBuf();
-      const content=line.replace(/^[•\-\*]\s+/,"");
-      els.push(<div key={els.length} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"2px 0"}}><span style={{color:"#1D9E75",fontWeight:700,flexShrink:0,marginTop:1}}>•</span><span style={{fontSize:13,color:"#333",lineHeight:1.7,flex:1}}>{content}</span></div>);
-      return;
-    }
-    // Empty line
+    if(/^[-—]{1,2}\s*.+\s*[-—]{1,2}$/.test(line)){flushBuf();const label=line.replace(/^[-—\s]+|[-—\s]+$/g,"").trim();els.push(<div key={els.length} style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:1,marginTop:els.length?12:0,marginBottom:4,paddingBottom:3,borderBottom:"1px solid #f0f0f0"}}>{label}</div>);return;}
+    if(/^[•\-\*]\s/.test(line)){flushBuf();const content=line.replace(/^[•\-\*]\s+/,"");els.push(<div key={els.length} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"2px 0"}}><span style={{color:"#1D9E75",fontWeight:700,flexShrink:0,marginTop:1}}>•</span><span style={{fontSize:13,color:"#333",lineHeight:1.7,flex:1}}>{content}</span></div>);return;}
     if(!line){flushBuf();return;}
     buf.push(line);
   });
@@ -379,138 +212,108 @@ function RFQDesc({text}){
   return<div>{els}</div>;
 }
 
-// ── MATCH SCORE ──
-const calcMatch=(sup,r)=>{
-  let score=0,max=0;
-  const ti=calcTier(sup.vserf);
-  // Tier (30%)
-  max+=30;
-  if(ti.label==="Tier 1")score+=30;
-  else if(ti.label==="Tier 2")score+=20;
-  else if(ti.label==="Tier 3")score+=10;
-  // Ngành hàng khớp RFQ desc (25%)
-  max+=25;
-  const desc=(r.desc||"").toLowerCase();
-  const prod=(sup.products||"").toLowerCase();
-  const ind=(sup.industry||"").toLowerCase();
-  if(prod&&desc&&(desc.includes(prod.split(" ")[0])||prod.split(" ").some(w=>w.length>3&&desc.includes(w))))score+=25;
-  else if(ind&&desc&&desc.includes(ind.toLowerCase().split(" ")[0]))score+=15;
-  else if(ind)score+=5;
-  // Xuất khẩu (25%)
-  max+=25;
-  const xk=sup.vserf?.xuat_khau||0;
-  score+=Math.round(xk/5*25);
-  // OEM/ODM (20%)
-  max+=20;
-  const oem=sup.vserf?.oem_odm||0;
-  score+=Math.round(oem/5*20);
-  return Math.min(100,Math.round(score/max*100));
-};
+// ── CHECKLIST ENGINE ──
+function ChecklistEngine({criteria,scores,setScores,mandatoryIds=[],accentColor="#1D9E75",accentBg="#F0FDF9"}){
+  const [hints,setHints]=useState({});
+  const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
+  const answered=criteria.filter(c=>scores[c.id]!==undefined).length;
+  const pct=Math.round(answered/criteria.length*100);
+  const isMandatoryFail=mandatoryIds.some(id=>(scores[id]??0)<3);
+  return(
+    <div>
+      <div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
+          <span style={{color:"#777"}}>{answered}/{criteria.length} tiêu chí đã chấm</span>
+          <span style={{fontWeight:700,color:accentColor}}>{total}/{criteria.length*5} điểm</span>
+        </div>
+        <div style={{height:6,background:"#e5e5e5",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:accentColor,borderRadius:3,transition:"width .3s"}}/></div>
+      </div>
+      {isMandatoryFail&&<div style={{background:"#FCEBEB",border:"1px solid #E24B4A",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#A32D2D"}}>⚠ Tiêu chí bắt buộc chưa đạt ≥ 3 điểm → kết quả sẽ là <b>Not Qualified</b></div>}
+      {criteria.map(c=>{
+        const val=scores[c.id];const done=val!==undefined;const isMand=mandatoryIds.includes(c.id);const isWarn=isMand&&(val??0)<3&&done;
+        return(
+          <div key={c.id} style={{border:`1.5px solid ${isWarn?"#E24B4A":done?accentColor:"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",marginBottom:8,background:done?accentBg:"#fff",transition:"all .2s"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:done?accentColor:"#f0f0f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:done?"#fff":"#aaa",flexShrink:0}}>{done?val:"?"}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:13,fontWeight:600}}>{c.icon} {c.label}</span>
+                  {isMand&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>bắt buộc ≥3</span>}
+                  {done&&<span style={{fontSize:11,padding:"1px 7px",borderRadius:3,background:accentColor,color:"#fff",fontWeight:600,marginLeft:"auto"}}>{val}/5</span>}
+                </div>
+                <div style={{fontSize:11,color:"#999",marginTop:2}}>{c.desc}</div>
+              </div>
+              <button onClick={()=>setHints(h=>({...h,[c.id]:!h[c.id]}))} style={{fontSize:11,padding:"2px 7px",borderRadius:4,border:"1px solid #e5e5e5",background:"none",cursor:"pointer",color:"#aaa",flexShrink:0}}>💡</button>
+            </div>
+            {hints[c.id]&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:7,padding:"8px 11px",marginBottom:8,fontSize:12,color:"#5C4000",lineHeight:1.6}}>{c.hint}</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {c.opts.map(opt=>{const sel=val===opt.p;return(
+                <label key={opt.p} onClick={()=>setScores(s=>({...s,[c.id]:opt.p}))} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",borderRadius:7,border:`1px solid ${sel?accentColor:"#e5e5e5"}`,background:"#fff",cursor:"pointer"}}>
+                  <input type="radio" readOnly checked={sel} style={{marginTop:3,accentColor,flexShrink:0}}/>
+                  <span style={{fontSize:12,lineHeight:1.5,flex:1,color:"#333"}}>{opt.t}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:sel?accentColor:"#ccc",flexShrink:0,minWidth:40,textAlign:"right"}}>{opt.p} đ</span>
+                </label>
+              );})}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-const SELECTION_REASONS=["Tier phù hợp","Đã xuất khẩu thị trường này","Có chứng nhận yêu cầu","Giá cạnh tranh","Lead time ngắn","OEM/ODM tốt","Đã hợp tác trước đây","MOQ phù hợp"];
-const REJECTION_REASONS=["Tier quá thấp","Không có kinh nghiệm XK","Thiếu chứng nhận","Giá quá cao","Lead time quá dài","Không có OEM/ODM","MOQ quá cao","Năng lực sản xuất không đủ","Không phản hồi RFQ"];
-const FEASIBILITY_QS=[
-  {id:"network",   label:"Ngành hàng có trong network không?",  hint:"Đã có supplier ngành này trong DB hoặc có thể tìm được trong 3–5 ngày"},
-  {id:"spec",      label:"Spec có bất thường không?",           hint:"Yêu cầu kỹ thuật quá phức tạp, chứng nhận hiếm, hoặc chưa từng source loại này"},
-  {id:"moq",       label:"MOQ có khớp không?",                  hint:"MOQ buyer yêu cầu phù hợp với năng lực supplier trong network"},
-  {id:"timeline",  label:"Timeline có khả thi không?",          hint:"Lead time sản xuất + vận chuyển có đủ để giao đúng deadline buyer không"},
-];
-
+// ── PRE-FEASIBILITY ──
 function FeasibilityModal({r,ctx,onClose}){
   const {upsR}=ctx;
   const init=r.feasibility||{};
-  const [ans,setAns]=useState({
-    network:init.network??null, networkNote:init.networkNote||"",
-    spec:init.spec??null,       specNote:init.specNote||"",
-    moq:init.moq??null,         moqNote:init.moqNote||"",
-    timeline:init.timeline??null,timelineNote:init.timelineNote||"",
-  });
+  const [ans,setAns]=useState({network:init.network??null,networkNote:init.networkNote||"",spec:init.spec??null,specNote:init.specNote||"",moq:init.moq??null,moqNote:init.moqNote||"",timeline:init.timeline??null,timelineNote:init.timelineNote||""});
   const [saving,setSaving]=useState(false);
-
   const set=(k,v)=>setAns(p=>({...p,[k]:v}));
   const allAnswered=FEASIBILITY_QS.every(q=>ans[q.id]!==null);
   const allYes=FEASIBILITY_QS.every(q=>ans[q.id]===true);
   const hasNo=FEASIBILITY_QS.some(q=>ans[q.id]===false);
-  // No phải có note
   const noNeedsNote=FEASIBILITY_QS.filter(q=>ans[q.id]===false).some(q=>!ans[q.id+"Note"]?.trim());
   const canSave=allAnswered&&(!hasNo||!noNeedsNote);
-
   const handleSave=async(forceTo)=>{
     setSaving(true);
     const newStatus=forceTo||(allYes?"searching":"feasibility_check");
     await upsR({...r,feasibility:ans,status:newStatus});
-    setSaving(false);
-    onClose();
+    setSaving(false);onClose();
   };
-
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1200,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{width:"100%",maxWidth:560,marginTop:"2rem",marginBottom:"2rem",background:"#fff",borderRadius:12,border:"1px solid #e5e5e5",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
-        {/* Header */}
         <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",background:"#F5F4FF",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div>
-            <div style={{fontSize:15,fontWeight:700,color:"#6D3AB7"}}>🔎 Pre-feasibility Check</div>
-            <div style={{fontSize:11,color:"#888",marginTop:2}}>{r.code} · {r.desc?.slice(0,50)}{r.desc?.length>50?"...":""}</div>
-          </div>
+          <div><div style={{fontSize:15,fontWeight:700,color:"#6D3AB7"}}>🔎 Pre-feasibility Check</div><div style={{fontSize:11,color:"#888",marginTop:2}}>{r.code} · {(r.desc||"").slice(0,50)}</div></div>
           <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa"}}>×</button>
         </div>
-        {/* Questions */}
         <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:12}}>
           {FEASIBILITY_QS.map(q=>{
-            const val=ans[q.id];
-            const noteKey=q.id+"Note";
-            const needNote=val===false&&!ans[noteKey]?.trim();
+            const val=ans[q.id];const noteKey=q.id+"Note";const needNote=val===false&&!ans[noteKey]?.trim();
             return(
-              <div key={q.id} style={{border:`1.5px solid ${val===true?"#1D9E75":val===false?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",background:val===true?"#F0FDF9":val===false?"#FFF5F5":"#fff",transition:"all .15s"}}>
+              <div key={q.id} style={{border:`1.5px solid ${val===true?"#1D9E75":val===false?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",background:val===true?"#F0FDF9":val===false?"#FFF5F5":"#fff"}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:val===false?8:0}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:"#1a1a1a",marginBottom:2}}>{q.label}</div>
-                    <div style={{fontSize:11,color:"#999"}}>{q.hint}</div>
-                  </div>
+                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{q.label}</div><div style={{fontSize:11,color:"#999"}}>{q.hint}</div></div>
                   <div style={{display:"flex",gap:6,flexShrink:0}}>
                     {[{v:true,l:"Yes"},{v:false,l:"No"}].map(opt=>(
-                      <button key={String(opt.v)} onClick={()=>set(q.id,opt.v)}
-                        style={{padding:"5px 16px",borderRadius:6,border:`1.5px solid ${val===opt.v?(opt.v?"#1D9E75":"#E24B4A"):"#ddd"}`,
-                          background:val===opt.v?(opt.v?"#1D9E75":"#E24B4A"):"#fff",
-                          color:val===opt.v?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                        {opt.l}
-                      </button>
+                      <button key={String(opt.v)} onClick={()=>set(q.id,opt.v)} style={{padding:"5px 16px",borderRadius:6,border:`1.5px solid ${val===opt.v?(opt.v?"#1D9E75":"#E24B4A"):"#ddd"}`,background:val===opt.v?(opt.v?"#1D9E75":"#E24B4A"):"#fff",color:val===opt.v?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>{opt.l}</button>
                     ))}
                   </div>
                 </div>
-                {val===false&&(
-                  <textarea value={ans[noteKey]} onChange={e=>set(noteKey,e.target.value)}
-                    placeholder="⚠ Bắt buộc: giải thích lý do và hướng xử lý..."
-                    style={{...iSt,minHeight:52,resize:"vertical",boxSizing:"border-box",fontSize:12,marginTop:4,
-                      borderColor:needNote?"#E24B4A":"#ddd",background:needNote?"#FFF5F5":"#fff"}}/>
-                )}
+                {val===false&&<textarea value={ans[noteKey]} onChange={e=>set(noteKey,e.target.value)} placeholder="⚠ Bắt buộc: giải thích lý do và hướng xử lý..." style={{...iSt,minHeight:52,resize:"vertical",boxSizing:"border-box",fontSize:12,marginTop:4,borderColor:needNote?"#E24B4A":"#ddd"}}/>}
                 {val===true&&<div style={{fontSize:11,color:"#1D9E75",marginTop:4,fontWeight:600}}>✓ OK</div>}
               </div>
             );
           })}
         </div>
-        {/* Result + actions */}
         <div style={{padding:"0 18px 16px"}}>
-          {allAnswered&&(
-            <div style={{padding:"10px 14px",borderRadius:8,marginBottom:12,
-              background:allYes?"#EAF3DE":hasNo?"#FFF5F5":"#f8f8f8",
-              border:`1px solid ${allYes?"#1D9E75":hasNo?"#E24B4A":"#eee"}`}}>
-              {allYes
-                ?<div style={{fontSize:13,fontWeight:600,color:"#1D9E75"}}>✅ 4/4 Yes — Sẵn sàng chuyển sang Đang tìm NCC</div>
-                :<div style={{fontSize:13,fontWeight:600,color:"#E24B4A"}}>⚠ Có {FEASIBILITY_QS.filter(q=>ans[q.id]===false).length} điểm cần lưu ý — cần ghi giải thích đầy đủ trước khi tiếp tục</div>
-              }
-            </div>
-          )}
+          {allAnswered&&<div style={{padding:"10px 14px",borderRadius:8,marginBottom:12,background:allYes?"#EAF3DE":"#FFF5F5",border:`1px solid ${allYes?"#1D9E75":"#E24B4A"}`}}>
+            {allYes?<div style={{fontSize:13,fontWeight:600,color:"#1D9E75"}}>✅ 4/4 Yes — Sẵn sàng chuyển sang Đang tìm NCC</div>:<div style={{fontSize:13,fontWeight:600,color:"#E24B4A"}}>⚠ Có {FEASIBILITY_QS.filter(q=>ans[q.id]===false).length} điểm cần lưu ý</div>}
+          </div>}
           <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
             <button onClick={onClose} style={gBtn}>Hủy</button>
-            {allAnswered&&hasNo&&canSave&&(
-              <button onClick={()=>handleSave("feasibility_check")} style={{...pBtn,background:"#854F0B"}}>
-                {saving?<Spin/>:"Lưu & Giữ flag ⚠"}
-              </button>
-            )}
-            <button onClick={()=>handleSave()} disabled={!canSave||saving} style={{...pBtn,background:allYes?"#1D9E75":"#6D3AB7",opacity:canSave?1:.5}}>
-              {saving?<Spin/>:allYes?"✅ Xác nhận & Tìm NCC":"Lưu Pre-feasibility"}
-            </button>
+            {allAnswered&&hasNo&&canSave&&<button onClick={()=>handleSave("feasibility_check")} style={{...pBtn,background:"#854F0B"}}>{saving?<Spin/>:"Lưu & Giữ flag ⚠"}</button>}
+            <button onClick={()=>handleSave()} disabled={!canSave||saving} style={{...pBtn,background:allYes?"#1D9E75":"#6D3AB7",opacity:canSave?1:.5}}>{saving?<Spin/>:allYes?"✅ Xác nhận & Tìm NCC":"Lưu Pre-feasibility"}</button>
           </div>
         </div>
       </div>
@@ -523,18 +326,10 @@ function EmailDraft({r,sups,onClose}){
   const [email,setEmail]=useState("");const [copied,setCopied]=useState(false);
   const asgn=(sups||[]).filter(s=>(parseJ(r.sids)||[]).includes(s.id));
   useEffect(()=>{
-    const isInq=r.type==="inq";
-    const supName=asgn.length>0?asgn[0].name:"[Supplier Name]";
-    const mkts=(parseJ(r.markets)||[]).join(", ")||"TBC";
-    const today2=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+    const isInq=r.type==="inq";const supName=asgn.length>0?asgn[0].name:"[Supplier Name]";const mkts=(parseJ(r.markets)||[]).join(", ")||"TBC";const today2=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
     let subj,body;
-    if(isInq){
-      subj=`Subject: Hỏi thăm sản phẩm / Product Inquiry — ${r.desc||"[Sản phẩm]"} | VinaSources`;
-      body=`Kính gửi đội ngũ ${supName},\n\nTôi là [Tên] từ VinaSources. Chúng tôi đang tìm hiểu nguồn cung cho:\nSản phẩm: ${r.desc||"[Mô tả]"}\nThị trường: ${mkts}${r.deadline?`\nCần phản hồi trước: ${r.deadline}`:""}\n${r.notes?`\nThông tin thêm:\n${r.notes}`:""}\n\nTrân trọng,\n[Tên] | VinaSources | Zalo: [số]\n\n────────────────────────────────\n\nDear ${supName} Team,\n\nMy name is [Your Name] from VinaSources. We are exploring sourcing for:\nProduct: ${r.desc||"[Description]"}\nTarget Market(s): ${mkts}${r.deadline?`\nResponse needed by: ${r.deadline}`:""}\n${r.notes?`\nAdditional context:\n${r.notes}`:""}\n\nBest regards,\n[Your Name] | VinaSources | Zalo: [number]`;
-    }else{
-      subj=`Subject: Yêu cầu báo giá / RFQ — ${r.desc||"[Sản phẩm]"} (${r.code}) | VinaSources`;
-      body=`Kính gửi đội ngũ ${supName},\n\nTôi là [Tên] từ VinaSources. Chúng tôi muốn gửi yêu cầu báo giá:\n\n— THÔNG TIN RFQ —\nMã: ${r.code}\nSản phẩm: ${r.desc||"[Mô tả]"}\nThị trường: ${mkts}${r.qty?`\nSố lượng: ${r.qty}`:""}${r.price?`\nGiá mục tiêu: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.certs?`\nChứng nhận: ${r.certs}`:""}${r.deadline?`\nHạn báo giá: ${r.deadline}`:""}\n\nVui lòng cung cấp đơn giá kèm MOQ, lead time, điều khoản thanh toán.\n${r.notes?`\nYêu cầu bổ sung:\n${r.notes}`:""}\n\nTrân trọng,\n[Tên] | VinaSources | Ngày: ${today2}\n\n────────────────────────────────\n\nDear ${supName} Team,\n\nRFQ Code: ${r.code} | Product: ${r.desc||"[Description]"} | Market: ${mkts}${r.qty?` | Qty: ${r.qty}`:""}${r.price?` | Target: ${r.price}`:""}${r.incoterm?` | Incoterm: ${r.incoterm}`:""}\n${r.certs?`Certifications required: ${r.certs}\n`:""}${r.deadline?`Deadline: ${r.deadline}\n`:""}\nPlease provide unit price with MOQ, lead time, payment terms.\n${r.notes?`\nAdditional: ${r.notes}`:""}\n\nBest regards,\n[Your Name] | VinaSources | Date: ${today2}`;
-    }
+    if(isInq){subj=`Subject: Hỏi thăm sản phẩm / Product Inquiry — ${r.desc||"[Sản phẩm]"} | VinaSources`;body=`Kính gửi đội ngũ ${supName},\n\nTôi là [Tên] từ VinaSources. Chúng tôi đang tìm hiểu nguồn cung cho:\nSản phẩm: ${r.desc||"[Mô tả]"}\nThị trường: ${mkts}${r.deadline?`\nCần phản hồi trước: ${r.deadline}`:""}\n${r.notes?`\nThông tin thêm:\n${r.notes}`:""}\n\nTrân trọng,\n[Tên] | VinaSources\n\n────────\n\nDear ${supName} Team,\n\nProduct: ${r.desc||"[Description]"}\nMarket(s): ${mkts}\n\nBest regards,\n[Your Name] | VinaSources`;}
+    else{subj=`Subject: Yêu cầu báo giá / RFQ — ${r.desc||"[Sản phẩm]"} (${r.code}) | VinaSources`;body=`Kính gửi đội ngũ ${supName},\n\nMã: ${r.code}\nSản phẩm: ${r.desc||"[Mô tả]"}\nThị trường: ${mkts}${r.qty?`\nSố lượng: ${r.qty}`:""}${r.price?`\nGiá mục tiêu: ${r.price}`:""}${r.incoterm?`\nIncoterm: ${r.incoterm}`:""}${r.deadline?`\nHạn báo giá: ${r.deadline}`:""}\n\nTrân trọng,\n[Tên] | VinaSources | ${today2}`;}
     setEmail(subj+"\n\n"+body);
   },[]);
   const copy=()=>{navigator.clipboard.writeText(email);setCopied(true);setTimeout(()=>setCopied(false),2000);};
@@ -548,235 +343,104 @@ function EmailDraft({r,sups,onClose}){
           <button onClick={copy} style={{fontSize:12,padding:"5px 14px",borderRadius:6,border:"none",background:copied?"#1D9E75":"#185FA5",color:"#fff",cursor:"pointer",fontWeight:500}}>{copied?"✓ Đã copy":"Copy"}</button>
           <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa"}}>×</button>
         </div>
-        <div style={{padding:"14px 18px"}}>
-          <textarea value={email} onChange={e=>setEmail(e.target.value)} style={{width:"100%",minHeight:340,border:"1px solid #e5e5e5",borderRadius:8,padding:"12px 14px",fontSize:13,lineHeight:1.7,resize:"vertical",fontFamily:"inherit",color:"#1a1a1a",boxSizing:"border-box"}}/>
-          <div style={{fontSize:11,color:"#aaa",marginTop:6}}>✏️ Chỉnh sửa trực tiếp trước khi copy</div>
-        </div>
+        <div style={{padding:"14px 18px"}}><textarea value={email} onChange={e=>setEmail(e.target.value)} style={{width:"100%",minHeight:340,border:"1px solid #e5e5e5",borderRadius:8,padding:"12px 14px",fontSize:13,lineHeight:1.7,resize:"vertical",fontFamily:"inherit",color:"#1a1a1a",boxSizing:"border-box"}}/><div style={{fontSize:11,color:"#aaa",marginTop:6}}>✏️ Chỉnh sửa trực tiếp trước khi copy</div></div>
       </div>
     </div>
   );
 }
 
-// Auto-generate supIdMgt: VNS-000001, VNS-000002...
-const genSupIdMgt=sups=>{
-  const nums=sups.map(s=>{
-    const m=String(s.supIdMgt||"").match(/^VNS-(\d+)$/);
-    return m?parseInt(m[1]):0;
-  });
-  const next=Math.max(0,...nums)+1;
-  return"VNS-"+String(next).padStart(6,"0");
-};
-const SUP_CSV_FIELDS=["id","name","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","channel","contactName","zalo","email","certs","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
-
+// ── IMPORT/EXPORT ──
+const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","channel","contactName","zalo","email","certs","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
 function exportSupCSV(sups){
-  const header=SUP_CSV_FIELDS.join(",");
-  const esc=v=>{const s=String(v??""
-  );return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
-  const rows=sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","));
-  const csv=[header,...rows].join("\n");
+  const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
+  const csv=[SUP_CSV_FIELDS.join(","),...sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","))].join("\n");
   const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;a.download=`VinaSources_Suppliers_${today()}.csv`;a.click();
-  URL.revokeObjectURL(url);
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`VinaSources_Suppliers_${today()}.csv`;a.click();URL.revokeObjectURL(url);
 }
-
 function ImportModal({ctx,onClose}){
-  const {upsS,toast2}=ctx;
-  const [preview,setPreview]=useState(null);
-  const [importing,setImporting]=useState(false);
-  const [done,setDone]=useState(false);
-  const fileRef=useRef();
-
+  const {upsS,toast2}=ctx;const [preview,setPreview]=useState(null);const [importing,setImporting]=useState(false);const [done,setDone]=useState(false);const fileRef=useRef();
   const parseCSV=text=>{
-    const lines=text.split(/\r?\n/).filter(Boolean);
-    if(lines.length<2)return[];
+    const lines=text.split(/\r?\n/).filter(Boolean);if(lines.length<2)return[];
     const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
     return lines.slice(1).map(line=>{
       const vals=[];let cur="",inQ=false;
-      for(let i=0;i<line.length;i++){
-        if(line[i]==='"'){inQ=!inQ;}
-        else if(line[i]===","&&!inQ){vals.push(cur.trim());cur="";}
-        else cur+=line[i];
-      }
+      for(let i=0;i<line.length;i++){if(line[i]==='"'){inQ=!inQ;}else if(line[i]===","&&!inQ){vals.push(cur.trim());cur="";}else cur+=line[i];}
       vals.push(cur.trim());
-      const obj={};
-      headers.forEach((h,i)=>{obj[h]=(vals[i]||"").replace(/^"|"$/g,"").replace(/""/g,'"');});
-      return obj;
+      const obj={};headers.forEach((h,i)=>{obj[h]=(vals[i]||"").replace(/^"|"$/g,"").replace(/""/g,'"');});return obj;
     }).filter(r=>r.name);
   };
-
-  const handleFile=e=>{
-    const file=e.target.files[0];
-    if(!file)return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      const text=ev.target.result.replace(/^\uFEFF/,"");
-      const rows=parseCSV(text);
-      setPreview(rows);
-    };
-    reader.readAsText(file,"utf-8");
-  };
-
+  const handleFile=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{const text=ev.target.result.replace(/^\uFEFF/,"");setPreview(parseCSV(text));};reader.readAsText(file,"utf-8");};
   const handleImport=async()=>{
-    if(!preview?.length)return;
-    setImporting(true);
-    let ok=0;
-    for(const row of preview){
-      try{
-        const s=normSup({...newS(),...row,id:row.id||newId("s"),ca:row.ca||now(),ua:now()});
-        await upsS(s);ok++;
-      }catch(e){console.error(e);}
-    }
-    setImporting(false);setDone(true);
-    toast2&&toast2(`Đã import ${ok}/${preview.length} supplier`);
+    if(!preview?.length)return;setImporting(true);let ok=0;
+    for(const row of preview){try{const s=normSup({...newS(),...row,id:row.id||newId("s"),ca:row.ca||now(),ua:now()});await upsS(s);ok++;}catch(e){console.error(e);}}
+    setImporting(false);setDone(true);toast2&&toast2(`Đã import ${ok}/${preview.length} supplier`);
   };
-
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1100,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{width:"100%",maxWidth:560,marginTop:"2rem",marginBottom:"2rem",background:"#fff",borderRadius:12,border:"1px solid #e5e5e5",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
-        <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontWeight:600,fontSize:15}}>📥 Import Supplier từ CSV</span>
-          <button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa"}}>×</button>
-        </div>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontWeight:600,fontSize:15}}>📥 Import Supplier từ CSV</span><button onClick={onClose} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#aaa"}}>×</button></div>
         <div style={{padding:"16px 18px"}}>
-          {/* Instructions */}
           <div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#0F6E56",lineHeight:1.7}}>
-            <b>Định dạng CSV:</b> hàng đầu là header, các cột: <span style={{fontFamily:"monospace",background:"#E1F5EE",padding:"1px 4px",borderRadius:3}}>name, industry, products, province, stage</span>... Tải file mẫu từ nút Export trước để xem đúng format.
+            <b>Định dạng CSV:</b> hàng đầu là header. Tải file mẫu từ nút Export trước để xem đúng format.
           </div>
           <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} style={{display:"none"}}/>
-          <button onClick={()=>fileRef.current.click()} style={{...gBtn,width:"100%",marginBottom:12,padding:"10px",textAlign:"center"}}>
-            📂 Chọn file CSV...
-          </button>
-          {preview&&(
-            <div>
-              <div style={{fontSize:12,color:"#777",marginBottom:8}}>
-                Tìm thấy <b style={{color:"#1a1a1a"}}>{preview.length} supplier</b> — xem trước 3 dòng đầu:
-              </div>
-              <div style={{border:"1px solid #e5e5e5",borderRadius:8,overflow:"auto",maxHeight:160,marginBottom:12}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead><tr style={{background:"#f5f5f5"}}>{["Tên","Ngành","Tỉnh","Stage"].map(h=><th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:600,color:"#666",borderBottom:"1px solid #eee"}}>{h}</th>)}</tr></thead>
-                  <tbody>{preview.slice(0,3).map((r,i)=><tr key={i} style={{borderBottom:"1px solid #f5f5f5"}}>{[r.name,r.industry,r.province,r.stage].map((v,j)=><td key={j} style={{padding:"6px 10px",color:"#333"}}>{v||"—"}</td>)}</tr>)}</tbody>
-                </table>
-              </div>
-              {done
-                ?<div style={{textAlign:"center",padding:"10px",color:"#1D9E75",fontWeight:600,fontSize:13}}>✅ Import hoàn tất!</div>
-                :<button onClick={handleImport} disabled={importing} style={{...pBtn,width:"100%",padding:"10px",fontSize:13}}>
-                  {importing?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Spin/>Đang import...</span>:`Import ${preview.length} supplier`}
-                </button>
-              }
+          <button onClick={()=>fileRef.current.click()} style={{...gBtn,width:"100%",marginBottom:12,padding:"10px",textAlign:"center"}}>📂 Chọn file CSV...</button>
+          {preview&&<div>
+            <div style={{fontSize:12,color:"#777",marginBottom:8}}>Tìm thấy <b style={{color:"#1a1a1a"}}>{preview.length} supplier</b> — xem trước 3 dòng:</div>
+            <div style={{border:"1px solid #e5e5e5",borderRadius:8,overflow:"auto",maxHeight:160,marginBottom:12}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead><tr style={{background:"#f5f5f5"}}>{["Tên","Ngành","Tỉnh","Stage"].map(h=><th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:600,color:"#666",borderBottom:"1px solid #eee"}}>{h}</th>)}</tr></thead>
+                <tbody>{preview.slice(0,3).map((r,i)=><tr key={i} style={{borderBottom:"1px solid #f5f5f5"}}>{[r.name,r.industry,r.province,r.stage].map((v,j)=><td key={j} style={{padding:"6px 10px",color:"#333"}}>{v||"—"}</td>)}</tr>)}</tbody>
+              </table>
             </div>
-          )}
+            {done?<div style={{textAlign:"center",padding:"10px",color:"#1D9E75",fontWeight:600,fontSize:13}}>✅ Import hoàn tất!</div>:<button onClick={handleImport} disabled={importing} style={{...pBtn,width:"100%",padding:"10px",fontSize:13}}>{importing?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Spin/>Đang import...</span>:`Import ${preview.length} supplier`}</button>}
+          </div>}
         </div>
       </div>
     </div>
   );
 }
+
+// ── APP ──
 function App(){
   const [canEdit,setCanEdit]=useState(localStorage.getItem(AUTH_KEY)==="1");
-  const [sups,setSups]=useState([]);
-  const [rfqs,setRfqs]=useState([]);
-  const [orders,setOrders]=useState([]);
-  const [tab,setTab]=useState("list");
-  const [modal,setModal]=useState(null);
-  const [toast,setToast]=useState(null);
-  const [loading,setLoading]=useState(true);
-  const [saving,setSaving]=useState(false);
-  const [syncErr,setSyncErr]=useState(false);
-
+  const [sups,setSups]=useState([]);const [rfqs,setRfqs]=useState([]);const [orders,setOrders]=useState([]);
+  const [tab,setTab]=useState("list");const [modal,setModal]=useState(null);const [toast,setToast]=useState(null);
+  const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);const [syncErr,setSyncErr]=useState(false);
   useEffect(()=>{
     Promise.all([apiGetAll("Suppliers"),apiGetAll("RFQs"),apiGetAll("Orders")])
-      .then(([s,r,o])=>{
-        setSups((s.data||[]).map(normSup));
-        setRfqs((r.data||[]).map(normRfq));
-        setOrders((o.data||[]).map(normOrd));
-        setLoading(false);
-      })
+      .then(([s,r,o])=>{setSups((s.data||[]).map(normSup));setRfqs((r.data||[]).map(normRfq));setOrders((o.data||[]).map(normOrd));setLoading(false);})
       .catch(()=>{setSyncErr(true);setLoading(false);});
   },[]);
-
   const toast2=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
-
-  const upsS=async s=>{
-    const u={...s,ua:now()};setSaving(true);
-    try{
-      await apiUpsert("Suppliers",serSup(u));
-      setSups(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});
-      toast2(sups.find(x=>x.id===u.id)?"Đã cập nhật":"Đã thêm supplier");
-    }finally{setSaving(false);}
-    setModal(null);
-  };
-  const delS=async id=>{
-    if(!confirm("Xóa supplier này?"))return;setSaving(true);
-    try{await apiDelete("Suppliers",id);setSups(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}
-    setModal(null);toast2("Đã xóa");
-  };
-  const upsR=async r=>{
-    const u={...r,ua:now()};setSaving(true);
-    try{
-      await apiUpsert("RFQs",serRfq(u));
-      setRfqs(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});
-      toast2(rfqs.find(x=>x.id===u.id)?"Đã cập nhật":"Đã tạo");
-    }finally{setSaving(false);}
-    setModal(null);
-  };
-  const delR=async id=>{
-    if(!confirm("Xóa?"))return;setSaving(true);
-    try{await apiDelete("RFQs",id);setRfqs(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}
-    setModal(null);toast2("Đã xóa");
-  };
-  const upsO=async o=>{
-    const u={...o,ua:now()};setSaving(true);
-    try{
-      await apiUpsert("Orders",u);
-      setOrders(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});
-      toast2(orders.find(x=>x.id===u.id)?"Đã cập nhật order":"Đã tạo order");
-    }finally{setSaving(false);}
-    setModal(null);
-  };
-  const delO=async id=>{
-    if(!confirm("Xóa order?"))return;setSaving(true);
-    try{await apiDelete("Orders",id);setOrders(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}
-    setModal(null);toast2("Đã xóa");
-  };
+  const upsS=async s=>{const u={...s,ua:now()};setSaving(true);try{await apiUpsert("Suppliers",serSup(u));setSups(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});toast2(sups.find(x=>x.id===u.id)?"Đã cập nhật":"Đã thêm supplier");}finally{setSaving(false);}setModal(null);};
+  const delS=async id=>{if(!confirm("Xóa supplier này?"))return;setSaving(true);try{await apiDelete("Suppliers",id);setSups(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}setModal(null);toast2("Đã xóa");};
+  const upsR=async r=>{const u={...r,ua:now()};setSaving(true);try{await apiUpsert("RFQs",serRfq(u));setRfqs(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});toast2(rfqs.find(x=>x.id===u.id)?"Đã cập nhật":"Đã tạo");}finally{setSaving(false);}setModal(null);};
+  const delR=async id=>{if(!confirm("Xóa?"))return;setSaving(true);try{await apiDelete("RFQs",id);setRfqs(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}setModal(null);toast2("Đã xóa");};
+  const upsO=async o=>{const u={...o,ua:now()};setSaving(true);try{await apiUpsert("Orders",u);setOrders(p=>{const i=p.findIndex(x=>x.id===u.id);return i>=0?p.map((x,j)=>j===i?u:x):[u,...p];});toast2(orders.find(x=>x.id===u.id)?"Đã cập nhật order":"Đã tạo order");}finally{setSaving(false);}setModal(null);};
+  const delO=async id=>{if(!confirm("Xóa order?"))return;setSaving(true);try{await apiDelete("Orders",id);setOrders(p=>p.filter(x=>x.id!==id));}finally{setSaving(false);}setModal(null);toast2("Đã xóa");};
   const logout=()=>{localStorage.removeItem(AUTH_KEY);setCanEdit(false);};
-
   if(loading)return<div style={{padding:"2rem",color:"#666",display:"flex",alignItems:"center",gap:12}}><Spin/><span>Đang kết nối Google Sheets...</span></div>;
-
   const ctx={sups,rfqs,orders,upsS,delS,upsR,delR,upsO,delO,setModal,toast2,canEdit,setSups,saving};
-
   return(
     <div style={{minHeight:"100vh",background:"#f0f0f0"}}>
       {toast&&<div style={{position:"fixed",top:14,right:14,background:"#1D9E75",color:"#fff",padding:"10px 20px",borderRadius:8,fontSize:13,zIndex:9999,fontWeight:500,boxShadow:"0 2px 12px rgba(0,0,0,0.15)"}}>{toast}</div>}
       {saving&&<div style={{position:"fixed",bottom:14,right:14,background:"#185FA5",color:"#fff",padding:"7px 14px",borderRadius:6,fontSize:12,zIndex:9999}}>💾 Đang lưu...</div>}
       {syncErr&&<div style={{background:"#FCEBEB",borderBottom:"1px solid #E24B4A",padding:"8px 1rem",fontSize:13,color:"#A32D2D",textAlign:"center"}}>⚠ Không kết nối được Google Sheets</div>}
       {!canEdit&&<LoginBanner onLogin={()=>setCanEdit(true)}/>}
-
-      {/* ── NAV BAR ── */}
       <div style={{background:"#fff",borderBottom:"1px solid #e5e5e5",padding:"0 1rem"}}>
         <div style={{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",gap:2}}>
           <span style={{fontWeight:700,fontSize:14,color:"#1D9E75",paddingRight:14,borderRight:"1px solid #eee",marginRight:6}}>🏭 VinaSources</span>
-
-          {/* Internal tabs */}
           {[{id:"list",l:"Supplier DB"},{id:"rfq",l:"RFQ/INQ"},{id:"orders",l:"Orders"},{id:"kraljic",l:"Kraljic"},{id:"dash",l:"Dashboard"}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"13px 11px",fontSize:13,cursor:"pointer",color:tab===t.id?"#1a1a1a":"#777",borderBottom:tab===t.id?"2px solid #1D9E75":"2px solid transparent",fontWeight:tab===t.id?600:400,position:"relative"}}>
               {t.l}
-              {t.id==="rfq"&&rfqs.filter(r=>["new","searching"].includes(r.status)).length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>["new","searching"].includes(r.status)).length}</span>}
+              {t.id==="rfq"&&rfqs.filter(r=>["new","searching","feasibility_check"].includes(r.status)).length>0&&<span style={{position:"absolute",top:7,right:0,background:"#E24B4A",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{rfqs.filter(r=>["new","searching","feasibility_check"].includes(r.status)).length}</span>}
               {t.id==="orders"&&orders.filter(o=>o.stage!=="closed").length>0&&<span style={{position:"absolute",top:7,right:0,background:"#534AB7",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"0 5px"}}>{orders.filter(o=>o.stage!=="closed").length}</span>}
             </button>
           ))}
-
-          {/* ── Divider + External tool links ── */}
           <div style={{width:1,height:20,background:"#e5e5e5",margin:"0 8px",flexShrink:0}}/>
-          <a href="qc-tracker.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #BA7517",color:"#BA7517",fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}
-            onMouseEnter={e=>{e.currentTarget.style.background="#FFF3DC";}} onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
-            🔍 QC Tracker
-          </a>
-          <a href="bienban.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #185FA5",color:"#185FA5",fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}
-            onMouseEnter={e=>{e.currentTarget.style.background="#E6F1FB";}} onMouseLeave={e=>{e.currentTarget.style.background="none";}}>
-            📄 Biên bản
-          </a>
-
+          <a href="qc-tracker.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #BA7517",color:"#BA7517",fontSize:12,fontWeight:600,textDecoration:"none"}} onMouseEnter={e=>e.currentTarget.style.background="#FFF3DC"} onMouseLeave={e=>e.currentTarget.style.background="none"}>🔍 QC Tracker</a>
+          <a href="bienban.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #185FA5",color:"#185FA5",fontSize:12,fontWeight:600,textDecoration:"none"}} onMouseEnter={e=>e.currentTarget.style.background="#E6F1FB"} onMouseLeave={e=>e.currentTarget.style.background="none"}>📄 Biên bản</a>
           <div style={{flex:1}}/>
           {canEdit?(<>
             <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
@@ -787,7 +451,6 @@ function App(){
           </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
         </div>
       </div>
-
       <div style={{maxWidth:960,margin:"0 auto",padding:"1rem"}}>
         {tab==="list"&&<SupList ctx={ctx}/>}
         {tab==="rfq"&&<RFQList ctx={ctx}/>}
@@ -797,8 +460,8 @@ function App(){
       </div>
       {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
-      {modal?.t==="prescore"&&canEdit&&<Modal onClose={()=>setModal(null)}><PreScoreChecklist supplier={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="prescore"&&canEdit&&<Modal onClose={()=>setModal(null)}><PreScoreChecklist supplier={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="brief"&&<Modal onClose={()=>setModal(null)}><Brief s={modal.d}/></Modal>}
       {modal?.t==="rfq-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><RFQForm r={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="rfq-detail"&&<Modal onClose={()=>setModal(null)}><RFQDetail r={modal.d} ctx={ctx}/></Modal>}
@@ -832,21 +495,16 @@ function LoginBanner({onLogin}){
 function SupList({ctx}){
   const {sups,setModal,canEdit}=ctx;
   const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
-  const [page,setPage]=useState(1);
-  const [showImport,setShowImport]=useState(false);
+  const [page,setPage]=useState(1);const [showImport,setShowImport]=useState(false);
   const PAGE_SIZE=50;
   const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))];
   const fl=useMemo(()=>sups.filter(s=>{
     const ti=calcTier(s.vserf);
     return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   }),[sups,q,fT,fI,fS]);
-
-  // Reset page khi filter thay đổi
   const setFilter=(fn)=>(...args)=>{fn(...args);setPage(1);};
-
   const totalPages=Math.max(1,Math.ceil(fl.length/PAGE_SIZE));
   const paginated=fl.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
-
   return(
     <div>
       {showImport&&<ImportModal ctx={ctx} onClose={()=>setShowImport(false)}/>}
@@ -857,7 +515,7 @@ function SupList({ctx}){
         <Sel val={fS} onChange={setFilter(setFS)} opts={[["all","Tất cả Stage"],...STAGES.map(s=>[s.id,s.label])]}/>
       </div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:6}}>
-        <span style={{fontSize:12,color:"#aaa"}}>{fl.length} supplier{fl.length!==sups.length?` (lọc từ ${sups.length})`:""} · Google Sheets{totalPages>1?` · Trang ${page}/${totalPages}`:""}</span>
+        <span style={{fontSize:12,color:"#aaa"}}>{fl.length} supplier{fl.length!==sups.length?` (lọc từ ${sups.length})`:""}{totalPages>1?` · Trang ${page}/${totalPages}`:""}</span>
         <div style={{display:"flex",gap:6}}>
           <button onClick={()=>exportSupCSV(sups)} style={{...gBtn,fontSize:11,padding:"4px 10px",color:"#1D9E75",borderColor:"#1D9E75"}}>⬇ Export CSV</button>
           {canEdit&&<button onClick={()=>setShowImport(true)} style={{...gBtn,fontSize:11,padding:"4px 10px",color:"#185FA5",borderColor:"#185FA5"}}>⬆ Import CSV</button>}
@@ -882,21 +540,10 @@ function SupList({ctx}){
           );
         })}
       </div>
-      {/* Pagination */}
       {totalPages>1&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:14,flexWrap:"wrap"}}>
         <button onClick={()=>setPage(1)} disabled={page===1} style={{...gBtn,padding:"5px 10px",fontSize:12,opacity:page===1?.4:1}}>«</button>
         <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} style={{...gBtn,padding:"5px 12px",fontSize:12,opacity:page===1?.4:1}}>‹ Trước</button>
-        {Array.from({length:totalPages},(_,i)=>i+1)
-          .filter(p=>p===1||p===totalPages||Math.abs(p-page)<=2)
-          .reduce((acc,p,i,arr)=>{
-            if(i>0&&p-arr[i-1]>1)acc.push("...");
-            acc.push(p);return acc;
-          },[])
-          .map((p,i)=>p==="..."
-            ?<span key={"e"+i} style={{fontSize:12,color:"#aaa",padding:"0 4px"}}>…</span>
-            :<button key={p} onClick={()=>setPage(p)} style={{...gBtn,padding:"5px 10px",fontSize:12,minWidth:32,background:page===p?"#1D9E75":"none",color:page===p?"#fff":"#555",border:page===p?"none":"1px solid #ddd",fontWeight:page===p?700:400}}>{p}</button>
-          )
-        }
+        {Array.from({length:totalPages},(_,i)=>i+1).filter(p=>p===1||p===totalPages||Math.abs(p-page)<=2).reduce((acc,p,i,arr)=>{if(i>0&&p-arr[i-1]>1)acc.push("...");acc.push(p);return acc;},[]).map((p,i)=>p==="..."?<span key={"e"+i} style={{fontSize:12,color:"#aaa",padding:"0 4px"}}>…</span>:<button key={p} onClick={()=>setPage(p)} style={{...gBtn,padding:"5px 10px",fontSize:12,minWidth:32,background:page===p?"#1D9E75":"none",color:page===p?"#fff":"#555",border:page===p?"none":"1px solid #ddd",fontWeight:page===p?700:400}}>{p}</button>)}
         <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages} style={{...gBtn,padding:"5px 12px",fontSize:12,opacity:page===totalPages?.4:1}}>Tiếp ›</button>
         <button onClick={()=>setPage(totalPages)} disabled={page===totalPages} style={{...gBtn,padding:"5px 10px",fontSize:12,opacity:page===totalPages?.4:1}}>»</button>
       </div>}
@@ -906,8 +553,7 @@ function SupList({ctx}){
 
 function SupDetail({s,ctx}){
   const {setModal,delS,canEdit,orders}=ctx;
-  const ti=calcTier(s.vserf);
-  const perf=calcSupPerf(s.id,orders||[]);
+  const ti=calcTier(s.vserf);const perf=calcSupPerf(s.id,orders||[]);
   const ptColor=s.partnerType==="Đối tác trực tiếp"?"#3B6D11":s.partnerType==="Đối tác nền tảng"?"#185FA5":"#aaa";
   const ptBg=s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":s.partnerType==="Đối tác nền tảng"?"#E6F1FB":"#f0f0f0";
   return(
@@ -926,6 +572,38 @@ function SupDetail({s,ctx}){
           <span style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:ptBg,color:ptColor,fontWeight:600}}>{s.partnerType||"Chưa xác định"}</span>
         </div>
       </div>
+      {/* Pre-score breakdown */}
+      {Object.keys(s.prescore||{}).length>0&&(()=>{
+        const ps=s.prescore||{};
+        const PRESCORE_IDS=PRESCORE_CRITERIA.map(c=>c.id);
+        const vals=PRESCORE_IDS.map(id=>parseInt(ps[id])||0);
+        const answered=PRESCORE_IDS.filter(id=>ps[id]!==undefined&&ps[id]!==null&&ps[id]!=="").length;
+        const tot=vals.reduce((a,b)=>a+b,0);
+        if(answered===0)return null;
+        const v=tot>=24?{label:"Có triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}:tot>=15?{label:"Cần xác minh thêm",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}:{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};
+        return(
+          <div style={{border:`1px solid ${v.c}`,borderRadius:10,marginBottom:12,overflow:"hidden"}}>
+            <div style={{background:v.bg,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:16}}>{v.icon}</span>
+              <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:v.c}}>Pre-score: {tot}/30 — {v.label}</div><div style={{fontSize:11,color:"#777",marginTop:1}}>{answered}/6 tiêu chí đã chấm</div></div>
+              {canEdit&&<button onClick={()=>setModal({t:"prescore",d:s})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${v.c}`,background:"#fff",color:v.c,cursor:"pointer",fontWeight:600}}>Cập nhật</button>}
+            </div>
+            <div style={{padding:"10px 14px",background:"#fff",display:"grid",gap:6}}>
+              {PRESCORE_CRITERIA.map(c=>{
+                const score=parseInt(ps[c.id])||0;const hasVal=ps[c.id]!==undefined&&ps[c.id]!=="";const pct=Math.round(score/5*100);
+                const barC=score>=4?"#1D9E75":score>=3?"#185FA5":score>=2?"#854F0B":"#E24B4A";
+                return(
+                  <div key={c.id} style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:12,color:"#555",width:220,flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.icon} {c.label}</span>
+                    <div style={{flex:1,height:6,background:"#f0f0f0",borderRadius:3,overflow:"hidden"}}>{hasVal&&<div style={{height:"100%",width:pct+"%",background:barC,borderRadius:3}}/>}</div>
+                    <span style={{fontSize:12,fontWeight:700,width:28,textAlign:"right",flexShrink:0,color:hasVal?barC:"#ccc"}}>{hasVal?`${score}/5`:"—"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
       {perf&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <div style={{fontSize:12,fontWeight:600,color:"#0F6E56",marginBottom:6}}>📦 Supplier Performance ({perf.orders} orders)</div>
         <div style={{display:"flex",gap:20,flexWrap:"wrap",fontSize:13,alignItems:"center"}}>
@@ -942,49 +620,6 @@ function SupDetail({s,ctx}){
       </div>
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
-      {/* Pre-score summary if exists */}
-      {Object.keys(s.prescore||{}).length>0&&(()=>{
-        const ps=s.prescore||{};
-        const PRESCORE_IDS=PRESCORE_CRITERIA.map(c=>c.id);
-        const vals=PRESCORE_IDS.map(id=>parseInt(ps[id])||0);
-        const answered=PRESCORE_IDS.filter(id=>ps[id]!==undefined&&ps[id]!==null&&ps[id]!=="").length;
-        const tot=vals.reduce((a,b)=>a+b,0);
-        if(answered===0)return null;
-        const v=tot>=24?{label:"Có triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}
-          :tot>=15?{label:"Cần xác minh thêm",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}
-          :{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};
-        return(
-          <div style={{border:`1px solid ${v.c}`,borderRadius:10,marginBottom:12,overflow:"hidden"}}>
-            {/* Header */}
-            <div style={{background:v.bg,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:16}}>{v.icon}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:700,color:v.c}}>Pre-score: {tot}/30 — {v.label}</div>
-                <div style={{fontSize:11,color:"#777",marginTop:1}}>{answered}/6 tiêu chí đã chấm</div>
-              </div>
-              {canEdit&&<button onClick={()=>setModal({t:"prescore",d:s})} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${v.c}`,background:"#fff",color:v.c,cursor:"pointer",fontWeight:600}}>Cập nhật</button>}
-            </div>
-            {/* Breakdown từng tiêu chí */}
-            <div style={{padding:"10px 14px",background:"#fff",display:"grid",gap:6}}>
-              {PRESCORE_CRITERIA.map(c=>{
-                const score=parseInt(ps[c.id])||0;
-                const hasVal=ps[c.id]!==undefined&&ps[c.id]!=="";
-                const pct=Math.round(score/5*100);
-                const barC=score>=4?"#1D9E75":score>=3?"#185FA5":score>=2?"#854F0B":"#E24B4A";
-                return(
-                  <div key={c.id} style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:12,color:"#555",width:220,flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.icon} {c.label}</span>
-                    <div style={{flex:1,height:6,background:"#f0f0f0",borderRadius:3,overflow:"hidden"}}>
-                      {hasVal&&<div style={{height:"100%",width:pct+"%",background:barC,borderRadius:3,transition:"width .3s"}}/>}
-                    </div>
-                    <span style={{fontSize:12,fontWeight:700,width:28,textAlign:"right",flexShrink:0,color:hasVal?barC:"#ccc"}}>{hasVal?`${score}/5`:"—"}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         {canEdit&&<button onClick={()=>setModal({t:"sup-form",d:s})} style={gBtn}>Sửa</button>}
         {canEdit&&<button onClick={()=>setModal({t:"prescore",d:s})} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>🔍 Pre-score</button>}
@@ -1000,26 +635,14 @@ function SupForm({s,ctx}){
   const {upsS,setModal,sups}=ctx;
   const [f,setF]=useState({...s,vserf:typeof s.vserf==="object"?s.vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
-
-  // Check trùng supIdMgt (bỏ qua chính nó khi edit)
   const mgtDup=f.supIdMgt&&sups.some(x=>x.id!==f.id&&x.supIdMgt===f.supIdMgt);
   const pltDup=f.supIdPlatform&&sups.some(x=>x.id!==f.id&&x.supIdPlatform===f.supIdPlatform);
   return(
     <Card>
       <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
-      <Sec title="Thông tin cơ bản">
-        <Rw l="Supplier ID (Mgt)">
-          <div>
-            <input value={f.supIdMgt||""} onChange={e=>set("supIdMgt",e.target.value)} placeholder="VNS-000001..." style={{...iSt,borderColor:mgtDup?"#E24B4A":"#ddd"}}/>
-            {mgtDup&&<div style={{fontSize:11,color:"#E24B4A",marginTop:3}}>⚠ ID này đã tồn tại — {sups.find(x=>x.supIdMgt===f.supIdMgt)?.name}</div>}
-          </div>
-        </Rw>
-        <Rw l="Supplier ID (Platform)">
-          <div>
-            <input value={f.supIdPlatform||""} onChange={e=>set("supIdPlatform",e.target.value)} placeholder="A000000..." style={{...iSt,borderColor:pltDup?"#E24B4A":"#ddd"}}/>
-            {pltDup&&<div style={{fontSize:11,color:"#E24B4A",marginTop:3}}>⚠ Platform ID này đã tồn tại — {sups.find(x=>x.supIdPlatform===f.supIdPlatform)?.name}</div>}
-          </div>
-        </Rw>
+      <Sec title="ID & Thông tin cơ bản">
+        <Rw l="Supplier ID (Mgt)"><div><input value={f.supIdMgt||""} onChange={e=>set("supIdMgt",e.target.value)} placeholder="VNS-000001..." style={{...iSt,borderColor:mgtDup?"#E24B4A":"#ddd"}}/>{mgtDup&&<div style={{fontSize:11,color:"#E24B4A",marginTop:3}}>⚠ ID đã tồn tại — {sups.find(x=>x.supIdMgt===f.supIdMgt)?.name}</div>}</div></Rw>
+        <Rw l="Supplier ID (Platform)"><div><input value={f.supIdPlatform||""} onChange={e=>set("supIdPlatform",e.target.value)} placeholder="A000000..." style={{...iSt,borderColor:pltDup?"#E24B4A":"#ddd"}}/>{pltDup&&<div style={{fontSize:11,color:"#E24B4A",marginTop:3}}>⚠ Platform ID đã tồn tại — {sups.find(x=>x.supIdPlatform===f.supIdPlatform)?.name}</div>}</div></Rw>
         <Rw l="Tên công ty *"><input value={f.name||""} onChange={e=>set("name",e.target.value)} style={iSt}/></Rw>
         <Rw l="Mô hình KD"><select value={f.bizModel||""} onChange={e=>set("bizModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BIZ_MODELS.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
@@ -1051,74 +674,8 @@ function SupForm({s,ctx}){
         <Rw l="Stage"><select value={f.stage||"B1"} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-        <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-        <button onClick={()=>upsS(f)} disabled={mgtDup||pltDup} style={{...pBtn,opacity:mgtDup||pltDup?.5:1}}>Lưu</button>
-      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsS(f)} disabled={mgtDup||pltDup} style={{...pBtn,opacity:mgtDup||pltDup?.5:1}}>Lưu</button></div>
     </Card>
-  );
-}
-
-// ── SHARED CHECKLIST ENGINE ──
-function ChecklistEngine({criteria,scores,setScores,maxPer=5,mandatoryIds=[],title,accentColor="#1D9E75",accentBg="#EAF3DE"}){
-  const [hints,setHints]=useState({});
-  const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
-  const answered=criteria.filter(c=>scores[c.id]!==undefined).length;
-  const pct=Math.round(answered/criteria.length*100);
-  const isMandatoryFail=mandatoryIds.some(id=>(scores[id]??0)<3);
-  const maxTotal=criteria.length*maxPer;
-  return(
-    <div>
-      {/* Progress */}
-      <div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
-          <span style={{color:"#777"}}>{answered}/{criteria.length} tiêu chí đã chấm</span>
-          <span style={{fontWeight:700,color:accentColor}}>{total}/{maxTotal} điểm</span>
-        </div>
-        <div style={{height:6,background:"#e5e5e5",borderRadius:3,overflow:"hidden"}}>
-          <div style={{height:"100%",width:pct+"%",background:accentColor,borderRadius:3,transition:"width .3s"}}/>
-        </div>
-      </div>
-      {isMandatoryFail&&<div style={{background:"#FCEBEB",border:"1px solid #E24B4A",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#A32D2D"}}>
-        ⚠ Tiêu chí bắt buộc chưa đạt ≥ 3 điểm → kết quả sẽ là <b>Not Qualified</b>
-      </div>}
-      {/* Criteria */}
-      {criteria.map(c=>{
-        const val=scores[c.id];
-        const done=val!==undefined;
-        const isMand=mandatoryIds.includes(c.id);
-        const isWarn=isMand&&(val??0)<3&&done;
-        return(
-          <div key={c.id} style={{border:`1.5px solid ${isWarn?"#E24B4A":done?accentColor:"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",marginBottom:8,background:done?accentBg:"#fff",transition:"all .2s"}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8}}>
-              <div style={{width:28,height:28,borderRadius:"50%",background:done?accentColor:"#f0f0f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:done?"#fff":"#aaa",flexShrink:0}}>{done?val:"?"}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                  <span style={{fontSize:13,fontWeight:600}}>{c.icon} {c.label}</span>
-                  {isMand&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#FCEBEB",color:"#A32D2D",fontWeight:600}}>bắt buộc ≥3</span>}
-                  {done&&<span style={{fontSize:11,padding:"1px 7px",borderRadius:3,background:accentColor,color:"#fff",fontWeight:600,marginLeft:"auto"}}>{val}/{maxPer}</span>}
-                </div>
-                <div style={{fontSize:11,color:"#999",marginTop:2}}>{c.desc}</div>
-              </div>
-              <button onClick={()=>setHints(h=>({...h,[c.id]:!h[c.id]}))} style={{fontSize:11,padding:"2px 7px",borderRadius:4,border:"1px solid #e5e5e5",background:"none",cursor:"pointer",color:"#aaa",flexShrink:0}}>💡</button>
-            </div>
-            {hints[c.id]&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:7,padding:"8px 11px",marginBottom:8,fontSize:12,color:"#5C4000",lineHeight:1.6}}>{c.hint}</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {c.opts.map(opt=>{
-                const sel=val===opt.p;
-                return(
-                  <label key={opt.p} onClick={()=>setScores(s=>({...s,[c.id]:opt.p}))} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",borderRadius:7,border:`1px solid ${sel?accentColor:"#e5e5e5"}`,background:sel?"#fff":"#fff",cursor:"pointer",opacity:sel?1:0.85}}>
-                    <input type="radio" readOnly checked={sel} style={{marginTop:3,accentColor,flexShrink:0}}/>
-                    <span style={{fontSize:12,lineHeight:1.5,flex:1,color:"#333"}}>{opt.t}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:sel?accentColor:"#ccc",flexShrink:0,minWidth:40,textAlign:"right"}}>{opt.p} đ</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
@@ -1130,32 +687,15 @@ function VSERFChecklist({supplier,ctx}){
   const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
   const answered=VSERF_CRITERIA.filter(c=>scores[c.id]!==undefined).length;
   const ti=calcTier(Object.fromEntries(Object.entries(scores).map(([k,v])=>[k,v??0])));
-  const handleSave=async()=>{
-    const merged={...Object.fromEntries(VSERF_CRITERIA.map(c=>[c.id,scores[c.id]??0]))};
-    await upsS({...supplier,vserf:merged});
-    toast2&&toast2("Đã lưu VSERF");
-  };
+  const handleSave=async()=>{const merged=Object.fromEntries(VSERF_CRITERIA.map(c=>[c.id,scores[c.id]??0]));await upsS({...supplier,vserf:merged});toast2&&toast2("Đã lưu VSERF");};
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <h2 style={{fontSize:15,fontWeight:600,margin:0}}>📋 VSERF — {supplier.name}</h2>
-        {answered===9&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:8,background:ti.bg,border:`1.5px solid ${ti.c}`}}>
-          <span style={{fontSize:20,fontWeight:800,color:ti.c}}>{total}/45</span>
-          <span style={{fontSize:13,fontWeight:700,color:ti.c}}>{ti.label}</span>
-        </div>}
+        {answered===9&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:8,background:ti.bg,border:`1.5px solid ${ti.c}`}}><span style={{fontSize:20,fontWeight:800,color:ti.c}}>{total}/45</span><span style={{fontSize:13,fontWeight:700,color:ti.c}}>{ti.label}</span></div>}
       </div>
-      <ChecklistEngine
-        criteria={VSERF_CRITERIA}
-        scores={scores}
-        setScores={setScores}
-        mandatoryIds={["phap_ly","san_xuat"]}
-        accentColor="#1D9E75"
-        accentBg="#F0FDF9"
-      />
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
-        <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
-        <button onClick={handleSave} style={pBtn}>Lưu VSERF</button>
-      </div>
+      <ChecklistEngine criteria={VSERF_CRITERIA} scores={scores} setScores={setScores} mandatoryIds={["phap_ly","san_xuat"]} accentColor="#1D9E75" accentBg="#F0FDF9"/>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}><button onClick={()=>setModal(null)} style={gBtn}>Đóng</button><button onClick={handleSave} style={pBtn}>Lưu VSERF</button></div>
     </Card>
   );
 }
@@ -1167,43 +707,18 @@ function PreScoreChecklist({supplier,ctx}){
   const [scores,setScores]=useState(initScores);
   const total=Object.values(scores).reduce((a,b)=>a+(b??0),0);
   const answered=PRESCORE_CRITERIA.filter(c=>scores[c.id]!==undefined).length;
-  // Pre-score verdict
-  const getVerdict=()=>{
-    if(answered<5)return null;
-    if(total>=24)return{label:"Có triển vọng — đưa vào Longlist",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"};
-    if(total>=15)return{label:"Cần xác minh thêm — theo dõi",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"};
-    return{label:"Loại sớm — không đủ điều kiện",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};
-  };
+  const getVerdict=()=>{if(answered<5)return null;if(total>=24)return{label:"Có triển vọng — đưa vào Longlist",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"};if(total>=15)return{label:"Cần xác minh thêm — theo dõi",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"};return{label:"Loại sớm — không đủ điều kiện",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"};};
   const verdict=getVerdict();
-  const handleSave=async()=>{
-    const merged=Object.fromEntries(PRESCORE_CRITERIA.map(c=>[c.id,scores[c.id]??0]));
-    await upsS({...supplier,prescore:JSON.stringify(merged)});
-    toast2&&toast2("Đã lưu Pre-score");
-  };
+  const handleSave=async()=>{const merged=Object.fromEntries(PRESCORE_CRITERIA.map(c=>[c.id,scores[c.id]??0]));await upsS({...supplier,prescore:JSON.stringify(merged)});toast2&&toast2("Đã lưu Pre-score");};
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,flexWrap:"wrap",gap:8}}>
         <h2 style={{fontSize:15,fontWeight:600,margin:0}}>🔍 Pre-score — {supplier.name}</h2>
-        {verdict&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",borderRadius:8,background:verdict.bg,border:`1.5px solid ${verdict.c}`}}>
-          <span style={{fontSize:13}}>{verdict.icon}</span>
-          <span style={{fontSize:12,fontWeight:700,color:verdict.c}}>{verdict.label}</span>
-        </div>}
+        {verdict&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",borderRadius:8,background:verdict.bg,border:`1.5px solid ${verdict.c}`}}><span style={{fontSize:13}}>{verdict.icon}</span><span style={{fontSize:12,fontWeight:700,color:verdict.c}}>{verdict.label}</span></div>}
       </div>
-      <div style={{fontSize:12,color:"#777",marginBottom:12,padding:"8px 12px",background:"#f8f8f8",borderRadius:7}}>
-        📌 Đánh giá từ xa — chỉ dùng thông tin công khai: website, Alibaba, mạng xã hội, báo ngành, tra MST.
-      </div>
-      <ChecklistEngine
-        criteria={PRESCORE_CRITERIA}
-        scores={scores}
-        setScores={setScores}
-        mandatoryIds={[]}
-        accentColor="#534AB7"
-        accentBg="#F5F4FF"
-      />
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
-        <button onClick={()=>setModal(null)} style={gBtn}>Đóng</button>
-        <button onClick={handleSave} style={{...pBtn,background:"#534AB7"}}>Lưu Pre-score</button>
-      </div>
+      <div style={{fontSize:12,color:"#777",marginBottom:12,padding:"8px 12px",background:"#f8f8f8",borderRadius:7}}>📌 Đánh giá từ xa — chỉ dùng thông tin công khai: website, Alibaba, mạng xã hội, tra MST.</div>
+      <ChecklistEngine criteria={PRESCORE_CRITERIA} scores={scores} setScores={setScores} mandatoryIds={[]} accentColor="#534AB7" accentBg="#F5F4FF"/>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}><button onClick={()=>setModal(null)} style={gBtn}>Đóng</button><button onClick={handleSave} style={{...pBtn,background:"#534AB7"}}>Lưu Pre-score</button></div>
     </Card>
   );
 }
@@ -1259,32 +774,22 @@ function RFQList({ctx}){
         <Sel val={fStatus} onChange={setFStatus} opts={[["all","Tất cả"],...allSt.map(s=>[s.id,s.label])]}/>
       </div>
       {fl.length===0&&<Empty text="Chưa có RFQ/INQ."/>}
-      {/* Table header */}
       <div style={{display:"grid",gridTemplateColumns:"52px 1fr 130px 90px 80px 70px",gap:0,padding:"6px 14px",background:"#f5f5f5",borderRadius:"8px 8px 0 0",border:"1px solid #e5e5e5",borderBottom:"none"}}>
-        {["Loại","Mô tả","Trạng thái","Thị trường","Deadline","NCC"].map(h=>(
-          <span key={h} style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:.5}}>{h}</span>
-        ))}
+        {["Loại","Mô tả","Trạng thái","Thị trường","Deadline","NCC"].map(h=><span key={h} style={{fontSize:11,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:.5}}>{h}</span>)}
       </div>
       <div style={{border:"1px solid #e5e5e5",borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
         {fl.map((r,idx)=>{
-          const isInq=r.type==="inq";
-          const stList=isInq?INQ_ST:RFQ_ST;
-          const st=stList.find(x=>x.id===r.status)||stList[0];
-          const mkts=parseJ(r.markets)||[];
-          const isOverdue=r.deadline&&new Date(r.deadline)<new Date()&&!["closed","inq_closed","inq_converted"].includes(r.status);
+          const isInq=r.type==="inq";const stList=isInq?INQ_ST:RFQ_ST;const st=stList.find(x=>x.id===r.status)||stList[0];
+          const mkts=parseJ(r.markets)||[];const isOverdue=r.deadline&&new Date(r.deadline)<new Date()&&!["closed","inq_closed","inq_converted"].includes(r.status);
           return(
             <div key={r.id} onClick={()=>setModal({t:isInq?"inq-detail":"rfq-detail",d:r})}
-              style={{display:"grid",gridTemplateColumns:"52px 1fr 130px 90px 80px 70px",gap:0,padding:"10px 14px",
-                background:r.urgent&&!["closed","inq_closed"].includes(r.status)?"#FFFAFA":"#fff",
-                borderTop:idx>0?"1px solid #f0f0f0":"none",cursor:"pointer",alignItems:"center"}}
+              style={{display:"grid",gridTemplateColumns:"52px 1fr 130px 90px 80px 70px",gap:0,padding:"10px 14px",background:r.urgent&&!["closed","inq_closed"].includes(r.status)?"#FFFAFA":"#fff",borderTop:idx>0?"1px solid #f0f0f0":"none",cursor:"pointer",alignItems:"center"}}
               onMouseEnter={e=>e.currentTarget.style.background=r.urgent?"#FFF5F5":"#FAFAFA"}
               onMouseLeave={e=>e.currentTarget.style.background=r.urgent&&!["closed","inq_closed"].includes(r.status)?"#FFFAFA":"#fff"}>
-              {/* Col 1: type badge + code */}
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,fontWeight:700,background:isInq?"#EEEDFE":"#E6F1FB",color:isInq?"#534AB7":"#185FA5",alignSelf:"flex-start"}}>{isInq?"INQ":"RFQ"}</span>
                 <span style={{fontSize:10,color:"#bbb",whiteSpace:"nowrap"}}>{r.code}</span>
               </div>
-              {/* Col 2: desc + sales + urgent */}
               <div style={{minWidth:0,paddingRight:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   {r.urgent&&<span style={{fontSize:10,color:"#A32D2D",fontWeight:700,flexShrink:0}}>🔴</span>}
@@ -1293,13 +798,9 @@ function RFQList({ctx}){
                 </div>
                 {r.sales&&<div style={{fontSize:11,color:"#aaa",marginTop:2}}>👤 {r.sales}</div>}
               </div>
-              {/* Col 3: status */}
               <div><span style={{fontSize:11,padding:"3px 9px",borderRadius:4,background:st.bg,color:st.c,fontWeight:600,whiteSpace:"nowrap"}}>{st.label}</span></div>
-              {/* Col 4: markets */}
               <div style={{fontSize:11,color:"#777",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{mkts.length>0?mkts.join(", "):"—"}</div>
-              {/* Col 5: deadline */}
               <div style={{fontSize:11,color:isOverdue?"#A32D2D":"#777",fontWeight:isOverdue?600:400}}>{r.deadline||"—"}</div>
-              {/* Col 6: NCC count */}
               <div style={{fontSize:12,color:"#555",fontWeight:600}}>{(parseJ(r.sids)||[]).length>0?`${(parseJ(r.sids)||[]).length} NCC`:"—"}</div>
             </div>
           );
@@ -1311,13 +812,7 @@ function RFQList({ctx}){
 
 function RFQForm({r,ctx}){
   const {upsR,setModal}=ctx;
-  const [f,setF]=useState({
-    ...r,
-    date:r.date||today(),
-    deadline:r.deadline||"",
-    markets:parseJ(r.markets)||[],
-    sids:parseJ(r.sids)||[],
-  });
+  const [f,setF]=useState({...r,date:r.date||today(),deadline:r.deadline||"",markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[]});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const tog=m=>set("markets",f.markets.includes(m)?f.markets.filter(x=>x!==m):[...f.markets,m]);
   const save=()=>upsR({...f,date:f.date||today(),deadline:f.deadline||""});
@@ -1350,12 +845,7 @@ function RFQForm({r,ctx}){
 
 function INQForm({r,ctx}){
   const {upsR,setModal}=ctx;
-  const [f,setF]=useState({
-    ...r,
-    date:r.date||today(),
-    deadline:r.deadline||"",
-    markets:parseJ(r.markets)||[],
-  });
+  const [f,setF]=useState({...r,date:r.date||today(),deadline:r.deadline||"",markets:parseJ(r.markets)||[]});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const tog=m=>set("markets",f.markets.includes(m)?f.markets.filter(x=>x!==m):[...f.markets,m]);
   const save=()=>upsR({...f,date:f.date||today(),deadline:f.deadline||""});
@@ -1383,18 +873,12 @@ function INQForm({r,ctx}){
 function INQDetail({r,ctx}){
   const {upsR,delR,setModal,canEdit,sups}=ctx;
   const [showEmail,setShowEmail]=useState(false);
-  const [showFeasibility,setShowFeasibility]=useState(false);
   const st=INQ_ST.find(x=>x.id===r.status)||INQ_ST[0];
   const mkts=parseJ(r.markets)||[];
-  const convertToRFQ=()=>{
-    const rfq={...newR(),sales:r.sales,desc:r.desc,markets:r.markets,deadline:r.deadline,notes:r.notes,urgent:r.urgent};
-    upsR({...r,status:"inq_converted"});
-    upsR(rfq);setModal({t:"rfq-detail",d:rfq});
-  };
+  const convertToRFQ=()=>{const rfq={...newR(),sales:r.sales,desc:r.desc,markets:r.markets,deadline:r.deadline,notes:r.notes,urgent:r.urgent};upsR({...r,status:"inq_converted"});upsR(rfq);setModal({t:"rfq-detail",d:rfq});};
   return(
     <Card>
       {showEmail&&<EmailDraft r={r} sups={sups||[]} onClose={()=>setShowEmail(false)}/>}
-      {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:10,alignItems:"flex-start"}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:"#EEEDFE",color:"#534AB7"}}>INQ</span>
@@ -1403,58 +887,21 @@ function INQDetail({r,ctx}){
         </div>
         <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600,flexShrink:0}}>{st.label}</span>
       </div>
-      {/* Meta row */}
       <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:12,color:"#777",marginBottom:12,paddingBottom:12,borderBottom:"1px solid #f0f0f0"}}>
-        {r.sales&&<span>👤 {r.sales}</span>}
-        {mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
+        {r.sales&&<span>👤 {r.sales}</span>}{mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
         {r.date&&<span>📅 Nhận: {r.date}</span>}
         {r.deadline&&<span style={{color:new Date(r.deadline)<new Date()?"#A32D2D":"#777",fontWeight:new Date(r.deadline)<new Date()?600:400}}>⏰ Hạn: {r.deadline}</span>}
       </div>
-      {/* Main desc — rendered */}
       <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung inquiry</div>
         <RFQDesc text={r.desc}/>
       </div>
-      {/* Notes if any */}
-      {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-        <div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div>
-        <RFQDesc text={r.notes}/>
-      </div>}
-      {/* Convert */}
-      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:12}}>
-        <div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div>
-        <button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button>
-      </div>}
-      {/* Rejection log */}
-      {(()=>{
-        const rejected=parseJ(r.rejected)||{};
-        const rejEntries=Object.entries(rejected).filter(([,v])=>v.reason);
-        if(!rejEntries.length)return null;
-        return(
-          <div style={{marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>NCC đã loại ({rejEntries.length})</div>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {rejEntries.map(([sid,rj])=>{
-                const s=sups.find(x=>x.id===sid);
-                return(
-                  <div key={sid} style={{background:"#FFF5F5",border:"1px solid #FECACA",borderRadius:7,padding:"7px 12px",display:"flex",gap:8,alignItems:"flex-start"}}>
-                    <span style={{fontSize:13}}>🚫</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <span style={{fontSize:12,fontWeight:600,color:"#555"}}>{s?.name||sid}</span>
-                      <span style={{fontSize:11,color:"#E24B4A",marginLeft:8,fontWeight:600}}>{rj.reason}</span>
-                      {rj.note&&<div style={{fontSize:11,color:"#777",marginTop:2}}>{rj.note}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div><RFQDesc text={r.notes}/></div>}
+      {r.status!=="inq_converted"&&r.status!=="inq_closed"&&canEdit&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:10,padding:"12px 16px",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,color:"#3B6D11",marginBottom:4}}>Chuyển thành RFQ</div><button onClick={convertToRFQ} style={{...pBtn,background:"#3B6D11",fontSize:12}}>🔄 Convert → RFQ</button></div>}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+        <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email</button>
         {canEdit&&<button onClick={()=>setModal({t:"inq-form",d:r})} style={gBtn}>✏️ Sửa</button>}
-        <div style={{marginLeft:"auto"}}>
-          {canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}
-        </div>
+        <div style={{marginLeft:"auto"}}>{canEdit?<select value={r.status} onChange={e=>upsR({...r,status:e.target.value})} style={{...iSt,padding:"5px 8px",fontSize:12,width:"auto"}}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>:<span style={{fontSize:12,padding:"4px 12px",borderRadius:5,background:st.bg,color:st.c,fontWeight:600}}>{st.label}</span>}</div>
         {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
       </div>
     </Card>
@@ -1464,53 +911,40 @@ function INQDetail({r,ctx}){
 function RFQDetail({r,ctx}){
   const {sups,setModal,upsR,delR,canEdit}=ctx;
   const [showEmail,setShowEmail]=useState(false);
-  // local state for notes/quotes so fields are editable
+  const [showFeasibility,setShowFeasibility]=useState(false);
   const [snotes,setSnotes]=useState(parseJ(r.snotes)||{});
   const [squotes,setSquotes]=useState(parseJ(r.squotes)||{});
   const snotesRef=useRef(parseJ(r.snotes)||{});
   const squotesRef=useRef(parseJ(r.squotes)||{});
-
   const handleBlur=(sid,field,val)=>{
-    // Cập nhật ref với giá trị mới nhất trước khi save
-    if(field==="note"){
-      snotesRef.current={...snotesRef.current,[sid]:val};
-    } else {
-      squotesRef.current={...squotesRef.current,[sid]:{...(squotesRef.current[sid]||{}),[field]:val}};
-    }
+    if(field==="note")snotesRef.current={...snotesRef.current,[sid]:val};
+    else squotesRef.current={...squotesRef.current,[sid]:{...(squotesRef.current[sid]||{}),[field]:val}};
     upsR({...r,snotes:snotesRef.current,squotes:squotesRef.current});
   };
-  const setNote=(sid,val)=>{
-    setSnotes(p=>({...p,[sid]:val}));
-    snotesRef.current={...snotesRef.current,[sid]:val};
-  };
-  const setQuote=(sid,field,val)=>{
-    setSquotes(p=>({...p,[sid]:{...(p[sid]||{}),[field]:val}}));
-    squotesRef.current={...squotesRef.current,[sid]:{...(squotesRef.current[sid]||{}),[field]:val}};
-  };
+  const setNote=(sid,val)=>{setSnotes(p=>({...p,[sid]:val}));snotesRef.current={...snotesRef.current,[sid]:val};};
+  const setQuote=(sid,field,val)=>{setSquotes(p=>({...p,[sid]:{...(p[sid]||{}),[field]:val}}));squotesRef.current={...squotesRef.current,[sid]:{...(squotesRef.current[sid]||{}),[field]:val}};};
   const st=RFQ_ST.find(x=>x.id===r.status)||RFQ_ST[0];
   const sids=parseJ(r.sids)||[];
   const mkts=parseJ(r.markets)||[];
   const asgn=sups.filter(s=>sids.includes(s.id));
+  const rejEntries=Object.entries(parseJ(r.rejected)||{}).filter(([,v])=>v&&v.reason);
   return(
     <Card>
       {showEmail&&<EmailDraft r={r} sups={sups} onClose={()=>setShowEmail(false)}/>}
       {showFeasibility&&<FeasibilityModal r={r} ctx={ctx} onClose={()=>setShowFeasibility(false)}/>}
-      {/* Pre-feasibility summary nếu đã check */}
+      {/* Pre-feasibility summary */}
       {r.feasibility&&Object.keys(r.feasibility).length>0&&(()=>{
         const f=r.feasibility;
-        const qs=FEASIBILITY_QS;
-        const allYes=qs.every(q=>f[q.id]===true);
-        const noCount=qs.filter(q=>f[q.id]===false).length;
+        const allYes=FEASIBILITY_QS.every(q=>f[q.id]===true);
+        const noCount=FEASIBILITY_QS.filter(q=>f[q.id]===false).length;
         return(
           <div style={{background:allYes?"#EAF3DE":"#FFF5F5",border:`1px solid ${allYes?"#1D9E75":"#E24B4A"}`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:12,fontWeight:700,color:allYes?"#1D9E75":"#E24B4A"}}>
-                {allYes?"✅ Pre-feasibility: 4/4 Pass":`⚠ Pre-feasibility: ${noCount} điểm cần lưu ý`}
-              </span>
+              <span style={{fontSize:12,fontWeight:700,color:allYes?"#1D9E75":"#E24B4A"}}>{allYes?"✅ Pre-feasibility: 4/4 Pass":`⚠ Pre-feasibility: ${noCount} điểm cần lưu ý`}</span>
               {canEdit&&<button onClick={()=>setShowFeasibility(true)} style={{fontSize:11,padding:"2px 8px",borderRadius:4,border:"1px solid #ddd",background:"#fff",cursor:"pointer",color:"#555"}}>Cập nhật</button>}
             </div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {qs.map(q=>(
+              {FEASIBILITY_QS.map(q=>(
                 <div key={q.id} style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
                   <span style={{color:f[q.id]===true?"#1D9E75":"#E24B4A",fontWeight:700}}>{f[q.id]===true?"✓":"✗"}</span>
                   <span style={{color:"#555"}}>{q.label.split(" ").slice(0,3).join(" ")}...</span>
@@ -1520,13 +954,10 @@ function RFQDetail({r,ctx}){
           </div>
         );
       })()}
-      {/* Prompt nếu status=new, chưa check */}
+      {/* Prompt nếu chưa check */}
       {r.status==="new"&&canEdit&&(!r.feasibility||Object.keys(r.feasibility).length===0)&&(
         <div style={{background:"#F5F4FF",border:"1px solid #C4B9F5",borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-          <div>
-            <div style={{fontSize:12,fontWeight:600,color:"#6D3AB7"}}>🔎 Chưa có Pre-feasibility check</div>
-            <div style={{fontSize:11,color:"#888",marginTop:2}}>Thực hiện check trước khi bắt đầu tìm NCC</div>
-          </div>
+          <div><div style={{fontSize:12,fontWeight:600,color:"#6D3AB7"}}>🔎 Chưa có Pre-feasibility check</div><div style={{fontSize:11,color:"#888",marginTop:2}}>Thực hiện check trước khi bắt đầu tìm NCC</div></div>
           <button onClick={()=>setShowFeasibility(true)} style={{...pBtn,background:"#6D3AB7",fontSize:12,flexShrink:0}}>Bắt đầu check</button>
         </div>
       )}
@@ -1541,27 +972,18 @@ function RFQDetail({r,ctx}){
       </div>
       {/* Meta */}
       <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:12,color:"#777",marginBottom:12,paddingBottom:12,borderBottom:"1px solid #f0f0f0"}}>
-        {r.sales&&<span>👤 {r.sales}</span>}
-        {mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
+        {r.sales&&<span>👤 {r.sales}</span>}{mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
         {r.date&&<span>📅 Nhận: {r.date}</span>}
         {r.deadline&&<span style={{color:new Date(r.deadline)<new Date()?"#A32D2D":"#777",fontWeight:new Date(r.deadline)<new Date()?600:400}}>⏰ Hạn BG: {r.deadline}</span>}
-        {r.qty&&<span>📦 MOQ: {r.qty}</span>}
-        {r.price&&<span>💲 Target: {r.price}</span>}
-        {r.incoterm&&<span>🚢 {r.incoterm}</span>}
+        {r.qty&&<span>📦 {r.qty}</span>}{r.price&&<span>💲 {r.price}</span>}{r.incoterm&&<span>🚢 {r.incoterm}</span>}
       </div>
       {/* Desc */}
       <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung RFQ</div>
         <RFQDesc text={r.desc}/>
       </div>
-      {r.certs&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-        <div style={{fontSize:10,fontWeight:700,color:"#0F6E56",marginBottom:6}}>CHỨNG NHẬN YÊU CẦU</div>
-        <RFQDesc text={r.certs}/>
-      </div>}
-      {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-        <div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div>
-        <RFQDesc text={r.notes}/>
-      </div>}
+      {r.certs&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:"#0F6E56",marginBottom:6}}>CHỨNG NHẬN YÊU CẦU</div><RFQDesc text={r.certs}/></div>}
+      {r.notes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:"#8A6200",marginBottom:6}}>GHI CHÚ NỘI BỘ</div><RFQDesc text={r.notes}/></div>}
       {/* NCC */}
       <div style={{marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1569,61 +991,52 @@ function RFQDetail({r,ctx}){
           {canEdit&&<button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{...gBtn,fontSize:11,padding:"3px 9px"}}>+ Gán NCC</button>}
         </div>
         {asgn.map(s=>{
-          const ti=calcTier(s.vserf);
-          const note=snotes[s.id]||"";
-          const sq=squotes[s.id]||{};
+          const ti=calcTier(s.vserf);const note=snotes[s.id]||"";const sq=squotes[s.id]||{};
+          const m=calcMatch(s,r);const mc=m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#aaa";const mb=m>=70?"#EAF3DE":m>=50?"#E6F1FB":m>=30?"#FAEEDA":"#f5f5f5";
+          const sr=(parseJ(r.selReasons)||{})[s.id]||[];
           return(
             <div key={s.id} style={{background:"#f8f8f8",border:"1px solid #eee",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
-              {/* Supplier header */}
-              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
+              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
                 <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
                 <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label}</span>
+                <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb,color:mc,fontWeight:700}}>Match {m}%</span>
                 {s.zalo&&<span style={{fontSize:12,color:"#777"}}>📱 {s.zalo}</span>}
+                {sr.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{sr.map(reason=><span key={reason} style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#EAF3DE",color:"#1D9E75",fontWeight:600}}>{reason}</span>)}</div>}
                 <div style={{marginLeft:"auto",display:"flex",gap:5,flexShrink:0}}>
                   <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
                   {canEdit&&<button onClick={()=>{const ns=sids.filter(x=>x!==s.id);upsR({...r,sids:ns});}} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
                 </div>
               </div>
-              {/* Quote fields */}
               <div style={{display:"grid",gap:7}}>
-                <div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:4}}>✅ Báo giá theo product spec</div>
-                  <textarea
-                    value={sq.spec||""}
-                    onChange={e=>setQuote(s.id,"spec",e.target.value)}
-                    onBlur={e=>handleBlur(s.id,"spec",e.target.value)}
-                    disabled={!canEdit}
-                    placeholder="Điền giá báo đúng spec: đơn giá, MOQ, lead time, điều kiện..."
-                    style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}
-                  />
-                </div>
-                <div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#854F0B",marginBottom:4}}>🔄 Báo giá không theo spec / đề xuất thay thế</div>
-                  <textarea
-                    value={sq.alt||""}
-                    onChange={e=>setQuote(s.id,"alt",e.target.value)}
-                    onBlur={e=>handleBlur(s.id,"alt",e.target.value)}
-                    disabled={!canEdit}
-                    placeholder="Điền đề xuất thay thế của NCC: thay đổi gì, giá bao nhiêu..."
-                    style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}
-                  />
-                </div>
-                <div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:4}}>📝 Ghi chú nội bộ</div>
-                  <input
-                    value={note}
-                    onChange={e=>setNote(s.id,e.target.value)}
-                    onBlur={e=>handleBlur(s.id,"note",e.target.value)}
-                    disabled={!canEdit}
-                    placeholder="Ghi chú nội bộ về NCC này..."
-                    style={{...iSt,fontSize:12}}
-                  />
-                </div>
+                <div><div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:4}}>✅ Báo giá theo product spec</div><textarea value={sq.spec||""} onChange={e=>setQuote(s.id,"spec",e.target.value)} onBlur={e=>handleBlur(s.id,"spec",e.target.value)} disabled={!canEdit} placeholder="Điền giá báo đúng spec: đơn giá, MOQ, lead time, điều kiện..." style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}/></div>
+                <div><div style={{fontSize:11,fontWeight:600,color:"#854F0B",marginBottom:4}}>🔄 Báo giá không theo spec / đề xuất thay thế</div><textarea value={sq.alt||""} onChange={e=>setQuote(s.id,"alt",e.target.value)} onBlur={e=>handleBlur(s.id,"alt",e.target.value)} disabled={!canEdit} placeholder="Điền đề xuất thay thế của NCC..." style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}/></div>
+                <div><div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:4}}>📝 Ghi chú nội bộ</div><input value={note} onChange={e=>setNote(s.id,e.target.value)} onBlur={e=>handleBlur(s.id,"note",e.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ về NCC này..." style={{...iSt,fontSize:12}}/></div>
               </div>
             </div>
           );
         })}
       </div>
+      {/* Rejection log */}
+      {rejEntries.length>0&&(
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>NCC đã loại ({rejEntries.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            {rejEntries.map(([sid,rj])=>{
+              const sup=sups.find(x=>x.id===sid);
+              return(
+                <div key={sid} style={{background:"#FFF5F5",border:"1px solid #FECACA",borderRadius:7,padding:"7px 12px",display:"flex",gap:8,alignItems:"flex-start"}}>
+                  <span style={{fontSize:13}}>🚫</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontSize:12,fontWeight:600,color:"#555"}}>{sup?.name||sid}</span>
+                    <span style={{fontSize:11,color:"#E24B4A",marginLeft:8,fontWeight:600}}>{rj.reason}</span>
+                    {rj.note&&<div style={{fontSize:11,color:"#777",marginTop:2}}>{rj.note}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {/* Actions */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <button onClick={()=>setShowEmail(true)} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>✉ Soạn email</button>
@@ -1637,32 +1050,20 @@ function RFQDetail({r,ctx}){
   );
 }
 
-        {canEdit&&<button onClick={()=>delR(r.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A"}}>Xóa</button>}
-      </div>
-    </Card>
-  );
-}
-
 function RFQAssign({r,ctx}){
   const {sups,upsR,setModal}=ctx;
   const [sel,setSel]=useState(parseJ(r.sids)||[]);
   const [rejected,setRejected]=useState(parseJ(r.rejected)||{});
   const [selReasons,setSelReasons]=useState(parseJ(r.selReasons)||{});
-  const [q,setQ]=useState("");
-  const [tab,setTab]=useState("ranked"); // ranked | all
-
-  // Sort by match score
+  const [q,setQ]=useState("");const [tab,setTab]=useState("ranked");
   const scored=sups.map(s=>({...s,_match:calcMatch(s,r)})).sort((a,b)=>b._match-a._match);
   const fl=scored.filter(s=>tab==="ranked"?s._match>=30:true).filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
-
   const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const togReason=(sid,reason)=>setSelReasons(p=>({...p,[sid]:(p[sid]||[]).includes(reason)?(p[sid]||[]).filter(r=>r!==reason):[...(p[sid]||[]),reason]}));
   const setRejReason=(sid,reason)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),reason}}));
   const setRejNote=(sid,note)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),note}}));
-
-  const matchColor=m=>m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#aaa";
-  const matchBg=m=>m>=70?"#EAF3DE":m>=50?"#E6F1FB":m>=30?"#FAEEDA":"#f5f5f5";
-
+  const mc=m=>m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#aaa";
+  const mb=m=>m>=70?"#EAF3DE":m>=50?"#E6F1FB":m>=30?"#FAEEDA":"#f5f5f5";
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
       <h2 style={{margin:"0 0 12px",fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
@@ -1674,50 +1075,35 @@ function RFQAssign({r,ctx}){
       <div style={{maxHeight:420,overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
         {fl.length===0&&<Empty text="Không tìm thấy NCC phù hợp."/>}
         {fl.map(s=>{
-          const ti=calcTier(s.vserf);
-          const chk=sel.includes(s.id);
-          const m=s._match;
-          const sr=selReasons[s.id]||[];
-          const rj=rejected[s.id]||{};
+          const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
           return(
             <div key={s.id} style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden"}}>
-              {/* Header row */}
               <div onClick={()=>{if(!rj.reason)tog(s.id);}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
-                {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  {chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}
-                </div>}
+                {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}</div>}
                 {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
                   <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.products?.slice(0,40)} · {s.province}</div>
                 </div>
-                {/* Match badge */}
-                <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:matchBg(m),color:matchColor(m),fontWeight:700,flexShrink:0}}>Match {m}%</span>
+                <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb(m),color:mc(m),fontWeight:700,flexShrink:0}}>Match {m}%</span>
                 <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
               </div>
-              {/* Match breakdown */}
               {(chk||tab==="ranked")&&m>0&&<div style={{padding:"6px 12px 8px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:12,flexWrap:"wrap",fontSize:11,color:"#777"}}>
                 <span>Tier: <b style={{color:ti.c}}>{ti.t}/45</b></span>
                 <span>XK: <b>{s.vserf?.xuat_khau||0}/5</b></span>
                 <span>OEM: <b>{s.vserf?.oem_odm||0}/5</b></span>
                 {s.industry&&<span>Ngành: <b>{s.industry}</b></span>}
               </div>}
-              {/* Selection reasons */}
               {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
-                <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn (chọn 1 hoặc nhiều):</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                  {SELECTION_REASONS.map(reason=>(
-                    <button key={reason} onClick={()=>togReason(s.id,reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>
-                  ))}
+                  {SELECTION_REASONS.map(reason=><button key={reason} onClick={()=>togReason(s.id,reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>)}
                 </div>
               </div>}
-              {/* Reject block */}
               {!chk&&<div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
                 <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>Loại NCC này? Chọn lý do:</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:rj.reason?6:0}}>
-                  {REJECTION_REASONS.map(reason=>(
-                    <button key={reason} onClick={()=>setRejReason(s.id,rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>
-                  ))}
+                  {REJECTION_REASONS.map(reason=><button key={reason} onClick={()=>setRejReason(s.id,rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>)}
                 </div>
                 {rj.reason&&<input value={rj.note||""} onChange={e=>setRejNote(s.id,e.target.value)} placeholder="Ghi chú thêm (tuỳ chọn)..." style={{...iSt,fontSize:11,marginTop:2}}/>}
               </div>}
@@ -1729,10 +1115,7 @@ function RFQAssign({r,ctx}){
         <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn · {Object.values(rejected).filter(r=>r.reason).length} bị loại</span>
         <div style={{display:"flex",gap:8}}>
           <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
-          <button onClick={()=>{
-            upsR({...r,sids:sel,rejected:JSON.stringify(rejected),selReasons:JSON.stringify(selReasons),status:sel.length>0?"shortlisted":r.status});
-            setModal(null);
-          }} style={pBtn}>Lưu</button>
+          <button onClick={()=>{upsR({...r,sids:sel,rejected:JSON.stringify(rejected),selReasons:JSON.stringify(selReasons),status:sel.length>0?"shortlisted":r.status});setModal(null);}} style={pBtn}>Lưu</button>
         </div>
       </div>
     </Card>
@@ -1746,16 +1129,14 @@ function OrderList({ctx}){
   return(
     <div>
       <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
-        <span style={{fontSize:14,fontWeight:600}}>Orders</span>
-        <div style={{flex:1}}/>
+        <span style={{fontSize:14,fontWeight:600}}>Orders</span><div style={{flex:1}}/>
         <Sel val={fStage} onChange={setFStage} opts={[["all","Tất cả"],...ORDER_STAGES.map(s=>[s.id,s.icon+" "+s.label])]}/>
         {canEdit&&<button onClick={()=>setModal({t:"order-form",d:newO()})} style={{...pBtn,fontSize:12}}>+ Order</button>}
       </div>
       {fl.length===0&&<Empty text="Chưa có order."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {fl.map(o=>{
-          const sup=(sups||[]).find(s=>s.id===o.supId);
-          const rfq=(rfqs||[]).find(r=>r.id===o.rfqId);
+          const sup=(sups||[]).find(s=>s.id===o.supId);const rfq=(rfqs||[]).find(r=>r.id===o.rfqId);
           const st=ORDER_STAGES.find(s=>s.id===o.stage)||ORDER_STAGES[0];
           const overdue=o.etd&&new Date(o.etd)<new Date()&&!["shipment","payment","closed"].includes(o.stage);
           return(
@@ -1778,9 +1159,7 @@ function OrderList({ctx}){
 }
 
 function OrderForm({o,ctx}){
-  const {sups,rfqs,upsO,setModal}=ctx;
-  const [f,setF]=useState({...o});
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const {sups,rfqs,upsO,setModal}=ctx;const [f,setF]=useState({...o});const set=(k,v)=>setF(p=>({...p,[k]:v}));
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
       <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.code?"Order: "+f.code:"Tạo Order mới"}</h2>
@@ -1800,10 +1179,7 @@ function OrderForm({o,ctx}){
             {PROD_STATUS.map(ps=>(
               <label key={ps.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 10px",borderRadius:7,border:`1.5px solid ${f.prodStatus===ps.id?ps.c:"#e5e5e5"}`,background:f.prodStatus===ps.id?ps.bg:"#fff",cursor:"pointer"}}>
                 <input type="radio" name="prodStatus" value={ps.id} checked={f.prodStatus===ps.id} onChange={()=>set("prodStatus",ps.id)} style={{marginTop:2,accentColor:ps.c}}/>
-                <div>
-                  <div style={{fontSize:13,fontWeight:600,color:ps.c}}>{ps.icon} {ps.label}</div>
-                  <div style={{fontSize:11,color:"#666",marginTop:2,lineHeight:1.5}}>{ps.action}</div>
-                </div>
+                <div><div style={{fontSize:13,fontWeight:600,color:ps.c}}>{ps.icon} {ps.label}</div><div style={{fontSize:11,color:"#666",marginTop:2,lineHeight:1.5}}>{ps.action}</div></div>
               </label>
             ))}
           </div>
@@ -1841,10 +1217,8 @@ function OrderForm({o,ctx}){
 
 function OrderDetail({o,ctx}){
   const {sups,rfqs,upsO,delO,setModal,canEdit}=ctx;
-  const sup=(sups||[]).find(s=>s.id===o.supId);
-  const rfq=(rfqs||[]).find(r=>r.id===o.rfqId);
-  const st=ORDER_STAGES.find(s=>s.id===o.stage)||ORDER_STAGES[0];
-  const stageIdx=ORDER_STAGES.findIndex(s=>s.id===o.stage);
+  const sup=(sups||[]).find(s=>s.id===o.supId);const rfq=(rfqs||[]).find(r=>r.id===o.rfqId);
+  const st=ORDER_STAGES.find(s=>s.id===o.stage)||ORDER_STAGES[0];const stageIdx=ORDER_STAGES.findIndex(s=>s.id===o.stage);
   const numVal=o.poValue?parseFloat(String(o.poValue).replace(/,/g,"")):0;
   const depositAmt=numVal?`${o.currency} ${(numVal*(o.depositPct||30)/100).toLocaleString()}`:"—";
   const balanceAmt=numVal?`${o.currency} ${(numVal*(100-(o.depositPct||30))/100).toLocaleString()}`:"—";
@@ -1859,73 +1233,22 @@ function OrderDetail({o,ctx}){
       <div style={{display:"flex",gap:0,marginBottom:16,borderRadius:8,overflow:"hidden",border:"1px solid #eee"}}>
         {ORDER_STAGES.map((s,i)=><div key={s.id} title={s.label} style={{flex:1,padding:"7px 4px",textAlign:"center",fontSize:13,background:i<=stageIdx?s.bg:"#fafafa",color:i<=stageIdx?s.c:"#ccc",borderRight:i<ORDER_STAGES.length-1?"1px solid #eee":"none"}}>{s.icon}</div>)}
       </div>
+      {o.prodStatus&&(()=>{const ps=PROD_STATUS.find(x=>x.id===o.prodStatus);if(!ps)return null;return(<div style={{background:ps.bg,border:`1.5px solid ${ps.c}`,borderRadius:10,padding:"12px 16px",marginBottom:14}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}><div style={{fontSize:13,fontWeight:700,color:ps.c}}>{ps.icon} Production Status — {ps.label}</div>{ps.who&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"rgba(0,0,0,0.07)",color:ps.c,fontWeight:600}}>👥 {ps.who}</span>}</div><div style={{fontSize:12,color:"#555",lineHeight:1.6}}>{ps.action}</div></div>);})()}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
         <IB title="Thông tin PO"><IR l="Ngày PO" v={o.poDate}/><IR l="Giá trị" v={o.poValue?`${o.currency} ${o.poValue}`:"—"}/><IR l="ETD" v={o.etd}/><IR l="ETA" v={o.eta}/></IB>
         <IB title="Payment">
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",borderBottom:"1px solid #f5f5f5"}}>
-            <span style={{color:"#777"}}>Deposit ({o.depositPct||30}%)</span>
-            <div style={{textAlign:"right"}}><div style={{fontWeight:600}}>{depositAmt}</div><div style={{fontSize:11,color:o.depositPaid?"#1D9E75":"#E24B4A",fontWeight:600}}>{o.depositPaid?`✓ ${o.depositDate||""}`:"⏳ Chưa TT"}</div></div>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0"}}>
-            <span style={{color:"#777"}}>Balance ({100-(o.depositPct||30)}%)</span>
-            <div style={{textAlign:"right"}}><div style={{fontWeight:600}}>{balanceAmt}</div><div style={{fontSize:11,color:o.balancePaid?"#1D9E75":"#E24B4A",fontWeight:600}}>{o.balancePaid?`✓ ${o.balanceDate||""}`:"⏳ Chưa TT"}</div></div>
-          </div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",borderBottom:"1px solid #f5f5f5"}}><span style={{color:"#777"}}>Deposit ({o.depositPct||30}%)</span><div style={{textAlign:"right"}}><div style={{fontWeight:600}}>{depositAmt}</div><div style={{fontSize:11,color:o.depositPaid?"#1D9E75":"#E24B4A",fontWeight:600}}>{o.depositPaid?`✓ ${o.depositDate||""}`:"⏳ Chưa TT"}</div></div></div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0"}}><span style={{color:"#777"}}>Balance ({100-(o.depositPct||30)}%)</span><div style={{textAlign:"right"}}><div style={{fontWeight:600}}>{balanceAmt}</div><div style={{fontSize:11,color:o.balancePaid?"#1D9E75":"#E24B4A",fontWeight:600}}>{o.balancePaid?`✓ ${o.balanceDate||""}`:"⏳ Chưa TT"}</div></div></div>
         </IB>
       </div>
-      {/* Production Status */}
-      {o.prodStatus&&(()=>{
-        const ps=PROD_STATUS.find(x=>x.id===o.prodStatus);
-        if(!ps)return null;
-        return(
-          <div style={{background:ps.bg,border:`1.5px solid ${ps.c}`,borderRadius:10,padding:"12px 16px",marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <div style={{fontSize:13,fontWeight:700,color:ps.c}}>{ps.icon} Production Status — {ps.label}</div>
-              {ps.who&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"rgba(0,0,0,0.07)",color:ps.c,fontWeight:600}}>👥 {ps.who}</span>}
-            </div>
-            <div style={{fontSize:12,color:"#555",lineHeight:1.6}}>{ps.action}</div>
-          </div>
-        );
-      })()}
-      {(o.qcType||o.qcResult)&&<div style={{background:o.qcResult?qcBg:"#f8f8f8",border:`1px solid ${o.qcResult?qcColor:"#eee"}`,borderRadius:8,padding:"10px 14px",marginBottom:14}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>🔍 QC</div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13}}>
-          {o.qcType&&<span><span style={{color:"#777"}}>Loại: </span>{o.qcType}</span>}
-          {o.qcDate&&<span><span style={{color:"#777"}}>Ngày: </span>{o.qcDate}</span>}
-          {o.qcResult&&<span style={{fontWeight:700,color:qcColor}}>{o.qcResult==="Pass"?"✅":o.qcResult==="Fail"?"❌":"⚠"} {o.qcResult}</span>}
-        </div>
-        {o.qcNotes&&<div style={{fontSize:12,color:"#555",marginTop:6}}>{o.qcNotes}</div>}
-      </div>}
-      {o.stage==="closed"&&o.rating>0&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#0F6E56",textTransform:"uppercase",marginBottom:6}}>Đánh giá</div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
-          <div style={{fontSize:18}}>{[1,2,3,4,5].map(n=><span key={n} style={{opacity:o.rating>=n?1:0.2}}>⭐</span>)}</div>
-          {o.onTimeRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>On-time: </span><b>{o.onTimeRate}%</b></span>}
-          {o.qualityRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>Quality: </span><b>{o.qualityRate}%</b></span>}
-        </div>
-      </div>}
-
-      {/* QC Tracker + Biên bản links */}
+      {(o.qcType||o.qcResult)&&<div style={{background:o.qcResult?qcBg:"#f8f8f8",border:`1px solid ${o.qcResult?qcColor:"#eee"}`,borderRadius:8,padding:"10px 14px",marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#aaa",textTransform:"uppercase",marginBottom:6}}>🔍 QC</div><div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13}}>{o.qcType&&<span><span style={{color:"#777"}}>Loại: </span>{o.qcType}</span>}{o.qcDate&&<span><span style={{color:"#777"}}>Ngày: </span>{o.qcDate}</span>}{o.qcResult&&<span style={{fontWeight:700,color:qcColor}}>{o.qcResult==="Pass"?"✅":o.qcResult==="Fail"?"❌":"⚠"} {o.qcResult}</span>}</div>{o.qcNotes&&<div style={{fontSize:12,color:"#555",marginTop:6}}>{o.qcNotes}</div>}</div>}
+      {o.stage==="closed"&&o.rating>0&&<div style={{background:"#F0F9F5",border:"1px solid #C5DFA8",borderRadius:8,padding:"10px 14px",marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:"#0F6E56",textTransform:"uppercase",marginBottom:6}}>Đánh giá</div><div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}><div style={{fontSize:18}}>{[1,2,3,4,5].map(n=><span key={n} style={{opacity:o.rating>=n?1:0.2}}>⭐</span>)}</div>{o.onTimeRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>On-time: </span><b>{o.onTimeRate}%</b></span>}{o.qualityRate&&<span style={{fontSize:13}}><span style={{color:"#777"}}>Quality: </span><b>{o.qualityRate}%</b></span>}</div></div>}
       <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <a href={`qc-tracker.html?orderId=${o.id}&orderCode=${o.code}`} target="_blank" rel="noopener noreferrer"
-          style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 14px",borderRadius:8,background:"#FFF3DC",border:"1px solid #BA7517",color:"#854F0B",fontWeight:600,fontSize:13,textDecoration:"none"}}>
-          🔍 Mở QC Tracker
-        </a>
-        <a href={`bienban.html?orderId=${o.id}&orderCode=${o.code}&supplier=${encodeURIComponent(sup?.name||"")}&desc=${encodeURIComponent(rfq?.desc||"")}`} target="_blank" rel="noopener noreferrer"
-          style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 14px",borderRadius:8,background:"#E6F1FB",border:"1px solid #185FA5",color:"#185FA5",fontWeight:600,fontSize:13,textDecoration:"none"}}>
-          📄 Xuất Biên bản
-        </a>
+        <a href={`qc-tracker.html?orderId=${o.id}&orderCode=${o.code}`} target="_blank" rel="noopener noreferrer" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 14px",borderRadius:8,background:"#FFF3DC",border:"1px solid #BA7517",color:"#854F0B",fontWeight:600,fontSize:13,textDecoration:"none"}}>🔍 Mở QC Tracker</a>
+        <a href={`bienban.html?orderId=${o.id}&orderCode=${o.code}&supplier=${encodeURIComponent(sup?.name||"")}&desc=${encodeURIComponent(rfq?.desc||"")}`} target="_blank" rel="noopener noreferrer" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 14px",borderRadius:8,background:"#E6F1FB",border:"1px solid #185FA5",color:"#185FA5",fontWeight:600,fontSize:13,textDecoration:"none"}}>📄 Xuất Biên bản</a>
       </div>
-
-      {canEdit&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
-        <div style={{fontSize:11,color:"#aaa",marginBottom:8,fontWeight:600,textTransform:"uppercase"}}>Cập nhật nhanh stage</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {ORDER_STAGES.map(s=><button key={s.id} onClick={()=>upsO({...o,stage:s.id})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:`1px solid ${o.stage===s.id?s.c:"#ddd"}`,background:o.stage===s.id?s.bg:"#fff",color:o.stage===s.id?s.c:"#777",cursor:"pointer",fontWeight:o.stage===s.id?700:400}}>{s.icon} {s.label}</button>)}
-        </div>
-      </div>}
-      <div style={{display:"flex",gap:8}}>
-        {canEdit&&<button onClick={()=>setModal({t:"order-form",d:o})} style={gBtn}>✏️ Sửa</button>}
-        {canEdit&&<button onClick={()=>delO(o.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
-      </div>
+      {canEdit&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:14}}><div style={{fontSize:11,color:"#aaa",marginBottom:8,fontWeight:600,textTransform:"uppercase"}}>Cập nhật nhanh stage</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{ORDER_STAGES.map(s=><button key={s.id} onClick={()=>upsO({...o,stage:s.id})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:`1px solid ${o.stage===s.id?s.c:"#ddd"}`,background:o.stage===s.id?s.bg:"#fff",color:o.stage===s.id?s.c:"#777",cursor:"pointer",fontWeight:o.stage===s.id?700:400}}>{s.icon} {s.label}</button>)}</div></div>}
+      <div style={{display:"flex",gap:8}}>{canEdit&&<button onClick={()=>setModal({t:"order-form",d:o})} style={gBtn}>✏️ Sửa</button>}{canEdit&&<button onClick={()=>delO(o.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}</div>
     </Card>
   );
 }
@@ -1946,29 +1269,13 @@ function Kraljic({ctx}){
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:20}}>{q.icon}</span><div><div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div><div style={{fontSize:11,color:"#666"}}>{q.desc}</div></div><span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[q.id].length}</span></div>
             <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8}}>💡 {q.strategy}</div>
             <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {grouped[q.id].map(s=>{const ti=calcTier(s.vserf);return(
-                <div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div></div>
-                  <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-                  {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}
-                </div>
-              );})}
+              {grouped[q.id].map(s=>{const ti=calcTier(s.vserf);return(<div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div></div><span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>{canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}</div>);})}
               {grouped[q.id].length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:"8px 0"}}>Chưa có NCC</div>}
             </div>
           </div>
         ))}
       </div>
-      {grouped.unclassified.length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length})</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
-          {grouped.unclassified.map(s=>{const ti=calcTier(s.vserf);return(
-            <div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
-              <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label}</div></div>
-              {canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}
-            </div>
-          );})}
-        </div>
-      </div>}
+      {grouped.unclassified.length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length})</div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>{grouped.unclassified.map(s=>{const ti=calcTier(s.vserf);return(<div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label}</div></div>{canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}</div>);})}</div></div>}
     </div>
   );
 }
@@ -1978,9 +1285,7 @@ function KraljicEdit({s,ctx}){
   return(
     <Card>
       <h2 style={{margin:"0 0 4px",fontSize:15,fontWeight:600}}>Phân loại Kraljic — {s.name}</h2>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,margin:"16px 0"}}>
-        {KRALJIC_QUADRANTS.map(q=><div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff"}}><div style={{fontSize:18,marginBottom:4}}>{q.icon}</div><div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div><div style={{fontSize:11,color:"#777"}}>{q.desc}</div></div>)}
-      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,margin:"16px 0"}}>{KRALJIC_QUADRANTS.map(q=><div key={q.id} onClick={()=>setSelected(q.id)} style={{border:`2px solid ${selected===q.id?q.c:"#eee"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",background:selected===q.id?q.bg:"#fff"}}><div style={{fontSize:18,marginBottom:4}}>{q.icon}</div><div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label}</div><div style={{fontSize:11,color:"#777"}}>{q.desc}</div></div>)}</div>
       <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
         {s.kraljic&&<button onClick={()=>{upsS({...s,kraljic:""});setModal(null);}} style={{...gBtn,color:"#E24B4A"}}>Bỏ phân loại</button>}
         <div style={{display:"flex",gap:8,marginLeft:"auto"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>{upsS({...s,kraljic:selected});setModal(null);}} disabled={!selected} style={{...pBtn,background:"#534AB7",opacity:selected?1:.5}}>Lưu</button></div>
@@ -1999,8 +1304,7 @@ function Dash({ctx}){
   const ptCount={};sups.forEach(s=>{const k=s.partnerType||"Chưa xác định";ptCount[k]=(ptCount[k]||0)+1;});
   const ptData=Object.entries(ptCount).sort((a,b)=>b[1]-a[1]);
   const ptColors={"Đối tác trực tiếp":"#1D9E75","Đối tác nền tảng":"#185FA5","Cả hai hình thức":"#534AB7","Chưa xác định":"#aaa"};
-  const indData=Object.entries(ind).sort((a,b)=>b[1]-a[1]);
-  const indMax=indData.length?indData[0][1]:1;
+  const indData=Object.entries(ind).sort((a,b)=>b[1]-a[1]);const indMax=indData.length?indData[0][1]:1;
   const kpis=[{l:"Tổng supplier",v:sups.length,c:"#185FA5"},{l:"Tier 1+2",v:ti.t1+ti.t2,c:"#1D9E75"},{l:"Tỷ lệ T1+T2",v:t12+"%",c:t12>=40?"#1D9E75":"#E24B4A"},{l:"VSERF TB",v:av+"/45",c:av>=32?"#1D9E75":"#E24B4A"},{l:"Orders active",v:(orders||[]).filter(o=>o.stage!=="closed").length,c:"#534AB7"},{l:"RFQ đang mở",v:rfqs.filter(r=>!["closed","inq_closed","inq_converted"].includes(r.status)).length,c:"#854F0B"}];
   return(
     <div>
@@ -2010,20 +1314,8 @@ function Dash({ctx}){
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1",v:ti.t1,c:"#1D9E75"},{l:"Tier 2",v:ti.t2,c:"#185FA5"},{l:"Tier 3",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Orders theo stage</div>{ORDER_STAGES.map(st=>{const cnt=(orders||[]).filter(o=>o.stage===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:13}}>{st.icon}</span><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{cnt}</span></div>;})}</div>
       </div>
-      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Hình thức hợp tác VNS</div>
-        {ptData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:ptData.map(([k,v])=>{
-          const pct=sups.length?Math.round(v/sups.length*100):0;const c=ptColors[k]||"#aaa";
-          return(<div key={k} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:"#555",fontWeight:500}}>{k}</span><span style={{color:"#777"}}>{v} supplier · <b style={{color:c}}>{pct}%</b></span></div><div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:c,borderRadius:5}}/></div></div>);
-        })}
-      </div>
-      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Phân bổ ngành hàng</div>
-        {indData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:indData.map(([k,v])=>{
-          const pct=sups.length?Math.round(v/sups.length*100):0;const barW=Math.round(v/indMax*100);
-          return(<div key={k} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:"#555",fontWeight:500}}>{k}</span><span style={{color:"#777"}}>{v} supplier · <b style={{color:"#534AB7"}}>{pct}%</b></span></div><div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}><div style={{height:"100%",width:barW+"%",background:"#534AB7",borderRadius:5}}/></div></div>);
-        })}
-      </div>
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Hình thức hợp tác VNS</div>{ptData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:ptData.map(([k,v])=>{const pct=sups.length?Math.round(v/sups.length*100):0;const c=ptColors[k]||"#aaa";return(<div key={k} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:"#555",fontWeight:500}}>{k}</span><span style={{color:"#777"}}>{v} · <b style={{color:c}}>{pct}%</b></span></div><div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:c,borderRadius:5}}/></div></div>);})}</div>
+      <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Phân bổ ngành hàng</div>{indData.length===0?<div style={{fontSize:12,color:"#aaa"}}>Chưa có dữ liệu</div>:indData.map(([k,v])=>{const pct=sups.length?Math.round(v/sups.length*100):0;const barW=Math.round(v/indMax*100);return(<div key={k} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:"#555",fontWeight:500}}>{k}</span><span style={{color:"#777"}}>{v} · <b style={{color:"#534AB7"}}>{pct}%</b></span></div><div style={{height:10,background:"#f0f0f0",borderRadius:5,overflow:"hidden"}}><div style={{height:"100%",width:barW+"%",background:"#534AB7",borderRadius:5}}/></div></div>);})}</div>
       <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem",marginBottom:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Pipeline Supplier</div>{STAGES.map(st=>{const cnt=sc[st.id]||0;const max=Math.max(...Object.values(sc),1);return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"#aaa",minWidth:22,flexShrink:0}}>{st.id}</span><span style={{fontSize:12,color:"#555",minWidth:140,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span><div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:(cnt/max*100)+"%",background:st.ph===1?"#9FE1CB":st.ph===2?"#B5D4F4":"#EEEDFE",borderRadius:4}}/></div><span style={{fontSize:12,fontWeight:600,minWidth:20,textAlign:"right",color:cnt>0?"#1a1a1a":"#ccc"}}>{cnt}</span></div>;})}</div>
     </div>
   );
