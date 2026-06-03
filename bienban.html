@@ -7,8 +7,6 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f5f5f0;padding:20px}
-
-/* TOOLBAR */
 .toolbar{max-width:900px;margin:0 auto 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .toolbar a{font-size:12px;color:#777;text-decoration:none;padding:6px 12px;border:1px solid #ddd;border-radius:6px;background:#fff}
 .toolbar a:hover{background:#f5f5f3}
@@ -19,11 +17,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;backgr
 .btn-load:hover{background:#f0f4f8}
 .toolbar .spacer{flex:1}
 .save-ind{font-size:11px;color:#3B6D11;background:#E8F4E2;border:1px solid #C5DFA8;padding:3px 10px;border-radius:10px}
-
-/* PAGE */
 .page{background:#fff;max-width:900px;margin:0 auto;padding:36px 40px;border:0.5px solid #ddd;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
-
-/* HEADER */
 .doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #1a3a5c;padding-bottom:14px;margin-bottom:18px}
 .company-badge{font-size:11px;font-weight:700;letter-spacing:0.5px;color:#fff;background:#1a3a5c;padding:4px 10px;border-radius:3px;display:inline-block}
 .doc-title{margin-top:6px}
@@ -33,27 +27,21 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;backgr
 .doc-no input{font-size:13px;font-weight:700;color:#1a3a5c;border:none;border-bottom:1.5px solid #1a3a5c;outline:none;width:160px;background:transparent;text-align:right}
 .meta-row{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:6px;font-size:12px;color:#555}
 .meta-row input{border:none;border-bottom:1px solid #bbb;outline:none;font-size:12px;color:#1a1a1a;background:transparent;width:130px;text-align:center}
-
-/* REF BAR */
 .ref-bar{background:#f0f4f8;border-left:3px solid #1a3a5c;padding:7px 12px;margin-bottom:18px;display:flex;gap:24px;font-size:12px;color:#444;flex-wrap:wrap;align-items:center}
 .ref-bar label{color:#888;font-style:italic;white-space:nowrap;margin-right:4px}
 .ref-bar input{border:none;border-bottom:1px solid #bbb;outline:none;font-size:12px;color:#1a1a1a;background:transparent;width:180px}
 .ref-bar input.wide{width:280px}
-
-/* SECTION */
 .sec-title{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#fff;background:#1a3a5c;padding:5px 10px;margin-bottom:0}
 .sec-sub{font-size:10px;font-style:italic;color:#aac;background:#1a3a5c;padding:0 10px 5px;margin-bottom:1px}
-
-/* INFO TABLE */
 table.info{width:100%;border-collapse:collapse;margin-bottom:16px}
 table.info td{border:0.5px solid #c8d0d8;padding:5px 9px;vertical-align:middle}
 table.info td.lbl{width:220px;color:#555;font-size:11.5px;background:#f9fafb;white-space:nowrap}
 table.info td.lbl em{display:block;font-style:italic;color:#aaa;font-size:10.5px}
 table.info td.val input,table.info td.val select,table.info td.val textarea{border:none;outline:none;width:100%;font-size:12.5px;color:#1a1a1a;background:transparent;font-family:inherit;resize:none}
 table.info td.val textarea{min-height:40px}
+/* Fix cứng — text tĩnh Bên A */
+table.info td.val.fixed{font-size:12.5px;color:#1a1a1a;font-weight:500}
 .divider-row td{background:#e8edf2;padding:4px 9px;font-size:10.5px;font-weight:700;letter-spacing:0.5px;color:#1a3a5c;text-transform:uppercase;border:0.5px solid #c8d0d8}
-
-/* APPENDIX TABLE */
 .appendix-table{width:100%;border-collapse:collapse;margin-bottom:16px}
 .appendix-table th{background:#1a3a5c;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;text-align:left}
 .appendix-table td{border:0.5px solid #c8d0d8;padding:6px 10px;font-size:12px;vertical-align:top}
@@ -65,8 +53,6 @@ table.info td.val textarea{min-height:40px}
 .verdict-sel.cap{border-color:#E09F27;color:#7A4500;background:#FDF3CD}
 .verdict-sel.hold{border-color:#854F0B;color:#854F0B;background:#FAEEDA}
 .verdict-sel.reject{border-color:#E24B4A;color:#A32D2D;background:#FCEBEB}
-
-/* SIGN */
 .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:0.5px solid #c8d0d8;margin-top:20px;margin-bottom:20px}
 .sign-box{padding:20px 16px 16px;text-align:center}
 .sign-box:first-child{border-right:0.5px solid #c8d0d8}
@@ -74,13 +60,9 @@ table.info td.val textarea{min-height:40px}
 .sign-sub{font-size:10px;font-style:italic;color:#888;margin-bottom:32px}
 .sign-line{border-top:1px dashed #bbb;width:70%;margin:0 auto 8px}
 .sign-name input{border:none;border-bottom:1px solid #ddd;outline:none;font-size:12px;background:transparent;width:80%;text-align:center;font-family:inherit;color:#1a1a1a}
-
-/* NOTE BOX */
 .note-box{background:#fffde7;border:0.5px solid #f0c040;border-left:3px solid #f0a000;padding:10px 14px;font-size:11.5px;color:#555;margin-top:4px;margin-bottom:16px}
 .note-box ul{padding-left:16px;margin-top:4px}
 .note-box li{margin-bottom:3px}
-
-/* PHOTO SECTION */
 .photo-tabs{display:flex;gap:0;border-bottom:2px solid #1a3a5c;margin-bottom:16px}
 .photo-tab{padding:7px 18px;font-size:12px;font-weight:600;cursor:pointer;border:0.5px solid transparent;border-bottom:none;background:#f5f5f0;border-radius:4px 4px 0 0;margin-right:2px;color:#666}
 .photo-tab.active{background:#fff;color:#1a3a5c;border-color:#1a3a5c;border-bottom:2px solid #fff;margin-bottom:-2px}
@@ -102,12 +84,9 @@ table.info td.val textarea{min-height:40px}
 .add-more-btn{display:none;background:#fff;border:1.5px dashed #c0d0e0;color:#1a3a5c;font-size:11px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;margin-top:8px;align-items:center;gap:5px;font-family:inherit}
 .add-more-btn:hover{background:#f0f4f8;border-color:#1a3a5c}
 .photo-cat.has-photos .add-more-btn{display:inline-flex}
-
-/* FOOTER */
 .doc-footer{display:flex;justify-content:space-between;align-items:center;margin-top:24px;border-top:0.5px solid #ddd;padding-top:10px;font-size:10.5px;color:#999}
 .footer-doc{font-weight:600;color:#1a3a5c}
 .conf{color:#c00;font-weight:600;letter-spacing:0.5px}
-
 @media print{
   body{background:#fff;padding:0}
   .page{box-shadow:none;border:none;padding:20px}
@@ -119,7 +98,6 @@ table.info td.val textarea{min-height:40px}
 </head>
 <body>
 
-<!-- TOOLBAR -->
 <div class="toolbar">
   <a href="index.html">← VinaSources</a>
   <a href="qc-tracker.html" id="back-qc">← QC Tracker</a>
@@ -131,7 +109,6 @@ table.info td.val textarea{min-height:40px}
 
 <div class="page">
 
-  <!-- HEADER -->
   <div class="doc-header">
     <div>
       <span class="company-badge">VINASOURCES</span>
@@ -146,29 +123,38 @@ table.info td.val textarea{min-height:40px}
     </div>
   </div>
 
-  <!-- REF BAR -->
   <div class="ref-bar">
     <span><label>Căn cứ HĐ / Contract No.:</label><input class="wide" id="ref-contract" placeholder="Số hợp đồng"/></span>
     <span><label>PO No.:</label><input id="ref-po" placeholder="Mã đơn hàng"/></span>
   </div>
 
-  <!-- TABS -->
   <div class="photo-tabs">
     <div class="photo-tab active" onclick="switchTab('tab-main',this)">📋 Biên Bản Chính <span style="font-size:10px;font-weight:400">Main Report</span></div>
     <div class="photo-tab" onclick="switchTab('tab-photo',this)">🖼 Phụ lục 5 – Hình Ảnh <span style="font-size:10px;font-weight:400">Appendix 5</span></div>
   </div>
 
-  <!-- TAB MAIN -->
   <div id="tab-main" class="photo-panel active">
 
     <div class="sec-title">I. Thông Tin Các Bên / Party Information</div>
     <div class="sec-sub">Bên mua và bên bán / Buyer and seller</div>
     <table class="info" style="margin-top:1px">
       <tr class="divider-row"><td colspan="2">Bên Mua (Bên A) / Buyer (Party A)</td></tr>
-      <tr><td class="lbl">Tên công ty <em>Company name</em></td><td class="val"><input id="a-name" placeholder="VinaSources hoặc Buyer"/></td></tr>
-      <tr><td class="lbl">Địa chỉ <em>Address</em></td><td class="val"><input id="a-addr" placeholder="Địa chỉ đầy đủ"/></td></tr>
-      <tr><td class="lbl">Người đại diện <em>Representative</em></td><td class="val"><input id="a-rep" placeholder="Họ và tên"/></td></tr>
-      <tr><td class="lbl">Chức vụ <em>Position</em></td><td class="val"><input id="a-pos" placeholder="Chức danh"/></td></tr>
+      <tr>
+        <td class="lbl">Tên công ty <em>Company name</em></td>
+        <td class="val fixed">CÔNG TY TNHH VINASOURCES</td>
+      </tr>
+      <tr>
+        <td class="lbl">Địa chỉ <em>Address</em></td>
+        <td class="val fixed">Tầng 4, tòa nhà Rainbow, khu đô thị mới Văn Quán, Phường Hà Đông, TP Hà Nội</td>
+      </tr>
+      <tr>
+        <td class="lbl">Người đại diện <em>Representative</em></td>
+        <td class="val fixed">PHẠM MINH TUẤN</td>
+      </tr>
+      <tr>
+        <td class="lbl">Chức vụ <em>Position</em></td>
+        <td class="val fixed">GIÁM ĐỐC</td>
+      </tr>
       <tr class="divider-row"><td colspan="2">Bên Bán / Nhà SX (Bên B) / Seller / Manufacturer (Party B)</td></tr>
       <tr><td class="lbl">Tên công ty <em>Company name</em></td><td class="val"><input id="b-name" placeholder="Tên nhà cung cấp"/></td></tr>
       <tr><td class="lbl">Địa chỉ <em>Address</em></td><td class="val"><input id="b-addr" placeholder="Địa chỉ xưởng"/></td></tr>
@@ -317,9 +303,8 @@ table.info td.val textarea{min-height:40px}
       </div>
     </div>
 
-  </div><!-- end tab-main -->
+  </div>
 
-  <!-- TAB PHOTO -->
   <div id="tab-photo" class="photo-panel">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>
@@ -327,7 +312,6 @@ table.info td.val textarea{min-height:40px}
         <div style="font-size:11px;color:#888;font-style:italic;margin-top:2px">Appendix 5 · Finished Product & Packaging Photographs</div>
       </div>
     </div>
-
     <div class="photo-cat" data-cat="product">
       <div class="cat-label">📦 Hình ảnh sản phẩm thực tế <em>Actual product photos</em></div>
       <div class="img-upload-zone" onclick="triggerUpload('product')">
@@ -338,7 +322,6 @@ table.info td.val textarea{min-height:40px}
       <div class="img-gallery" id="gallery-product"></div>
       <button class="add-more-btn" onclick="triggerUpload('product')">📷 Thêm ảnh khác</button>
     </div>
-
     <div class="photo-cat" data-cat="inner">
       <div class="cat-label">🗂 Đóng gói đơn vị <em>Inner packaging</em></div>
       <div class="img-upload-zone" onclick="triggerUpload('inner')">
@@ -349,7 +332,6 @@ table.info td.val textarea{min-height:40px}
       <div class="img-gallery" id="gallery-inner"></div>
       <button class="add-more-btn" onclick="triggerUpload('inner')">📷 Thêm ảnh khác</button>
     </div>
-
     <div class="photo-cat" data-cat="carton">
       <div class="cat-label">📫 Carton & Shipping mark</div>
       <div class="img-upload-zone" onclick="triggerUpload('carton')">
@@ -360,7 +342,6 @@ table.info td.val textarea{min-height:40px}
       <div class="img-gallery" id="gallery-carton"></div>
       <button class="add-more-btn" onclick="triggerUpload('carton')">📷 Thêm ảnh khác</button>
     </div>
-
     <div class="photo-cat" data-cat="defect">
       <div class="cat-label">⚠️ Hình ảnh lỗi phát hiện (nếu có) <em>Defect photos (if any)</em></div>
       <div class="img-upload-zone" onclick="triggerUpload('defect')">
@@ -371,73 +352,50 @@ table.info td.val textarea{min-height:40px}
       <div class="img-gallery" id="gallery-defect"></div>
       <button class="add-more-btn" onclick="triggerUpload('defect')">📷 Thêm ảnh khác</button>
     </div>
-  </div><!-- end tab-photo -->
+  </div>
 
-  <!-- FOOTER -->
   <div class="doc-footer">
     <span>Trang / Page &nbsp;&nbsp;___ / ___</span>
     <span class="footer-doc">No.: <span id="footer-no">BB-KT-VNS-___</span></span>
     <span class="conf">TÀI LIỆU NỘI BỘ / INTERNAL USE ONLY</span>
   </div>
 
-</div><!-- end page -->
+</div>
 
 <script>
-// ── INIT ──
 window.onload = () => {
-  // Set today
   const t = new Date().toISOString().split('T')[0];
   document.getElementById('doc-date').value = t;
   document.getElementById('sign-a-date').value = t;
   document.getElementById('sign-b-date').value = t;
-
-  // Check if opened from QC Tracker with params
   const params = new URLSearchParams(location.search);
   const qcId = params.get('qcId');
   const orderId = params.get('orderId');
   if (qcId || orderId) {
-    // Update back link
     const backLink = document.getElementById('back-qc');
     if (backLink) backLink.href = `qc-tracker.html?${qcId?'qcId='+qcId:''}${orderId?'&orderId='+orderId:''}`;
-    // Auto-load if localStorage has QC data
     autoLoadFromStorage(qcId || orderId);
   }
 };
-
-// ── AUTO LOAD from localStorage (QC Tracker saves state there too as backup) ──
 function autoLoadFromStorage(key) {
-  // Try sessionStorage for data passed from QC Tracker
   try {
     const raw = sessionStorage.getItem('vns_bb_data');
-    if (raw) {
-      const d = JSON.parse(raw);
-      fillFromData(d);
-      document.getElementById('load-status').style.display = '';
-    }
+    if (raw) { const d = JSON.parse(raw); fillFromData(d); document.getElementById('load-status').style.display = ''; }
   } catch(e) {}
 }
-
 function loadFromQC() {
-  // Read from sessionStorage set by QC Tracker
   try {
     const raw = sessionStorage.getItem('vns_bb_data');
-    if (!raw) {
-      alert('Chưa có dữ liệu từ QC Tracker. Vui lòng mở Biên bản từ nút trong QC Tracker.');
-      return;
-    }
+    if (!raw) { alert('Chưa có dữ liệu từ QC Tracker. Vui lòng mở Biên bản từ nút trong QC Tracker.'); return; }
     const d = JSON.parse(raw);
     fillFromData(d);
     document.getElementById('load-status').style.display = '';
-  } catch(e) {
-    alert('Lỗi đọc dữ liệu: ' + e.message);
-  }
+  } catch(e) { alert('Lỗi đọc dữ liệu: ' + e.message); }
 }
-
 function fillFromData(d) {
   const s = id => { const el=document.getElementById(id); if(el&&d[id]!==undefined) el.value=d[id]||''; };
   s('ref-po'); s('b-name'); s('insp-sku'); s('insp-lot'); s('insp-sample'); s('insp-qc');
   s('d-crit'); s('d-maj'); s('d-min');
-  // Verdicts
   ['ipi','dupro','fri','cli'].forEach(ph => {
     const sel = document.getElementById('v-'+ph);
     if (sel && d['verdict_'+ph]) { sel.value = d['verdict_'+ph]; styleVerdict(sel); }
@@ -446,23 +404,17 @@ function fillFromData(d) {
     const app = document.getElementById('app'+(ph==='ipi'?1:ph==='dupro'?2:ph==='fri'?3:4));
     if (app && d['verdict_'+ph]) { app.value = d['verdict_'+ph]; styleVerdict(app); }
   });
-  // Overall
   const ov = document.getElementById('v-overall');
   if (ov && d.verdict_overall) { ov.value = d.verdict_overall; styleVerdict(ov); }
-  // CAP
   if (d.cap_desc) { const el=document.getElementById('cap-desc'); if(el) el.value=d.cap_desc; }
   if (d.cap_action) { const el=document.getElementById('cap-action'); if(el) el.value=d.cap_action; }
 }
-
-// ── TAB ──
 function switchTab(id, el) {
   document.querySelectorAll('.photo-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.photo-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   el.classList.add('active');
 }
-
-// ── VERDICT STYLE ──
 function styleVerdict(sel) {
   sel.className = 'verdict-sel';
   const v = sel.value;
@@ -471,15 +423,11 @@ function styleVerdict(sel) {
   else if (v==='hold') sel.classList.add('hold');
   else if (v==='reject') sel.classList.add('reject');
 }
-
-// ── FOOTER ──
 function updateFooter() {
   const v = document.getElementById('doc-no').value;
   const el = document.getElementById('footer-no');
   if (el) el.textContent = v || 'BB-KT-VNS-___';
 }
-
-// ── PHOTO UPLOAD ──
 function triggerUpload(cat) {
   document.querySelector(`.photo-cat[data-cat="${cat}"] input[type=file]`).click();
 }
@@ -495,7 +443,8 @@ function handleFiles(e, cat) {
       const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '×';
       del.onclick = () => { card.remove(); if (gallery.children.length===0) photoCat.classList.remove('has-photos'); };
       const cap = document.createElement('div'); cap.className = 'img-cap';
-      const capInp = document.createElement('input'); capInp.placeholder = 'Chú thích ảnh...'; capInp.style.cssText='border:none;outline:none;font-size:11px;width:100%;background:transparent;font-family:inherit';
+      const capInp = document.createElement('input'); capInp.placeholder = 'Chú thích ảnh...';
+      capInp.style.cssText='border:none;outline:none;font-size:11px;width:100%;background:transparent;font-family:inherit';
       cap.appendChild(capInp);
       card.appendChild(img); card.appendChild(del); card.appendChild(cap);
       gallery.appendChild(card);
