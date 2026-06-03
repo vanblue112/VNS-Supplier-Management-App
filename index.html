@@ -106,10 +106,10 @@ const KRALJIC_QUADRANTS=[
   {id:"routine",label:"Routine",labelVi:"Thông thường",c:"#185FA5",bg:"#E6F1FB",icon:"📦",desc:"Tác động tài chính thấp · Rủi ro thấp",strategy:"Tự động hóa, tối ưu chi phí"},
 ];
 const FEASIBILITY_QS=[
-  {id:"network",label:"Ngành hàng có trong network không?",hint:"Đã có supplier ngành này trong DB hoặc tìm được trong 3–5 ngày"},
-  {id:"spec",label:"Spec có bất thường không?",hint:"Yêu cầu kỹ thuật quá phức tạp, chứng nhận hiếm, hoặc chưa từng source loại này"},
-  {id:"moq",label:"MOQ có khớp không?",hint:"MOQ buyer yêu cầu phù hợp với năng lực supplier trong network"},
-  {id:"timeline",label:"Timeline có khả thi không?",hint:"Lead time sản xuất + vận chuyển đủ để giao đúng deadline buyer không"},
+  {id:"network",  label:"Ngành hàng có trong network không?",   hint:"Đã có supplier ngành này trong DB hoặc tìm được trong 3–5 ngày",  yesOk:true},
+  {id:"spec",     label:"Spec có bất thường không?",            hint:"Yêu cầu kỹ thuật quá phức tạp, chứng nhận hiếm, hoặc chưa từng source loại này — Yes = có vấn đề",yesOk:false},
+  {id:"moq",      label:"MOQ có khớp không?",                   hint:"MOQ buyer yêu cầu phù hợp với năng lực supplier trong network",   yesOk:true},
+  {id:"timeline", label:"Timeline có khả thi không?",           hint:"Lead time sản xuất + vận chuyển đủ để giao đúng deadline buyer không", yesOk:true},
 ];
 const SELECTION_REASONS=["Tier phù hợp","Đã XK thị trường này","Có chứng nhận yêu cầu","Giá cạnh tranh","Lead time ngắn","OEM/ODM tốt","Đã hợp tác trước đây","MOQ phù hợp"];
 const REJECTION_REASONS=["Tier quá thấp","Không có kinh nghiệm XK","Thiếu chứng nhận","Giá quá cao","Lead time quá dài","Không có OEM/ODM","MOQ quá cao","Năng lực sản xuất không đủ","Không phản hồi RFQ"];
@@ -169,9 +169,26 @@ const genSupIdMgt=sups=>{
   return"VNS-"+String(Math.max(0,...nums)+1).padStart(6,"0");
 };
 
-const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
-const newR=()=>({id:newId("r"),type:"rfq",code:"RFQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
-const newINQ=()=>({id:newId("i"),type:"inq",code:"INQ-"+Date.now().toString().slice(-5),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
+// Auto-generate RFQ/INQ code: RFQ-yymmdd-xxx
+const genCode=(prefix,existing)=>{
+  const d=new Date();
+  const yy=String(d.getFullYear()).slice(2);
+  const mm=String(d.getMonth()+1).padStart(2,"0");
+  const dd=String(d.getDate()).padStart(2,"0");
+  const dateStr=`${yy}${mm}${dd}`;
+  const todayCodes=existing.filter(r=>{
+    const c=String(r.code||"");
+    return c.startsWith(`${prefix}-${dateStr}-`);
+  });
+  const maxSeq=todayCodes.reduce((max,r)=>{
+    const parts=String(r.code||"").split("-");
+    const seq=parseInt(parts[parts.length-1])||0;
+    return Math.max(max,seq);
+  },0);
+  return`${prefix}-${dateStr}-${String(maxSeq+1).padStart(3,"0")}`;
+};({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
+const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
+const newINQ=(rfqs=[])=>({id:newId("i"),type:"inq",code:genCode("INQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
@@ -270,13 +287,16 @@ function FeasibilityModal({r,ctx,onClose}){
   const [saving,setSaving]=useState(false);
   const set=(k,v)=>setAns(p=>({...p,[k]:v}));
   const allAnswered=FEASIBILITY_QS.every(q=>ans[q.id]!==null);
-  const allYes=FEASIBILITY_QS.every(q=>ans[q.id]===true);
-  const hasNo=FEASIBILITY_QS.some(q=>ans[q.id]===false);
-  const noNeedsNote=FEASIBILITY_QS.filter(q=>ans[q.id]===false).some(q=>!ans[q.id+"Note"]?.trim());
-  const canSave=allAnswered&&(!hasNo||!noNeedsNote);
+  // Pass = answer matches yesOk (Yes cho câu Yes-tốt, No cho câu Yes-xấu)
+  const isPass=q=>ans[q.id]===null?false:(q.yesOk?ans[q.id]===true:ans[q.id]===false);
+  const allPass=FEASIBILITY_QS.every(q=>isPass(q));
+  const hasFlag=FEASIBILITY_QS.some(q=>allAnswered&&!isPass(q));
+  // Câu có flag phải ghi note
+  const flagNeedsNote=FEASIBILITY_QS.filter(q=>allAnswered&&!isPass(q)).some(q=>!ans[q.id+"Note"]?.trim());
+  const canSave=allAnswered&&(!hasFlag||!flagNeedsNote);
   const handleSave=async(forceTo)=>{
     setSaving(true);
-    const newStatus=forceTo||(allYes?"searching":"feasibility_check");
+    const newStatus=forceTo||(allPass?"searching":"feasibility_check");
     await upsR({...r,feasibility:ans,status:newStatus});
     setSaving(false);onClose();
   };
@@ -289,31 +309,46 @@ function FeasibilityModal({r,ctx,onClose}){
         </div>
         <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:12}}>
           {FEASIBILITY_QS.map(q=>{
-            const val=ans[q.id];const noteKey=q.id+"Note";const needNote=val===false&&!ans[noteKey]?.trim();
+            const val=ans[q.id];
+            const noteKey=q.id+"Note";
+            const pass=val===null?null:(q.yesOk?val===true:val===false);
+            const isFlag=val!==null&&pass===false;
+            const needNote=isFlag&&!ans[noteKey]?.trim();
             return(
-              <div key={q.id} style={{border:`1.5px solid ${val===true?"#1D9E75":val===false?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",background:val===true?"#F0FDF9":val===false?"#FFF5F5":"#fff"}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:val===false?8:0}}>
-                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{q.label}</div><div style={{fontSize:11,color:"#999"}}>{q.hint}</div></div>
+              <div key={q.id} style={{border:`1.5px solid ${pass===true?"#1D9E75":isFlag?"#E24B4A":"#e5e5e5"}`,borderRadius:10,padding:"12px 14px",background:pass===true?"#F0FDF9":isFlag?"#FFF5F5":"#fff"}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:isFlag?8:0}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{q.label}</div>
+                    <div style={{fontSize:11,color:"#999"}}>{q.hint}</div>
+                  </div>
                   <div style={{display:"flex",gap:6,flexShrink:0}}>
-                    {[{v:true,l:"Yes"},{v:false,l:"No"}].map(opt=>(
-                      <button key={String(opt.v)} onClick={()=>set(q.id,opt.v)} style={{padding:"5px 16px",borderRadius:6,border:`1.5px solid ${val===opt.v?(opt.v?"#1D9E75":"#E24B4A"):"#ddd"}`,background:val===opt.v?(opt.v?"#1D9E75":"#E24B4A"):"#fff",color:val===opt.v?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>{opt.l}</button>
-                    ))}
+                    {[{v:true,l:"Yes"},{v:false,l:"No"}].map(opt=>{
+                      const optPass=q.yesOk?opt.v===true:opt.v===false;
+                      const selColor=optPass?"#1D9E75":"#E24B4A";
+                      const isSel=val===opt.v;
+                      return(
+                        <button key={String(opt.v)} onClick={()=>set(q.id,opt.v)}
+                          style={{padding:"5px 16px",borderRadius:6,border:`1.5px solid ${isSel?selColor:"#ddd"}`,background:isSel?selColor:"#fff",color:isSel?"#fff":"#555",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                          {opt.l}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                {val===false&&<textarea value={ans[noteKey]} onChange={e=>set(noteKey,e.target.value)} placeholder="⚠ Bắt buộc: giải thích lý do và hướng xử lý..." style={{...iSt,minHeight:52,resize:"vertical",boxSizing:"border-box",fontSize:12,marginTop:4,borderColor:needNote?"#E24B4A":"#ddd"}}/>}
-                {val===true&&<div style={{fontSize:11,color:"#1D9E75",marginTop:4,fontWeight:600}}>✓ OK</div>}
+                {isFlag&&<textarea value={ans[noteKey]} onChange={e=>set(noteKey,e.target.value)} placeholder="⚠ Bắt buộc: giải thích lý do và hướng xử lý..." style={{...iSt,minHeight:52,resize:"vertical",boxSizing:"border-box",fontSize:12,marginTop:4,borderColor:needNote?"#E24B4A":"#ddd"}}/>}
+                {pass===true&&<div style={{fontSize:11,color:"#1D9E75",marginTop:4,fontWeight:600}}>✓ OK</div>}
               </div>
             );
           })}
         </div>
         <div style={{padding:"0 18px 16px"}}>
-          {allAnswered&&<div style={{padding:"10px 14px",borderRadius:8,marginBottom:12,background:allYes?"#EAF3DE":"#FFF5F5",border:`1px solid ${allYes?"#1D9E75":"#E24B4A"}`}}>
-            {allYes?<div style={{fontSize:13,fontWeight:600,color:"#1D9E75"}}>✅ 4/4 Yes — Sẵn sàng chuyển sang Đang tìm NCC</div>:<div style={{fontSize:13,fontWeight:600,color:"#E24B4A"}}>⚠ Có {FEASIBILITY_QS.filter(q=>ans[q.id]===false).length} điểm cần lưu ý</div>}
+          {allAnswered&&<div style={{padding:"10px 14px",borderRadius:8,marginBottom:12,background:allPass?"#EAF3DE":"#FFF5F5",border:`1px solid ${allPass?"#1D9E75":"#E24B4A"}`}}>
+            {allPass?<div style={{fontSize:13,fontWeight:600,color:"#1D9E75"}}>✅ 4/4 Pass — Sẵn sàng chuyển sang Đang tìm NCC</div>:<div style={{fontSize:13,fontWeight:600,color:"#E24B4A"}}>⚠ Có {FEASIBILITY_QS.filter(q=>allAnswered&&!isPass(q)).length} điểm cần lưu ý</div>}
           </div>}
           <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
             <button onClick={onClose} style={gBtn}>Hủy</button>
-            {allAnswered&&hasNo&&canSave&&<button onClick={()=>handleSave("feasibility_check")} style={{...pBtn,background:"#854F0B"}}>{saving?<Spin/>:"Lưu & Giữ flag ⚠"}</button>}
-            <button onClick={()=>handleSave()} disabled={!canSave||saving} style={{...pBtn,background:allYes?"#1D9E75":"#6D3AB7",opacity:canSave?1:.5}}>{saving?<Spin/>:allYes?"✅ Xác nhận & Tìm NCC":"Lưu Pre-feasibility"}</button>
+            {allAnswered&&hasFlag&&canSave&&<button onClick={()=>handleSave("feasibility_check")} style={{...pBtn,background:"#854F0B"}}>{saving?<Spin/>:"Lưu & Giữ flag ⚠"}</button>}
+            <button onClick={()=>handleSave()} disabled={!canSave||saving} style={{...pBtn,background:allPass?"#1D9E75":"#6D3AB7",opacity:canSave?1:.5}}>{saving?<Spin/>:allPass?"✅ Xác nhận & Tìm NCC":"Lưu Pre-feasibility"}</button>
           </div>
         </div>
       </div>
@@ -443,8 +478,8 @@ function App(){
           <a href="bienban.html" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:6,border:"1px solid #185FA5",color:"#185FA5",fontSize:12,fontWeight:600,textDecoration:"none"}} onMouseEnter={e=>e.currentTarget.style.background="#E6F1FB"} onMouseLeave={e=>e.currentTarget.style.background="none"}>📄 Biên bản</a>
           <div style={{flex:1}}/>
           {canEdit?(<>
-            <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
-            <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ RFQ</button>
+            <button onClick={()=>setModal({t:"inq-form",d:newINQ(rfqs)})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
+            <button onClick={()=>setModal({t:"rfq-form",d:newR(rfqs)})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ RFQ</button>
             <button onClick={()=>setModal({t:"order-form",d:newO()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #1D9E75",background:"none",color:"#1D9E75",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ Order</button>
             <button onClick={()=>setModal({t:"sup-form",d:{...newS(),supIdMgt:genSupIdMgt(sups)}})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
             <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
@@ -1006,6 +1041,17 @@ function RFQDetail({r,ctx}){
                   <button onClick={()=>setModal({t:"brief",d:s})} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"none",background:"#185FA5",color:"#fff",cursor:"pointer"}}>Brief</button>
                   {canEdit&&<button onClick={()=>{const ns=sids.filter(x=>x!==s.id);upsR({...r,sids:ns});}} style={{fontSize:11,padding:"4px 10px",borderRadius:5,border:"1px solid #E24B4A",background:"none",color:"#E24B4A",cursor:"pointer"}}>Bỏ</button>}
                 </div>
+              </div>
+              {/* Selection reasons block — màu cam */}
+              <div style={{background:"#FFF3E0",border:"1px solid #E8922A",borderRadius:8,padding:"10px 12px",marginBottom:8}}>
+                <div style={{fontSize:11,fontWeight:600,color:"#B35A00",marginBottom:6}}>🏷 Lý do chọn NCC này</div>
+                {sr.length>0
+                  ?<div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:canEdit?8:0}}>
+                    {sr.map(reason=><span key={reason} style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#E8922A",color:"#fff",fontWeight:600}}>{reason}</span>)}
+                  </div>
+                  :<div style={{fontSize:11,color:"#B35A00",marginBottom:canEdit?8:0,opacity:.7}}>Chưa chọn lý do</div>
+                }
+                {canEdit&&<button onClick={()=>setModal({t:"rfq-assign",d:r})} style={{fontSize:11,padding:"3px 10px",borderRadius:5,border:"1px solid #E8922A",background:"#fff",color:"#B35A00",cursor:"pointer",fontWeight:600}}>✏️ Cập nhật lý do</button>}
               </div>
               <div style={{display:"grid",gap:7}}>
                 <div><div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:4}}>✅ Báo giá theo product spec</div><textarea value={sq.spec||""} onChange={e=>setQuote(s.id,"spec",e.target.value)} onBlur={e=>handleBlur(s.id,"spec",e.target.value)} disabled={!canEdit} placeholder="Điền giá báo đúng spec: đơn giá, MOQ, lead time, điều kiện..." style={{...iSt,minHeight:56,resize:"vertical",boxSizing:"border-box",fontSize:12,lineHeight:1.5}}/></div>
