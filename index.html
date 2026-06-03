@@ -416,7 +416,15 @@ function EmailDraft({r,sups,onClose}){
   );
 }
 
-// ── IMPORT / EXPORT ──
+// Auto-generate supIdMgt: VNS-000001, VNS-000002...
+const genSupIdMgt=sups=>{
+  const nums=sups.map(s=>{
+    const m=String(s.supIdMgt||"").match(/^VNS-(\d+)$/);
+    return m?parseInt(m[1]):0;
+  });
+  const next=Math.max(0,...nums)+1;
+  return"VNS-"+String(next).padStart(6,"0");
+};
 const SUP_CSV_FIELDS=["id","name","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","channel","contactName","zalo","email","certs","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
 
 function exportSupCSV(sups){
@@ -633,7 +641,7 @@ function App(){
             <button onClick={()=>setModal({t:"inq-form",d:newINQ()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #534AB7",background:"none",color:"#534AB7",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ INQ</button>
             <button onClick={()=>setModal({t:"rfq-form",d:newR()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #185FA5",background:"none",color:"#185FA5",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:4}}>+ RFQ</button>
             <button onClick={()=>setModal({t:"order-form",d:newO()})} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #1D9E75",background:"none",color:"#1D9E75",fontSize:12,cursor:"pointer",fontWeight:500,marginRight:6}}>+ Order</button>
-            <button onClick={()=>setModal({t:"sup-form",d:newS()})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
+            <button onClick={()=>setModal({t:"sup-form",d:{...newS(),supIdMgt:genSupIdMgt(sups)}})} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#1D9E75",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:500}}>+ Supplier</button>
             <button onClick={logout} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #eee",background:"none",color:"#aaa",fontSize:11,cursor:"pointer",marginLeft:6}}>Đăng xuất</button>
           </>):<span style={{fontSize:12,color:"#aaa",padding:"6px 10px"}}>👁 Chỉ xem</span>}
         </div>
@@ -826,14 +834,29 @@ function SupDetail({s,ctx}){
 }
 
 function SupForm({s,ctx}){
-  const {upsS,setModal}=ctx;const [f,setF]=useState({...s,vserf:typeof s.vserf==="object"?s.vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}});
+  const {upsS,setModal,sups}=ctx;
+  const [f,setF]=useState({...s,vserf:typeof s.vserf==="object"?s.vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
+
+  // Check trùng supIdMgt (bỏ qua chính nó khi edit)
+  const mgtDup=f.supIdMgt&&sups.some(x=>x.id!==f.id&&x.supIdMgt===f.supIdMgt);
+  const pltDup=f.supIdPlatform&&sups.some(x=>x.id!==f.id&&x.supIdPlatform===f.supIdPlatform);
   return(
     <Card>
       <h2 style={{margin:"0 0 1.2rem",fontSize:15,fontWeight:600}}>{f.name?"Sửa: "+f.name:"Thêm supplier mới"}</h2>
       <Sec title="Thông tin cơ bản">
-        <Rw l="Supplier ID (Mgt)"><input value={f.supIdMgt||""} onChange={e=>set("supIdMgt",e.target.value)} placeholder="VNS-001..." style={iSt}/></Rw>
-        <Rw l="Supplier ID (Platform)"><input value={f.supIdPlatform||""} onChange={e=>set("supIdPlatform",e.target.value)} placeholder="ALI-xxx / GS-xxx..." style={iSt}/></Rw>
+        <Rw l="Supplier ID (Mgt)">
+          <div>
+            <input value={f.supIdMgt||""} onChange={e=>set("supIdMgt",e.target.value)} placeholder="VNS-000001..." style={{...iSt,borderColor:mgtDup?"#E24B4A":"#ddd"}}/>
+            {mgtDup&&<div style={{fontSize:11,color:"#E24B4A",marginTop:3}}>⚠ ID này đã tồn tại — {sups.find(x=>x.supIdMgt===f.supIdMgt)?.name}</div>}
+          </div>
+        </Rw>
+        <Rw l="Supplier ID (Platform)">
+          <div>
+            <input value={f.supIdPlatform||""} onChange={e=>set("supIdPlatform",e.target.value)} placeholder="A000000..." style={{...iSt,borderColor:pltDup?"#E24B4A":"#ddd"}}/>
+            {pltDup&&<div style={{fontSize:11,color:"#E24B4A",marginTop:3}}>⚠ Platform ID này đã tồn tại — {sups.find(x=>x.supIdPlatform===f.supIdPlatform)?.name}</div>}
+          </div>
+        </Rw>
         <Rw l="Tên công ty *"><input value={f.name||""} onChange={e=>set("name",e.target.value)} style={iSt}/></Rw>
         <Rw l="Mô hình KD"><select value={f.bizModel||""} onChange={e=>set("bizModel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{BIZ_MODELS.map(i=><option key={i}>{i}</option>)}</select></Rw>
         <Rw l="Loại hình DN"><select value={f.legalType||""} onChange={e=>set("legalType",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{LEGAL_TYPES.map(i=><option key={i}>{i}</option>)}</select></Rw>
