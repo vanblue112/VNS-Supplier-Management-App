@@ -321,8 +321,14 @@ function ChecklistEngine({criteria,scores,setScores,mandatoryIds=[],accentColor=
 // ── PRE-FEASIBILITY ──
 function FeasibilityModal({r,ctx,onClose}){
   const {upsR}=ctx;
+  const parseVal=v=>v===true||v==="true"?true:v===false||v==="false"?false:null;
   const init=r.feasibility||{};
-  const [ans,setAns]=useState({network:init.network??null,networkNote:init.networkNote||"",spec:init.spec??null,specNote:init.specNote||"",moq:init.moq??null,moqNote:init.moqNote||"",timeline:init.timeline??null,timelineNote:init.timelineNote||""});
+  const [ans,setAns]=useState({
+    network:parseVal(init.network),networkNote:init.networkNote||"",
+    spec:parseVal(init.spec),specNote:init.specNote||"",
+    moq:parseVal(init.moq),moqNote:init.moqNote||"",
+    timeline:parseVal(init.timeline),timelineNote:init.timelineNote||"",
+  });
   const [saving,setSaving]=useState(false);
   const set=(k,v)=>setAns(p=>({...p,[k]:v}));
   const allAnswered=FEASIBILITY_QS.every(q=>ans[q.id]!==null);
@@ -1015,22 +1021,32 @@ function RFQDetail({r,ctx}){
       {/* Pre-feasibility summary */}
       {r.feasibility&&Object.keys(r.feasibility).length>0&&(()=>{
         const f=r.feasibility;
-        const isPass=q=>f[q.id]===null||f[q.id]===undefined?false:(q.yesOk?f[q.id]===true:f[q.id]===false);
-        const allPass=FEASIBILITY_QS.every(q=>isPass(q));
-        const noCount=FEASIBILITY_QS.filter(q=>!isPass(q)&&f[q.id]!==null&&f[q.id]!==undefined).length;
+        // Parse giá trị từ Sheets (có thể là string "true"/"false")
+        const parseVal=v=>v===true||v==="true"?true:v===false||v==="false"?false:null;
+        const isPass=q=>{const v=parseVal(f[q.id]);if(v===null)return false;return q.yesOk?v===true:v===false;};
+        const answered=FEASIBILITY_QS.filter(q=>parseVal(f[q.id])!==null).length;
+        const allPass=answered===FEASIBILITY_QS.length&&FEASIBILITY_QS.every(q=>isPass(q));
+        const noCount=FEASIBILITY_QS.filter(q=>parseVal(f[q.id])!==null&&!isPass(q)).length;
+        if(answered===0)return null;
         return(
           <div style={{background:allPass?"#EAF3DE":"#FFF5F5",border:`1px solid ${allPass?"#1D9E75":"#E24B4A"}`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:12,fontWeight:700,color:allPass?"#1D9E75":"#E24B4A"}}>{allPass?"✅ Pre-feasibility: 4/4 Pass":`⚠ Pre-feasibility: ${noCount} điểm cần lưu ý`}</span>
+              <span style={{fontSize:12,fontWeight:700,color:allPass?"#1D9E75":"#E24B4A"}}>
+                {allPass?"✅ Pre-feasibility: 4/4 Pass":`⚠ Pre-feasibility: ${noCount} điểm cần lưu ý`}
+              </span>
               {canEdit&&<button onClick={()=>setShowFeasibility(true)} style={{fontSize:11,padding:"2px 8px",borderRadius:4,border:"1px solid #ddd",background:"#fff",cursor:"pointer",color:"#555"}}>Cập nhật</button>}
             </div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {FEASIBILITY_QS.map(q=>(
-                <div key={q.id} style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
-                  <span style={{color:isPass(q)?"#1D9E75":"#E24B4A",fontWeight:700}}>{isPass(q)?"✓":"✗"}</span>
-                  <span style={{color:"#555"}}>{q.label.split(" ").slice(0,3).join(" ")}...</span>
-                </div>
-              ))}
+              {FEASIBILITY_QS.map(q=>{
+                const v=parseVal(f[q.id]);
+                const pass=v===null?null:isPass(q);
+                return(
+                  <div key={q.id} style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
+                    <span style={{color:pass===true?"#1D9E75":pass===false?"#E24B4A":"#aaa",fontWeight:700}}>{pass===true?"✓":pass===false?"✗":"?"}</span>
+                    <span style={{color:"#555"}}>{q.label.split(" ").slice(0,3).join(" ")}...</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
