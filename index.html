@@ -603,33 +603,29 @@ function SupList({ctx}){
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {paginated.map(s=>{
           const ti=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);
+          const ps=s.prescore||{};
+          const psIds=PRESCORE_CRITERIA.map(c=>c.id);
+          const psAnswered=psIds.filter(id=>ps[id]!==undefined&&ps[id]!==null&&ps[id]!=="").length;
+          const psTotal=psIds.reduce((a,id)=>a+(parseInt(ps[id])||0),0);
+          const psV=psAnswered>=5?(psTotal>=24?{label:"Triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}:psTotal>=15?{label:"Cần xác minh",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}:{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"}):null;
           return(
-            {(()=>{
-              const ps=s.prescore||{};
-              const psIds=PRESCORE_CRITERIA.map(c=>c.id);
-              const psAnswered=psIds.filter(id=>ps[id]!==undefined&&ps[id]!==null&&ps[id]!=="").length;
-              const psTotal=psIds.reduce((a,id)=>a+(parseInt(ps[id])||0),0);
-              const psV=psAnswered>=5?(psTotal>=24?{label:"Triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}:psTotal>=15?{label:"Cần xác minh",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}:{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"}):null;
-              return(
-                <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-                  <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div>
-                    <div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
-                  </div>
-                  {s.partnerType&&s.partnerType!=="Chưa xác định"&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":"#E6F1FB",color:s.partnerType==="Đối tác trực tiếp"?"#3B6D11":"#185FA5",fontWeight:600,flexShrink:0}}>{s.partnerType==="Đối tác trực tiếp"?"Trực tiếp":"Nền tảng"}</span>}
-                  {psV
-                    ?<span title={`Pre-score: ${psTotal}/30`} style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:psV.bg,color:psV.c,fontWeight:600,flexShrink:0,cursor:"help"}}>{psV.icon} {psTotal}/30</span>
-                    :psAnswered>0
-                      ?<span title={`Pre-score: ${psAnswered}/6 tiêu chí`} style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#aaa",fontWeight:600,flexShrink:0}}>🔍 {psAnswered}/6</span>
-                      :<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#ccc",fontWeight:400,flexShrink:0}}>Pre-score —</span>
-                  }
-                  <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-                  <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
-                  <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
-                </div>
-              );
-            })()}
+            <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div>
+                <div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
+              </div>
+              {s.partnerType&&s.partnerType!=="Chưa xác định"&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":"#E6F1FB",color:s.partnerType==="Đối tác trực tiếp"?"#3B6D11":"#185FA5",fontWeight:600,flexShrink:0}}>{s.partnerType==="Đối tác trực tiếp"?"Trực tiếp":"Nền tảng"}</span>}
+              {psV
+                ?<span title={`Pre-score: ${psTotal}/30`} style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:psV.bg,color:psV.c,fontWeight:600,flexShrink:0,cursor:"help"}}>{psV.icon} {psTotal}/30</span>
+                :psAnswered>0
+                  ?<span title={`Pre-score: ${psAnswered}/6 tiêu chí`} style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#aaa",fontWeight:600,flexShrink:0}}>🔍 {psAnswered}/6</span>
+                  :<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#ccc",fontWeight:400,flexShrink:0}}>Pre —</span>
+              }
+              <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+              <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
+              <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
+            </div>
           );
         })}
       </div>
