@@ -204,8 +204,9 @@ const newId=sfx=>Date.now()+sfx;
 const now=()=>new Date().toISOString();
 const today=()=>new Date().toISOString().slice(0,10);
 const genSupIdMgt=sups=>{
-  const nums=sups.map(s=>{const m=String(s.supIdMgt||"").match(/^VNS-(\d+)$/);return m?parseInt(m[1]):0;});
-  return"VNS-"+String(Math.max(0,...nums)+1).padStart(6,"0");
+  const nums=(sups||[]).map(s=>{const m=String(s.supIdMgt||"").match(/^VNS-(\d+)$/);return m?parseInt(m[1]):0;});
+  const max=nums.length?Math.max(...nums):0;
+  return"VNS-"+String(max+1).padStart(6,"0");
 };
 
 // Auto-generate RFQ/INQ code: RFQ-yymmdd-xxx
