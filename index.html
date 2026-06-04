@@ -572,14 +572,14 @@ function LoginBanner({onLogin}){
 
 function SupList({ctx}){
   const {sups,setModal,canEdit}=ctx;
-  const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");
+  const [q,setQ]=useState("");const [fT,setFT]=useState("all");const [fI,setFI]=useState("all");const [fS,setFS]=useState("all");const [fP,setFP]=useState("all");
   const [page,setPage]=useState(1);const [showImport,setShowImport]=useState(false);
   const PAGE_SIZE=50;
-  const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))];
+  const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   const fl=useMemo(()=>sups.filter(s=>{
     const ti=calcTier(s.vserf);
-    return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
-  }),[sups,q,fT,fI,fS]);
+    return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(fP==="all"||s.partnerType===fP)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+  }),[sups,q,fT,fI,fS,fP]);
   const setFilter=(fn)=>(...args)=>{fn(...args);setPage(1);};
   const totalPages=Math.max(1,Math.ceil(fl.length/PAGE_SIZE));
   const paginated=fl.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
@@ -590,6 +590,7 @@ function SupList({ctx}){
         <input value={q} onChange={e=>{setQ(e.target.value);setPage(1);}} placeholder="Tìm tên, sản phẩm, tỉnh..." style={{...iSt,flex:1,minWidth:160}}/>
         <Sel val={fT} onChange={setFilter(setFT)} opts={[["all","Tất cả Tier"],["Tier 1","Tier 1"],["Tier 2","Tier 2"],["Tier 3","Tier 3"],["Not","Not Qualified"]]}/>
         <Sel val={fI} onChange={setFilter(setFI)} opts={[["all","Tất cả ngành"],...inds.map(i=>[i,i])]}/>
+        <Sel val={fP} onChange={setFilter(setFP)} opts={[["all","Tất cả hình thức"],...PARTNER_TYPES.map(p=>[p,p])]}/>
         <Sel val={fS} onChange={setFilter(setFS)} opts={[["all","Tất cả Stage"],...STAGES.map(s=>[s.id,s.label])]}/>
       </div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:6}}>
