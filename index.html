@@ -209,6 +209,8 @@ const genSupIdMgt=sups=>{
   return"VNS-"+String(max+1).padStart(6,"0");
 };
 
+const newS=()=>({id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),prescore:"{}",perf:"{}",ca:now(),ua:now()});
+
 // Auto-generate RFQ/INQ code: RFQ-yymmdd-xxx
 const genCode=(prefix,existing)=>{
   const d=new Date();
