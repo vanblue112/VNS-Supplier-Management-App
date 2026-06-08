@@ -217,7 +217,7 @@ const genSupIdMgt=sups=>{
 const newS=()=>({
   id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",
   industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",
-  contactName:"",zalo:"",email:"",certs:"",capacity:"",moq:"",priceRange:"",
+  contactName:"",zalo:"",email:"",certsProduct:"",certsFactory:"",capacity:"",moq:"",priceRange:"",
   leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",
   notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",
   vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),
@@ -717,7 +717,7 @@ function SupDetail({s,ctx}){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
         <IB title="Thông tin cơ bản"><IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/><IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/><IR l="Website" v={s.website}/><IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/></IB>
         <IB title="Liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
-        <IB title="Năng lực"><IR l="Chứng nhận" v={s.certs}/><IR l="Công suất" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
+        <IB title="Năng lực"><IR l="Chứng nhận SP" v={s.certsProduct}/><IR l="Chứng nhận NM" v={s.certsFactory}/><IR l="Công suất" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
         <IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
       </div>
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
@@ -762,7 +762,8 @@ function SupForm({s,ctx}){
         <Rw l="Email"><input value={f.email||""} onChange={e=>set("email",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Năng lực">
-        <Rw l="Chứng nhận"><input value={f.certs||""} onChange={e=>set("certs",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Chứng nhận SP"><input value={f.certsProduct||""} onChange={e=>set("certsProduct",e.target.value)} placeholder="CE, FDA, Organic, REACH..." style={iSt}/></Rw>
+        <Rw l="Chứng nhận NM"><input value={f.certsFactory||""} onChange={e=>set("certsFactory",e.target.value)} placeholder="ISO 9001, BSCI, WRAP, SA8000..." style={iSt}/></Rw>
         <Rw l="Công suất"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} style={iSt}/></Rw>
         <Rw l="MOQ"><input value={f.moq||""} onChange={e=>set("moq",e.target.value)} style={iSt}/></Rw>
         <Rw l="Price range"><input value={f.priceRange||""} onChange={e=>set("priceRange",e.target.value)} style={iSt}/></Rw>
