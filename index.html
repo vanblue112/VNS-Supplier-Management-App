@@ -1468,31 +1468,46 @@ function Dash({ctx}){
           <div><div style={{fontSize:13,fontWeight:600}}>Trạng thái Đối tác NCC</div><div style={{fontSize:11,color:"#aaa",marginTop:2}}>Active: <b style={{color:"#1D9E75"}}>{activeTotal}</b> · Tổng: {sups.length}</div></div>
         </div>
 
-        {/* Funnel conversion */}
+        {/* Funnel — % trên tổng NCC */}
         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:14,flexWrap:"wrap"}}>
           {["in_contact","considering","registering"].map((id,i)=>{
             const g=psGroups.find(x=>x.id===id);
-            const next=psGroups.find(x=>x.id===["considering","registering","active_platform"][i]);
-            const rate=g&&g.sups.length&&next?(Math.round(next.sups.length/g.sups.length*100)+"%"):"—";
+            const pct=sups.length?Math.round(g.sups.length/sups.length*100):0;
             return g?<React.Fragment key={id}>
               <div style={{textAlign:"center",padding:"6px 10px",borderRadius:7,background:g.bg,border:`1px solid ${g.c}`,minWidth:90}}>
                 <div style={{fontSize:13}}>{g.icon}</div>
                 <div style={{fontSize:11,fontWeight:600,color:g.c}}>{g.label.split("—").pop().trim()}</div>
                 <div style={{fontSize:16,fontWeight:700,color:g.c}}>{g.sups.length}</div>
+                <div style={{fontSize:10,color:g.c,opacity:.7}}>{pct}% tổng</div>
               </div>
-              {i<2&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",fontSize:10,color:"#aaa"}}><span>→</span><span style={{color:"#555",fontWeight:600}}>{rate}</span></div>}
+              {i<2&&<div style={{fontSize:14,color:"#ccc",alignSelf:"center"}}>→</div>}
             </React.Fragment>:null;
           })}
-          <div style={{fontSize:18,color:"#aaa",alignSelf:"center"}}>→</div>
+          <div style={{fontSize:14,color:"#ccc",alignSelf:"center"}}>→</div>
           {/* Active group */}
-          <div style={{border:"2px solid #1D9E75",borderRadius:8,padding:"6px 10px",background:"#F0FDF9",minWidth:110}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#1D9E75",marginBottom:4}}>✅ Active ({activeTotal})</div>
+          <div style={{border:"2px solid #1D9E75",borderRadius:8,padding:"6px 10px",background:"#F0FDF9",minWidth:120}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#1D9E75",marginBottom:4}}>✅ Active ({activeTotal}) · {sups.length?Math.round(activeTotal/sups.length*100):0}% tổng</div>
             {["active_platform","active_direct","active_both"].map(id=>{
               const g=psGroups.find(x=>x.id===id);
-              return g&&g.sups.length>0?<div key={id} style={{fontSize:11,color:"#0F6E56",display:"flex",justifyContent:"space-between",gap:8}}><span>{g.icon} {g.label.split("—").pop().trim()}</span><b>{g.sups.length}</b></div>:null;
+              const pct=sups.length?Math.round(g.sups.length/sups.length*100):0;
+              return g&&g.sups.length>0?<div key={id} style={{fontSize:11,color:"#0F6E56",display:"flex",justifyContent:"space-between",gap:8}}><span>{g.icon} {g.label.split("—").pop().trim()}</span><b>{g.sups.length} <span style={{fontWeight:400,opacity:.6}}>({pct}%)</span></b></div>:null;
             })}
             {activeTotal===0&&<div style={{fontSize:11,color:"#aaa"}}>Chưa có</div>}
           </div>
+          <div style={{fontSize:14,color:"#ccc",alignSelf:"center"}}>→</div>
+          {/* Paused + Rejected nhỏ */}
+          {["paused","rejected"].map(id=>{
+            const g=psGroups.find(x=>x.id===id);
+            const pct=sups.length?Math.round(g.sups.length/sups.length*100):0;
+            return(
+              <div key={id} style={{textAlign:"center",padding:"6px 10px",borderRadius:7,background:g.bg,border:`1px solid ${g.c}`,minWidth:80}}>
+                <div style={{fontSize:13}}>{g.icon}</div>
+                <div style={{fontSize:10,fontWeight:600,color:g.c}}>{g.label}</div>
+                <div style={{fontSize:15,fontWeight:700,color:g.c}}>{g.sups.length}</div>
+                <div style={{fontSize:10,color:g.c,opacity:.7}}>{pct}% tổng</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Grid KPI 8 statuses */}
