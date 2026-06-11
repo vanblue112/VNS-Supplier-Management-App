@@ -440,7 +440,7 @@ function EmailDraft({r,sups,onClose}){
   );
 }
 
-const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","channel","contactName","zalo","email","certs","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
+const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","partnerStatus","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
 function exportSupCSV(sups){
   const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
   const csv=[SUP_CSV_FIELDS.join(","),...sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","))].join("\n");
