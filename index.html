@@ -1186,41 +1186,84 @@ function SupplierCard({s,sel,setSel,rejected,setRejected,selReasons,setSelReason
   const indWarn=!!s._indWarn;
   const sr=selReasons[s.id]||[];
   const rj=rejected[s.id]||{};
-  const mc=m>=70?"#fff":m>=30?"#fff":"#777";
-  const mb=m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#e5e5e5";
+  const mbg=m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#ccc";
+  const mfg=m>=30?"#fff":"#777";
   const tog=()=>setSel(p=>p.includes(s.id)?p.filter(x=>x!==s.id):[...p,s.id]);
   const togReason=reason=>setSelReasons(p=>({...p,[s.id]:(p[s.id]||[]).includes(reason)?(p[s.id]||[]).filter(r=>r!==reason):[...(p[s.id]||[]),reason]}));
-  const setRejR=reason=>setRejected(p=>({...p,[s.id]:{...(p[s.id]||{}),reason}}));
+  const setRejR=reason=>setRejected(p=>({...p,[s.id]:{...(p[s.id]||{}),reason:p[s.id]?.reason===reason?"":reason}}));
   const setRejN=note=>setRejected(p=>({...p,[s.id]:{...(p[s.id]||{}),note}}));
   return(
-    <div style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden",opacity:indWarn&&!showAll?0.7:1}}>
-      <div onClick={()=>{if(!rj.reason)tog();}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
-        {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}</div>}
-        {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
+    <div style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,background:"#fff",marginBottom:0}}>
+      {/* Row chính */}
+      <div
+        onClick={()=>{if(!rj.reason)tog();}}
+        style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff",borderRadius:rj.reason||chk?"10px 10px 0 0":"10px"}}
+      >
+        {!rj.reason
+          ?<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            {chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700,lineHeight:1}}>✓</span>}
+          </div>
+          :<span style={{fontSize:14,flexShrink:0}}>🚫</span>
+        }
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||"(Chưa có tên)"}</div>
-          <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.industry||"—"} · {s.province||"—"}</div>
-          {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:1}}>⚠ Khác ngành RFQ{rInd?` (RFQ: ${rInd})`:""}</div>}
+          <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name||"(Chưa tên)"}</div>
+          <div style={{fontSize:11,color:"#888",marginTop:2}}>{[s.industry,s.province].filter(Boolean).join(" · ")||"—"}</div>
+          {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:1}}>⚠ Khác ngành RFQ{rInd?` (${rInd})`:""}</div>}
         </div>
-        <span title={breakdown.join(" | ")} style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb,color:mc,fontWeight:700,flexShrink:0,cursor:"help"}}>Match {m}%</span>
+        <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mbg,color:mfg,fontWeight:700,flexShrink:0}}>{m}%</span>
         <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
       </div>
-      {breakdown.length>0&&<div style={{padding:"5px 12px 6px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:5,flexWrap:"wrap"}}>
-        {breakdown.map((b,i)=><span key={i} style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:b.includes("Khác")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555",fontWeight:600}}>{b}</span>)}
-      </div>}
-      {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-          {SELECTION_REASONS.map(reason=><button key={reason} onClick={()=>togReason(reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>)}
+
+      {/* Breakdown bar */}
+      {breakdown.length>0&&(
+        <div style={{padding:"4px 12px 6px",background:"#f9f9f9",borderTop:"1px solid #f0f0f0",display:"flex",gap:5,flexWrap:"wrap"}}>
+          {breakdown.map((b,i)=>(
+            <span key={i} style={{fontSize:10,padding:"1px 6px",borderRadius:3,fontWeight:600,
+              background:b.includes("Khác")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",
+              color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555"
+            }}>{b}</span>
+          ))}
         </div>
-      </div>}
-      {!chk&&<div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
-        <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>Loại NCC này? Chọn lý do:</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:rj.reason?6:0}}>
-          {REJECTION_REASONS.map(reason=><button key={reason} onClick={()=>setRejR(rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>)}
+      )}
+
+      {/* Lý do chọn */}
+      {chk&&(
+        <div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
+          <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:6}}>Lý do chọn:</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+            {SELECTION_REASONS.map(reason=>(
+              <button key={reason} onClick={e=>{e.stopPropagation();togReason(reason);}}
+                style={{fontSize:11,padding:"3px 9px",borderRadius:5,cursor:"pointer",
+                  border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,
+                  background:sr.includes(reason)?"#1D9E75":"#fff",
+                  color:sr.includes(reason)?"#fff":"#555"
+                }}>{reason}</button>
+            ))}
+          </div>
         </div>
-        {rj.reason&&<input value={rj.note||""} onChange={e=>setRejN(e.target.value)} placeholder="Ghi chú thêm (tuỳ chọn)..." style={{...iSt,fontSize:11,marginTop:2}}/>}
-      </div>}
+      )}
+
+      {/* Lý do loại */}
+      {!chk&&(
+        <div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
+          <div style={{fontSize:11,color:"#aaa",marginBottom:5}}>Loại NCC này? Chọn lý do:</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+            {REJECTION_REASONS.map(reason=>(
+              <button key={reason} onClick={e=>{e.stopPropagation();setRejR(reason);}}
+                style={{fontSize:10,padding:"2px 8px",borderRadius:4,cursor:"pointer",
+                  border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,
+                  background:rj.reason===reason?"#FCEBEB":"#fff",
+                  color:rj.reason===reason?"#A32D2D":"#999"
+                }}>{reason}</button>
+            ))}
+          </div>
+          {rj.reason&&(
+            <input value={rj.note||""} onChange={e=>setRejN(e.target.value)}
+              placeholder="Ghi chú thêm..."
+              style={{...iSt,fontSize:11,marginTop:6}}/>
+          )}
+        </div>
+      )}
     </div>
   );
 }
