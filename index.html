@@ -242,8 +242,8 @@ const genCode=(prefix,existing)=>{
   return`${prefix}-${dateStr}-${String(maxSeq+1).padStart(3,"0")}`;
 };
 
-const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",industry:"",isCustom:false,deadline:"",qty:"",certs:"",price:"",incoterm:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
-const newINQ=(rfqs=[])=>({id:newId("i"),type:"inq",code:genCode("INQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
+const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",industry:"",isCustom:false,deadline:"",qty:"",certs:"",price:"",incoterm:"",specLink:"",notes:"",status:"new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",feasibility:"{}",rejected:"{}",selReasons:"{}",ca:now(),ua:now()});
+const newINQ=(rfqs=[])=>({id:newId("i"),type:"inq",code:genCode("INQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",specLink:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
 const normSup=s=>({...s,vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}});
@@ -945,6 +945,7 @@ function RFQForm({r,ctx}){
         <Rw l="Giá mục tiêu"><input value={f.price||""} onChange={e=>set("price",e.target.value)} style={iSt}/></Rw>
         <Rw l="Incoterm"><input value={f.incoterm||""} onChange={e=>set("incoterm",e.target.value)} style={iSt}/></Rw>
         <Rw l="Chứng chỉ"><textarea value={f.certs||""} onChange={e=>set("certs",e.target.value)} style={{...iSt,minHeight:50,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Link Product Spec"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.specLink||""} onChange={e=>set("specLink",e.target.value)} placeholder="https://drive.google.com/..." style={iSt}/>{f.specLink&&<a href={f.specLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #185FA5",color:"#185FA5",whiteSpace:"nowrap",textDecoration:"none"}}>🔗 Mở</a>}</div></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:50,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status||"new"} onChange={e=>set("status",e.target.value)} style={iSt}>{RFQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
@@ -973,6 +974,7 @@ function INQForm({r,ctx}){
         <Rw l="Mô tả *"><textarea value={f.desc||""} onChange={e=>set("desc",e.target.value)} style={{...iSt,minHeight:80,resize:"vertical",boxSizing:"border-box"}}/></Rw>
         <Rw l="Thị trường"><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{MARKETS.map(m=><button key={m} onClick={()=>tog(m)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${f.markets.includes(m)?"#534AB7":"#ddd"}`,background:f.markets.includes(m)?"#EEEDFE":"none",color:f.markets.includes(m)?"#534AB7":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>)}</div></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:50,resize:"vertical",boxSizing:"border-box"}}/></Rw>
+        <Rw l="Link Product Spec"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.specLink||""} onChange={e=>set("specLink",e.target.value)} placeholder="https://drive.google.com/..." style={iSt}/>{f.specLink&&<a href={f.specLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #534AB7",color:"#534AB7",whiteSpace:"nowrap",textDecoration:"none"}}>🔗 Mở</a>}</div></Rw>
       </Sec>
       <Sec title="Trạng thái"><Rw l="Status"><select value={f.status||"inq_new"} onChange={e=>set("status",e.target.value)} style={iSt}>{INQ_ST.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw></Sec>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={save} style={pBtn}>Lưu INQ</button></div>
