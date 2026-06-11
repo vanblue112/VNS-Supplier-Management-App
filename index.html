@@ -220,6 +220,7 @@ const newS=()=>({
   contactName:"",zalo:"",email:"",certsProduct:"",certsFactory:"",capacity:"",moq:"",priceRange:"",
   leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",
   notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",
+  catalogLink:"",alibabaLink:"",websiteLink:"",
   vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),
   prescore:"{}",perf:"{}",partnerStatus:"",ca:now(),ua:now()
 });
@@ -715,7 +716,18 @@ function SupDetail({s,ctx}){
         </div>
       </div>}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:12}}>
-        <IB title="Thông tin cơ bản"><IR l="Mô hình KD" v={s.bizModel}/><IR l="Loại hình DN" v={s.legalType}/><IR l="Sản phẩm" v={s.products}/><IR l="Năm thành lập" v={s.foundedYear}/><IR l="Website" v={s.website}/><IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/></IB>
+        <IB title="Thông tin cơ bản">
+          <IR l="Mô hình KD" v={s.bizModel}/>
+          <IR l="Loại hình DN" v={s.legalType}/>
+          <IR l="Sản phẩm" v={s.products}/>
+          <IR l="Năm thành lập" v={s.foundedYear}/>
+          <IR l="Stage" v={STAGES.find(x=>x.id===s.stage)?.label||s.stage}/>
+          <div style={{display:"flex",gap:6,padding:"3px 0",flexWrap:"wrap"}}>
+            {s.website&&<a href={s.website} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #185FA5",color:"#185FA5",textDecoration:"none",fontWeight:600}}>🌐 Website</a>}
+            {s.alibabaLink&&<a href={s.alibabaLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #E8922A",color:"#E8922A",textDecoration:"none",fontWeight:600}}>🏪 Alibaba</a>}
+            {s.catalogLink&&<a href={s.catalogLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #1D9E75",color:"#1D9E75",textDecoration:"none",fontWeight:600}}>📁 Catalog</a>}
+          </div>
+        </IB>
         <IB title="Liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
         <IB title="Năng lực"><IR l="Chứng nhận SP" v={s.certsProduct}/><IR l="Chứng nhận NM" v={s.certsFactory}/><IR l="Công suất" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
         <IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
@@ -753,7 +765,9 @@ function SupForm({s,ctx}){
         <Rw l="Sản phẩm *"><input value={f.products||""} onChange={e=>set("products",e.target.value)} style={iSt}/></Rw>
         <Rw l="Năm thành lập"><input value={f.foundedYear||""} onChange={e=>set("foundedYear",e.target.value)} style={iSt}/></Rw>
         <Rw l="Tỉnh / TP"><select value={f.province||""} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
-        <Rw l="Website"><input value={f.website||""} onChange={e=>set("website",e.target.value)} style={iSt}/></Rw>
+        <Rw l="Website"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.website||""} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/>{f.website&&<a href={f.website} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #185FA5",color:"#185FA5",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
+        <Rw l="Alibaba / Global Src"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.alibabaLink||""} onChange={e=>set("alibabaLink",e.target.value)} placeholder="https://..." style={iSt}/>{f.alibabaLink&&<a href={f.alibabaLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #E8922A",color:"#E8922A",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
+        <Rw l="Catalog / Google Drive"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.catalogLink||""} onChange={e=>set("catalogLink",e.target.value)} placeholder="https://drive.google.com/..." style={iSt}/>{f.catalogLink&&<a href={f.catalogLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #1D9E75",color:"#1D9E75",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
         <Rw l="Kênh tìm kiếm"><select value={f.channel||""} onChange={e=>set("channel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{CHANNELS.map(c=><option key={c}>{c}</option>)}</select></Rw>
       </Sec>
       <Sec title="Liên hệ">
