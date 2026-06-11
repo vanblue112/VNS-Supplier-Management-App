@@ -1003,6 +1003,7 @@ function INQDetail({r,ctx}){
         {r.sales&&<span>👤 {r.sales}</span>}{mkts.length>0&&<span>🌍 {mkts.join(", ")}</span>}
         {r.date&&<span>📅 Nhận: {r.date}</span>}
         {r.deadline&&<span style={{color:new Date(r.deadline)<new Date()?"#A32D2D":"#777",fontWeight:new Date(r.deadline)<new Date()?600:400}}>⏰ Hạn: {r.deadline}</span>}
+        {r.specLink&&<a href={r.specLink} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:4,color:"#534AB7",fontWeight:600,textDecoration:"none",fontSize:12}}>🔗 Product Spec</a>}
       </div>
       <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung inquiry</div>
@@ -1094,6 +1095,7 @@ function RFQDetail({r,ctx}){
         {r.date&&<span>📅 Nhận: {r.date}</span>}
         {r.deadline&&<span style={{color:new Date(r.deadline)<new Date()?"#A32D2D":"#777",fontWeight:new Date(r.deadline)<new Date()?600:400}}>⏰ Hạn BG: {r.deadline}</span>}
         {r.qty&&<span>📦 {r.qty}</span>}{r.price&&<span>💲 {r.price}</span>}{r.incoterm&&<span>🚢 {r.incoterm}</span>}
+        {r.specLink&&<a href={r.specLink} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:4,color:"#185FA5",fontWeight:600,textDecoration:"none",fontSize:12}}>🔗 Product Spec</a>}
       </div>
       <div style={{background:"#FAFAFA",border:"1px solid #eee",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
         <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Nội dung RFQ</div>
@@ -1185,10 +1187,11 @@ function RFQAssign({r,ctx}){
   const [showAll,setShowAll]=useState(false);
   const scored=sups.map(s=>{const res=calcMatch(s,r);return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};}).sort((a,b)=>b._match-a._match);
   const rInd=r.industry||"";
-  const exactMatch=scored.filter(s=>rInd&&s.industry===rInd);
+  const exactMatch=scored.filter(s=>rInd?s.industry===rInd:true);
   const related=scored.filter(s=>rInd&&s.industry!==rInd&&sameGroup(rInd,s.industry));
-  const baseList=showAll?scored:[...exactMatch,...related];
-  const fl=baseList.filter(s=>!q||[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+  const others=scored.filter(s=>rInd&&s.industry!==rInd&&!sameGroup(rInd,s.industry));
+  // fl chỉ dùng khi search — không dùng cho render nhóm
+  const fl=q?scored.filter(s=>[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase()))):[];
   const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
   const togReason=(sid,reason)=>setSelReasons(p=>({...p,[sid]:(p[sid]||[]).includes(reason)?(p[sid]||[]).filter(r=>r!==reason):[...(p[sid]||[]),reason]}));
   const setRejReason=(sid,reason)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),reason}}));
@@ -1239,23 +1242,28 @@ function RFQAssign({r,ctx}){
         <h2 style={{margin:0,fontSize:15,fontWeight:600}}>Gán NCC vào {r.code}</h2>
         {rInd&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>{rInd}</span>}
         {r.isCustom&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#FFF0D6",color:"#B35A00",fontWeight:600}}>🔧 Custom</span>}
+        {r.specLink&&<a href={r.specLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"2px 9px",borderRadius:4,border:"1px solid #185FA5",color:"#185FA5",textDecoration:"none",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>🔗 Product Spec</a>}
       </div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10}}/>
       {rInd&&<div style={{display:"flex",gap:8,marginBottom:10,fontSize:12,color:"#777",flexWrap:"wrap"}}>
         <span style={{padding:"3px 10px",borderRadius:5,background:"#EAF3DE",color:"#1D9E75",fontWeight:600}}>✅ Đúng ngành: {exactMatch.length}</span>
         {related.length>0&&<span style={{padding:"3px 10px",borderRadius:5,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>🔗 Liên quan: {related.length}</span>}
-        {!showAll&&scored.filter(s=>rInd&&!sameGroup(rInd,s.industry)&&s.industry!==rInd).length>0&&<button onClick={()=>setShowAll(true)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>+ Hiện {scored.filter(s=>rInd&&!sameGroup(rInd,s.industry)&&s.industry!==rInd).length} NCC khác ngành</button>}
+        {!showAll&&others.length>0&&<button onClick={()=>setShowAll(true)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>+ Hiện {others.length} NCC khác ngành</button>}
         {showAll&&<button onClick={()=>setShowAll(false)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>Ẩn bớt</button>}
       </div>}
       <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
-        {fl.length===0&&<Empty text="Không tìm thấy NCC phù hợp."/>}
-        {!q&&rInd&&fl.filter(s=>s.industry===rInd).length>0&&<div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginBottom:2}}>✅ Đúng ngành — {rInd}</div>}
-        {(q?fl:fl.filter(s=>s.industry===rInd)).map(s=>renderSupplier(s))}
-        {!q&&rInd&&fl.filter(s=>sameGroup(rInd,s.industry)&&s.industry!==rInd).length>0&&<div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>🔗 Ngành liên quan</div>}
-        {(q?[]:fl.filter(s=>rInd&&sameGroup(rInd,s.industry)&&s.industry!==rInd)).map(s=>renderSupplier(s))}
-        {!q&&showAll&&fl.filter(s=>rInd&&!sameGroup(rInd,s.industry)&&s.industry!==rInd).length>0&&<div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>⚠ Khác ngành</div>}
-        {(q?[]:showAll?fl.filter(s=>rInd&&!sameGroup(rInd,s.industry)&&s.industry!==rInd):[]).map(s=>renderSupplier(s))}
-        {q&&fl.map(s=>renderSupplier(s))}
+        {/* Khi search: hiện fl */}
+        {q&&(fl.length===0?<Empty text="Không tìm thấy NCC phù hợp."/>:fl.map(s=>renderSupplier(s)))}
+        {/* Khi không search: render theo nhóm */}
+        {!q&&<>
+          {exactMatch.length===0&&related.length===0&&!showAll&&<Empty text="Không tìm thấy NCC phù hợp."/>}
+          {exactMatch.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginBottom:2}}>✅ Đúng ngành{rInd?` — ${rInd}`:""}</div>}
+          {exactMatch.map(s=>renderSupplier(s))}
+          {related.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>🔗 Ngành liên quan</div>}
+          {related.map(s=>renderSupplier(s))}
+          {showAll&&others.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>⚠ Khác ngành</div>}
+          {showAll&&others.map(s=>renderSupplier(s))}
+        </>}
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn · {Object.values(rejected).filter(r=>r.reason).length} bị loại</span>
