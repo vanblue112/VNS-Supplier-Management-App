@@ -1233,14 +1233,39 @@ function RFQAssign({r,ctx}){
   const [q,setQ]=useState("");
   const [showAll,setShowAll]=useState(false);
   const rInd=r.industry||"";
-  const scored=useMemo(()=>sups.map(s=>{
-    const res=calcMatch(s,r);
-    return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};
-  }).sort((a,b)=>b._match-a._match),[sups,r.id]);
-  const exactMatch=useMemo(()=>scored.filter(s=>rInd?s.industry===rInd:scored),[scored,rInd]);
-  const related=useMemo(()=>scored.filter(s=>rInd&&s.industry!==rInd&&sameGroup(rInd,s.industry)),[scored,rInd]);
-  const others=useMemo(()=>scored.filter(s=>rInd&&s.industry!==rInd&&!sameGroup(rInd,s.industry)),[scored,rInd]);
-  const searched=useMemo(()=>q?scored.filter(s=>[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase()))):[],[scored,q]);
+  const scored=useMemo(()=>{
+    if(!sups||!sups.length)return[];
+    return sups.map(s=>{
+      try{
+        const res=calcMatch(s,r);
+        return{...s,_match:res.score||0,_breakdown:res.breakdown||[],_indWarn:!!res.indWarn};
+      }catch(e){
+        return{...s,_match:0,_breakdown:[],_indWarn:false};
+      }
+    }).sort((a,b)=>b._match-a._match);
+  },[sups,r.id,r.industry,r.isCustom]);
+
+  const exactMatch=useMemo(()=>{
+    if(!rInd)return scored;
+    return scored.filter(s=>(s.industry||"")===(rInd||""));
+  },[scored,rInd]);
+
+  const related=useMemo(()=>{
+    if(!rInd)return[];
+    return scored.filter(s=>s.industry!==rInd&&sameGroup(rInd,s.industry));
+  },[scored,rInd]);
+
+  const others=useMemo(()=>{
+    if(!rInd)return[];
+    return scored.filter(s=>s.industry!==rInd&&!sameGroup(rInd,s.industry));
+  },[scored,rInd]);
+
+  const searched=useMemo(()=>{
+    if(!q)return[];
+    const ql=q.toLowerCase();
+    return scored.filter(s=>[s.name,s.products,s.industry,s.province].some(v=>(v||"").toLowerCase().includes(ql)));
+  },[scored,q]);
+
   const cardProps={sel,setSel,rejected,setRejected,selReasons,setSelReasons,showAll,rInd};
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
@@ -1252,11 +1277,18 @@ function RFQAssign({r,ctx}){
       </div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10}}/>
       <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-        <span style={{padding:"3px 10px",borderRadius:5,background:"#EAF3DE",color:"#1D9E75",fontWeight:600,fontSize:12}}>✅ Đúng ngành: {exactMatch.length}</span>
-        {related.length>0&&<span style={{padding:"3px 10px",borderRadius:5,background:"#E6F1FB",color:"#185FA5",fontWeight:600,fontSize:12}}>🔗 Liên quan: {related.length}</span>}
-        {!showAll&&others.length>0&&<button onClick={()=>setShowAll(true)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>+ Hiện {others.length} NCC khác ngành</button>}
-        {showAll&&<button onClick={()=>setShowAll(false)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>Ẩn bớt</button>}
+        <span style={{padding:"3px 10px",borderRadius:5,background:"#EAF3DE",color:"#1D9E75",fontWeight:600,fontSize:12}}>
+          {rInd?`✅ Đúng ngành: ${exactMatch.length}`:`✅ Tất cả NCC: ${exactMatch.length}`}
+        </span>
+        {rInd&&related.length>0&&<span style={{padding:"3px 10px",borderRadius:5,background:"#E6F1FB",color:"#185FA5",fontWeight:600,fontSize:12}}>🔗 Liên quan: {related.length}</span>}
+        {rInd&&!showAll&&others.length>0&&<button onClick={()=>setShowAll(true)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>+ Hiện {others.length} NCC khác ngành</button>}
+        {rInd&&showAll&&<button onClick={()=>setShowAll(false)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>Ẩn bớt</button>}
       </div>
+
+      {/* DEBUG — xóa sau khi fix */}
+      {scored.length===0&&<div style={{padding:"10px",background:"#FCEBEB",borderRadius:8,fontSize:12,color:"#A32D2D",marginBottom:8}}>⚠ scored.length = 0 — sups không truyền vào được</div>}
+      {scored.length>0&&exactMatch.length===0&&!rInd&&<div style={{padding:"10px",background:"#FAEEDA",borderRadius:8,fontSize:12,color:"#854F0B",marginBottom:8}}>⚠ scored={scored.length} nhưng exactMatch=0, rInd="{rInd}"</div>}
+
       <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
         {q?(
           searched.length===0
@@ -1264,17 +1296,19 @@ function RFQAssign({r,ctx}){
             :searched.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)
         ):(
           <>
-            {exactMatch.length===0&&related.length===0&&<Empty text="Không có NCC đúng ngành. Nhấn '+ Hiện NCC khác ngành' để xem thêm."/>}
+            {exactMatch.length===0&&(!rInd||(!showAll&&related.length===0))&&<Empty text="Chưa có NCC. Thêm supplier vào DB trước."/>}
             {exactMatch.length>0&&<>
-              <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5"}}>✅ Đúng ngành{rInd?` — ${rInd}`:""}</div>
+              <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginBottom:2}}>
+                {rInd?`✅ Đúng ngành — ${rInd}`:"✅ Tất cả NCC"}
+              </div>
               {exactMatch.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)}
             </>}
-            {related.length>0&&<>
-              <div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:4}}>🔗 Ngành liên quan</div>
+            {rInd&&related.length>0&&<>
+              <div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:4,marginBottom:2}}>🔗 Ngành liên quan</div>
               {related.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)}
             </>}
-            {showAll&&others.length>0&&<>
-              <div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:4}}>⚠ Khác ngành</div>
+            {rInd&&showAll&&others.length>0&&<>
+              <div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:4,marginBottom:2}}>⚠ Khác ngành</div>
               {others.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)}
             </>}
           </>
