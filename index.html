@@ -265,7 +265,7 @@ function IB({title,children}){return<div><div style={{fontSize:11,fontWeight:600
 function IR({l,v}){return<div style={{display:"flex",gap:8,fontSize:13,padding:"3px 0"}}><span style={{color:"#777",minWidth:100,flexShrink:0}}>{l}</span><span style={{color:"#1a1a1a",flex:1}}>{v||<span style={{color:"#ccc"}}>—</span>}</span></div>;}
 function Sel({val,onChange,opts}){return<select value={val} onChange={e=>onChange(e.target.value)} style={{...iSt,width:"auto"}}>{opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>;}
 function Empty({text}){return<div style={{textAlign:"center",padding:"3rem",color:"#aaa",fontSize:13}}>{text}</div>;}
-function Modal({children,onClose}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
+function Modal({children,onClose,noClickOut=false}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"1rem"}} onClick={e=>{if(!noClickOut&&e.target===e.currentTarget)onClose();}}><div style={{width:"100%",maxWidth:700,marginTop:"2rem",marginBottom:"2rem"}} onClick={e=>e.stopPropagation()}>{children}</div></div>;}
 function Spin(){return<div style={{width:16,height:16,border:"2px solid #1D9E75",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",display:"inline-block"}}/>;}
 
 function RFQDesc({text}){
@@ -548,7 +548,7 @@ function App(){
         {tab==="kraljic"&&<Kraljic ctx={ctx}/>}
         {tab==="dash"&&<Dash ctx={ctx}/>}
       </div>
-      {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)}><SupForm s={modal.d} ctx={ctx}/></Modal>}
+      {modal?.t==="sup-form"&&canEdit&&<Modal onClose={()=>setModal(null)} noClickOut={true}><SupForm s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="sup-detail"&&<Modal onClose={()=>setModal(null)}><SupDetail s={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="vserf"&&canEdit&&<Modal onClose={()=>setModal(null)}><VSERFChecklist supplier={modal.d} ctx={ctx}/></Modal>}
       {modal?.t==="prescore"&&canEdit&&<Modal onClose={()=>setModal(null)}><PreScoreChecklist supplier={modal.d} ctx={ctx}/></Modal>}
@@ -792,7 +792,13 @@ function SupForm({s,ctx}){
         <Rw l="Stage"><select value={f.stage||"B1"} onChange={e=>set("stage",e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><button onClick={()=>setModal(null)} style={gBtn}>Hủy</button><button onClick={()=>upsS(f)} disabled={mgtDup||pltDup} style={{...pBtn,opacity:mgtDup||pltDup?.5:1}}>Lưu</button></div>
+      <div style={{position:"sticky",bottom:0,background:"#fff",borderTop:"1px solid #e5e5e5",padding:"12px 0 4px",marginTop:8,display:"flex",gap:8,justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:11,color:"#aaa"}}>⚠ Nhấn Lưu để không mất dữ liệu</span>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
+          <button onClick={()=>upsS(f)} disabled={mgtDup||pltDup} style={{...pBtn,opacity:mgtDup||pltDup?.5:1}}>💾 Lưu Supplier</button>
+        </div>
+      </div>
     </Card>
   );
 }
