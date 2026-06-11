@@ -1198,7 +1198,7 @@ function RFQAssign({r,ctx}){
   const setRejNote=(sid,note)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),note}}));
   const mc=m=>m>=70?"#fff":m>=30?"#fff":"#777";
   const mb=m=>m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#e5e5e5";
-  const renderSupplier=(s)=>{
+  const renderSupplier=(s,_idx)=>{
     const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;
     const breakdown=s._breakdown||[];const indWarn=s._indWarn;
     const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
@@ -1209,10 +1209,10 @@ function RFQAssign({r,ctx}){
           {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-            <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.industry||"—"} · {s.province}</div>
+            <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.industry||"—"} · {s.province||"—"}</div>
             {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:1}}>⚠ Khác ngành RFQ{rInd?` (RFQ: ${rInd})`:""}</div>}
           </div>
-          <div style={{position:"relative",flexShrink:0}} title={breakdown.join(" | ")}>
+          <div style={{flexShrink:0}} title={breakdown.join(" | ")}>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb(m),color:mc(m),fontWeight:700,cursor:"help"}}>Match {m}%</span>
           </div>
           <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
@@ -1252,18 +1252,16 @@ function RFQAssign({r,ctx}){
         {showAll&&<button onClick={()=>setShowAll(false)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>Ẩn bớt</button>}
       </div>}
       <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
-        {/* Khi search: hiện fl */}
-        {q&&(fl.length===0?<Empty text="Không tìm thấy NCC phù hợp."/>:fl.map(s=>renderSupplier(s)))}
-        {/* Khi không search: render theo nhóm */}
         {!q&&<>
           {exactMatch.length===0&&related.length===0&&!showAll&&<Empty text="Không tìm thấy NCC phù hợp."/>}
           {exactMatch.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginBottom:2}}>✅ Đúng ngành{rInd?` — ${rInd}`:""}</div>}
-          {exactMatch.map(s=>renderSupplier(s))}
+          {exactMatch.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>)}
           {related.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>🔗 Ngành liên quan</div>}
-          {related.map(s=>renderSupplier(s))}
+          {related.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>)}
           {showAll&&others.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>⚠ Khác ngành</div>}
-          {showAll&&others.map(s=>renderSupplier(s))}
+          {showAll&&others.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>)}
         </>}
+        {q&&(fl.length===0?<Empty text="Không tìm thấy NCC phù hợp."/>:fl.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>))}
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
         <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn · {Object.values(rejected).filter(r=>r.reason).length} bị loại</span>
