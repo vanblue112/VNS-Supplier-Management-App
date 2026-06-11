@@ -1178,6 +1178,53 @@ function RFQDetail({r,ctx}){
   );
 }
 
+function SupplierCard({s,sel,setSel,rejected,setRejected,selReasons,setSelReasons,showAll,rInd}){
+  const ti=calcTier(s.vserf);
+  const chk=sel.includes(s.id);
+  const m=s._match||0;
+  const breakdown=s._breakdown||[];
+  const indWarn=!!s._indWarn;
+  const sr=selReasons[s.id]||[];
+  const rj=rejected[s.id]||{};
+  const mc=m>=70?"#fff":m>=30?"#fff":"#777";
+  const mb=m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#e5e5e5";
+  const tog=()=>setSel(p=>p.includes(s.id)?p.filter(x=>x!==s.id):[...p,s.id]);
+  const togReason=reason=>setSelReasons(p=>({...p,[s.id]:(p[s.id]||[]).includes(reason)?(p[s.id]||[]).filter(r=>r!==reason):[...(p[s.id]||[]),reason]}));
+  const setRejR=reason=>setRejected(p=>({...p,[s.id]:{...(p[s.id]||{}),reason}}));
+  const setRejN=note=>setRejected(p=>({...p,[s.id]:{...(p[s.id]||{}),note}}));
+  return(
+    <div style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden",opacity:indWarn&&!showAll?0.7:1}}>
+      <div onClick={()=>{if(!rj.reason)tog();}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
+        {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}</div>}
+        {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||"(Chưa có tên)"}</div>
+          <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.industry||"—"} · {s.province||"—"}</div>
+          {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:1}}>⚠ Khác ngành RFQ{rInd?` (RFQ: ${rInd})`:""}</div>}
+        </div>
+        <span title={breakdown.join(" | ")} style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb,color:mc,fontWeight:700,flexShrink:0,cursor:"help"}}>Match {m}%</span>
+        <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
+      </div>
+      {breakdown.length>0&&<div style={{padding:"5px 12px 6px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:5,flexWrap:"wrap"}}>
+        {breakdown.map((b,i)=><span key={i} style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:b.includes("Khác")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555",fontWeight:600}}>{b}</span>)}
+      </div>}
+      {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+          {SELECTION_REASONS.map(reason=><button key={reason} onClick={()=>togReason(reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>)}
+        </div>
+      </div>}
+      {!chk&&<div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
+        <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>Loại NCC này? Chọn lý do:</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:rj.reason?6:0}}>
+          {REJECTION_REASONS.map(reason=><button key={reason} onClick={()=>setRejR(rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>)}
+        </div>
+        {rj.reason&&<input value={rj.note||""} onChange={e=>setRejN(e.target.value)} placeholder="Ghi chú thêm (tuỳ chọn)..." style={{...iSt,fontSize:11,marginTop:2}}/>}
+      </div>}
+    </div>
+  );
+}
+
 function RFQAssign({r,ctx}){
   const {sups,upsR,setModal}=ctx;
   const [sel,setSel]=useState(parseJ(r.sids)||[]);
@@ -1185,57 +1232,16 @@ function RFQAssign({r,ctx}){
   const [selReasons,setSelReasons]=useState(parseJ(r.selReasons)||{});
   const [q,setQ]=useState("");
   const [showAll,setShowAll]=useState(false);
-  const scored=sups.map(s=>{const res=calcMatch(s,r);return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};}).sort((a,b)=>b._match-a._match);
   const rInd=r.industry||"";
-  const exactMatch=scored.filter(s=>rInd?s.industry===rInd:true);
-  const related=scored.filter(s=>rInd&&s.industry!==rInd&&sameGroup(rInd,s.industry));
-  const others=scored.filter(s=>rInd&&s.industry!==rInd&&!sameGroup(rInd,s.industry));
-  // fl chỉ dùng khi search — không dùng cho render nhóm
-  const fl=q?scored.filter(s=>[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase()))):[];
-  const tog=id=>setSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-  const togReason=(sid,reason)=>setSelReasons(p=>({...p,[sid]:(p[sid]||[]).includes(reason)?(p[sid]||[]).filter(r=>r!==reason):[...(p[sid]||[]),reason]}));
-  const setRejReason=(sid,reason)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),reason}}));
-  const setRejNote=(sid,note)=>setRejected(p=>({...p,[sid]:{...(p[sid]||{}),note}}));
-  const mc=m=>m>=70?"#fff":m>=30?"#fff":"#777";
-  const mb=m=>m>=70?"#1D9E75":m>=50?"#185FA5":m>=30?"#854F0B":"#e5e5e5";
-  const renderSupplier=(s,_idx)=>{
-    const ti=calcTier(s.vserf);const chk=sel.includes(s.id);const m=s._match;
-    const breakdown=s._breakdown||[];const indWarn=s._indWarn;
-    const sr=selReasons[s.id]||[];const rj=rejected[s.id]||{};
-    return(
-      <div key={s.id} style={{border:`1.5px solid ${chk?"#1D9E75":rj.reason?"#E24B4A":"#e5e5e5"}`,borderRadius:10,overflow:"hidden",opacity:indWarn&&!showAll?.7:1}}>
-        <div onClick={()=>{if(!rj.reason)tog(s.id);}} style={{padding:"10px 12px",display:"flex",gap:10,alignItems:"center",cursor:rj.reason?"default":"pointer",background:chk?"#F0FDF9":rj.reason?"#FFF5F5":"#fff"}}>
-          {!rj.reason&&<div style={{width:20,height:20,borderRadius:4,border:`2px solid ${chk?"#1D9E75":"#ccc"}`,background:chk?"#1D9E75":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{chk&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}</div>}
-          {rj.reason&&<span style={{fontSize:14}}>🚫</span>}
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-            <div style={{fontSize:11,color:"#777",marginTop:1}}>{s.industry||"—"} · {s.province||"—"}</div>
-            {indWarn&&<div style={{fontSize:10,color:"#A32D2D",fontWeight:600,marginTop:1}}>⚠ Khác ngành RFQ{rInd?` (RFQ: ${rInd})`:""}</div>}
-          </div>
-          <div style={{flexShrink:0}} title={breakdown.join(" | ")}>
-            <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:mb(m),color:mc(m),fontWeight:700,cursor:"help"}}>Match {m}%</span>
-          </div>
-          <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
-        </div>
-        {(chk||!rj.reason)&&breakdown.length>0&&<div style={{padding:"5px 12px 6px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",gap:5,flexWrap:"wrap"}}>
-          {breakdown.map((b,i)=><span key={i} style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:b.includes("Khác")?"#FCEBEB":b.includes("Tier 1")?"#EAF3DE":b.includes("Tier 2")?"#E6F1FB":"#f0f0f0",color:b.includes("Khác")?"#A32D2D":b.includes("Tier 1")?"#3B6D11":b.includes("Tier 2")?"#185FA5":"#555",fontWeight:600}}>{b}</span>)}
-        </div>}
-        {chk&&<div style={{padding:"8px 12px",borderTop:"1px solid #e5e5e5",background:"#F0FDF9"}}>
-          <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",marginBottom:5}}>Lý do chọn:</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-            {SELECTION_REASONS.map(reason=><button key={reason} onClick={()=>togReason(s.id,reason)} style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:`1px solid ${sr.includes(reason)?"#1D9E75":"#ddd"}`,background:sr.includes(reason)?"#1D9E75":"#fff",color:sr.includes(reason)?"#fff":"#555",cursor:"pointer"}}>{reason}</button>)}
-          </div>
-        </div>}
-        {!chk&&<div style={{padding:"6px 12px 8px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
-          <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>Loại NCC này? Chọn lý do:</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:rj.reason?6:0}}>
-            {REJECTION_REASONS.map(reason=><button key={reason} onClick={()=>setRejReason(s.id,rj.reason===reason?"":reason)} style={{fontSize:10,padding:"2px 8px",borderRadius:4,border:`1px solid ${rj.reason===reason?"#E24B4A":"#e5e5e5"}`,background:rj.reason===reason?"#FCEBEB":"#fff",color:rj.reason===reason?"#A32D2D":"#999",cursor:"pointer"}}>{reason}</button>)}
-          </div>
-          {rj.reason&&<input value={rj.note||""} onChange={e=>setRejNote(s.id,e.target.value)} placeholder="Ghi chú thêm (tuỳ chọn)..." style={{...iSt,fontSize:11,marginTop:2}}/>}
-        </div>}
-      </div>
-    );
-  };
+  const scored=useMemo(()=>sups.map(s=>{
+    const res=calcMatch(s,r);
+    return{...s,_match:res.score,_breakdown:res.breakdown,_indWarn:res.indWarn};
+  }).sort((a,b)=>b._match-a._match),[sups,r.id]);
+  const exactMatch=useMemo(()=>scored.filter(s=>rInd?s.industry===rInd:scored),[scored,rInd]);
+  const related=useMemo(()=>scored.filter(s=>rInd&&s.industry!==rInd&&sameGroup(rInd,s.industry)),[scored,rInd]);
+  const others=useMemo(()=>scored.filter(s=>rInd&&s.industry!==rInd&&!sameGroup(rInd,s.industry)),[scored,rInd]);
+  const searched=useMemo(()=>q?scored.filter(s=>[s.name,s.products,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase()))):[],[scored,q]);
+  const cardProps={sel,setSel,rejected,setRejected,selReasons,setSelReasons,showAll,rInd};
   return(
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
@@ -1245,26 +1251,37 @@ function RFQAssign({r,ctx}){
         {r.specLink&&<a href={r.specLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"2px 9px",borderRadius:4,border:"1px solid #185FA5",color:"#185FA5",textDecoration:"none",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>🔗 Product Spec</a>}
       </div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm NCC..." style={{...iSt,marginBottom:10}}/>
-      {rInd&&<div style={{display:"flex",gap:8,marginBottom:10,fontSize:12,color:"#777",flexWrap:"wrap"}}>
-        <span style={{padding:"3px 10px",borderRadius:5,background:"#EAF3DE",color:"#1D9E75",fontWeight:600}}>✅ Đúng ngành: {exactMatch.length}</span>
-        {related.length>0&&<span style={{padding:"3px 10px",borderRadius:5,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>🔗 Liên quan: {related.length}</span>}
+      <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+        <span style={{padding:"3px 10px",borderRadius:5,background:"#EAF3DE",color:"#1D9E75",fontWeight:600,fontSize:12}}>✅ Đúng ngành: {exactMatch.length}</span>
+        {related.length>0&&<span style={{padding:"3px 10px",borderRadius:5,background:"#E6F1FB",color:"#185FA5",fontWeight:600,fontSize:12}}>🔗 Liên quan: {related.length}</span>}
         {!showAll&&others.length>0&&<button onClick={()=>setShowAll(true)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>+ Hiện {others.length} NCC khác ngành</button>}
         {showAll&&<button onClick={()=>setShowAll(false)} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#777",fontSize:12,cursor:"pointer"}}>Ẩn bớt</button>}
-      </div>}
+      </div>
       <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
-        {!q&&<>
-          {exactMatch.length===0&&related.length===0&&!showAll&&<Empty text="Không tìm thấy NCC phù hợp."/>}
-          {exactMatch.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginBottom:2}}>✅ Đúng ngành{rInd?` — ${rInd}`:""}</div>}
-          {exactMatch.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>)}
-          {related.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>🔗 Ngành liên quan</div>}
-          {related.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>)}
-          {showAll&&others.length>0&&<div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:6,marginBottom:2}}>⚠ Khác ngành</div>}
-          {showAll&&others.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>)}
-        </>}
-        {q&&(fl.length===0?<Empty text="Không tìm thấy NCC phù hợp."/>:fl.map((s,i)=><React.Fragment key={s.id}>{renderSupplier(s,i)}</React.Fragment>))}
+        {q?(
+          searched.length===0
+            ?<Empty text="Không tìm thấy NCC phù hợp."/>
+            :searched.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)
+        ):(
+          <>
+            {exactMatch.length===0&&related.length===0&&<Empty text="Không có NCC đúng ngành. Nhấn '+ Hiện NCC khác ngành' để xem thêm."/>}
+            {exactMatch.length>0&&<>
+              <div style={{fontSize:11,fontWeight:600,color:"#1D9E75",padding:"4px 0",borderBottom:"1px solid #e5e5e5"}}>✅ Đúng ngành{rInd?` — ${rInd}`:""}</div>
+              {exactMatch.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)}
+            </>}
+            {related.length>0&&<>
+              <div style={{fontSize:11,fontWeight:600,color:"#185FA5",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:4}}>🔗 Ngành liên quan</div>
+              {related.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)}
+            </>}
+            {showAll&&others.length>0&&<>
+              <div style={{fontSize:11,fontWeight:600,color:"#777",padding:"4px 0",borderBottom:"1px solid #e5e5e5",marginTop:4}}>⚠ Khác ngành</div>
+              {others.map(s=><SupplierCard key={s.id} s={s} {...cardProps}/>)}
+            </>}
+          </>
+        )}
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
-        <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn · {Object.values(rejected).filter(r=>r.reason).length} bị loại</span>
+        <span style={{fontSize:13,color:"#777"}}>{sel.length} NCC được chọn · {Object.values(rejected).filter(v=>v&&v.reason).length} bị loại</span>
         <div style={{display:"flex",gap:8}}>
           <button onClick={()=>setModal(null)} style={gBtn}>Hủy</button>
           <button onClick={()=>{upsR({...r,sids:sel,rejected:JSON.stringify(rejected),selReasons:JSON.stringify(selReasons),status:sel.length>0?"shortlisted":r.status});setModal(null);}} style={pBtn}>Lưu</button>
