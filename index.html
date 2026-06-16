@@ -42,7 +42,7 @@ const PARTNER_STATUSES=[
   {id:"active_platform",label:"Active — Nền tảng",icon:"✅",c:"#0F6E56",bg:"#E1F5EE"},
   {id:"active_direct",label:"Active — Trực tiếp",icon:"🤝",c:"#1D9E75",bg:"#EAF3DE"},
   {id:"active_both",label:"Active — Cả hai",icon:"⭐",c:"#3B6D11",bg:"#D6EDBE"},
-  {id:"registering",label:"Đang đăng ký",icon:"📝",c:"#185FA5",bg:"#E6F1FB"},
+  {id:"registering",label:"Đang đăng ký/thu hồ sơ",icon:"📝",c:"#185FA5",bg:"#E6F1FB"},
   {id:"in_contact",label:"Đang liên hệ",icon:"📞",c:"#534AB7",bg:"#EEEDFE"},
   {id:"considering",label:"Đang cân nhắc",icon:"🤔",c:"#854F0B",bg:"#FAEEDA"},
   {id:"paused",label:"Tạm dừng",icon:"⏸",c:"#888",bg:"#F0F0F0"},
@@ -220,7 +220,7 @@ const newS=()=>({
   contactName:"",zalo:"",email:"",certsProduct:"",certsFactory:"",capacity:"",moq:"",priceRange:"",
   leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",
   notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",
-  catalogLink:"",alibabaLink:"",websiteLink:"",
+  catalogLink:"",alibabaLink:"",websiteLink:"",exportMarkets:"[]",
   vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),
   prescore:"{}",perf:"{}",partnerStatus:"",ca:now(),ua:now()
 });
@@ -440,7 +440,7 @@ function EmailDraft({r,sups,onClose}){
   );
 }
 
-const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","partnerStatus","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
+const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","partnerStatus","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","exportMarkets","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","notes","specialNotes","source","kraljic","ca","ua"];
 function exportSupCSV(sups){
   const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
   const csv=[SUP_CSV_FIELDS.join(","),...sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","))].join("\n");
@@ -729,7 +729,17 @@ function SupDetail({s,ctx}){
           </div>
         </IB>
         <IB title="Liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
-        <IB title="Năng lực"><IR l="Chứng nhận SP" v={s.certsProduct}/><IR l="Chứng nhận NM" v={s.certsFactory}/><IR l="Công suất" v={s.capacity}/><IR l="MOQ" v={s.moq}/><IR l="Price range" v={s.priceRange}/><IR l="Lead time" v={s.leadTime}/><IR l="Incoterm" v={s.incoterm}/><IR l="Thanh toán" v={s.paymentMethod}/></IB>
+        <IB title="Năng lực">
+          <IR l="Chứng nhận SP" v={s.certsProduct}/>
+          <IR l="Chứng nhận NM" v={s.certsFactory}/>
+          {(()=>{const mks=parseJ(s.exportMarkets)||[];return mks.length>0?<div style={{display:"flex",gap:4,padding:"3px 0",flexWrap:"wrap",alignItems:"center"}}><span style={{color:"#777",fontSize:13,minWidth:100,flexShrink:0}}>Export Markets</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{mks.map(m=><span key={m} style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"#E6F1FB",color:"#185FA5",fontWeight:600}}>{m}</span>)}</div></div>:<IR l="Export Markets" v={null}/>;})()}
+          <IR l="Công suất" v={s.capacity}/>
+          <IR l="MOQ" v={s.moq}/>
+          <IR l="Price range" v={s.priceRange}/>
+          <IR l="Lead time" v={s.leadTime}/>
+          <IR l="Incoterm" v={s.incoterm}/>
+          <IR l="Thanh toán" v={s.paymentMethod}/>
+        </IB>
         <IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
       </div>
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
@@ -776,7 +786,15 @@ function SupForm({s,ctx}){
         <Rw l="Email"><input value={f.email||""} onChange={e=>set("email",e.target.value)} style={iSt}/></Rw>
       </Sec>
       <Sec title="Năng lực">
-        <Rw l="Chứng nhận SP"><input value={f.certsProduct||""} onChange={e=>set("certsProduct",e.target.value)} placeholder="CE, FDA, Organic, REACH..." style={iSt}/></Rw>
+        <Rw l="Export Markets">
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {MARKETS.map(m=>{
+              const mks=parseJ(f.exportMarkets)||[];
+              const sel=mks.includes(m);
+              return<button key={m} type="button" onClick={()=>{const cur=parseJ(f.exportMarkets)||[];set("exportMarkets",JSON.stringify(sel?cur.filter(x=>x!==m):[...cur,m]));}} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${sel?"#185FA5":"#ddd"}`,background:sel?"#E6F1FB":"none",color:sel?"#185FA5":"#777",fontSize:12,cursor:"pointer"}}>{m}</button>;
+            })}
+          </div>
+        </Rw>
         <Rw l="Chứng nhận NM"><input value={f.certsFactory||""} onChange={e=>set("certsFactory",e.target.value)} placeholder="ISO 9001, BSCI, WRAP, SA8000..." style={iSt}/></Rw>
         <Rw l="Công suất"><input value={f.capacity||""} onChange={e=>set("capacity",e.target.value)} style={iSt}/></Rw>
         <Rw l="MOQ"><input value={f.moq||""} onChange={e=>set("moq",e.target.value)} style={iSt}/></Rw>
