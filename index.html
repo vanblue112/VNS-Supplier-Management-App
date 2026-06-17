@@ -230,7 +230,7 @@ const newS=()=>({
   id:newId("s"),name:"",bizModel:"",legalType:"",partnerType:"Chưa xác định",
   industry:"",products:"",foundedYear:"",province:"",website:"",channel:"",
   contactName:"",zalo:"",email:"",certsProduct:"",certsFactory:"",capacity:"",moq:"",priceRange:"",
-  leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",subStatus:"",inactiveReason:"",
+  leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",subStatus:"",rejectReason:"",inactiveReason:"",
   notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",
   catalogLink:"",alibabaLink:"",websiteLink:"",exportMarkets:"[]",
   vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),
@@ -259,7 +259,7 @@ const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:
 const newINQ=(rfqs=[])=>({id:newId("i"),type:"inq",code:genCode("INQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",specLink:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
-const normSup=s=>{const _m=LEGACY_PS_TO_STAGE[s.partnerStatus];return{...s,stage:_m?_m[0]:(s.stage||"B1"),subStatus:_m?_m[1]:(s.subStatus||""),inactiveReason:s.inactiveReason||"",vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}};};
+const normSup=s=>{const _m=LEGACY_PS_TO_STAGE[s.partnerStatus];return{...s,stage:_m?_m[0]:(s.stage||"B1"),subStatus:_m?_m[1]:(s.subStatus||""),rejectReason:s.rejectReason||"",inactiveReason:s.inactiveReason||"",vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}};};
 const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},feasibility:parseJ(r.feasibility)||{},rejected:parseJ(r.rejected)||{},selReasons:parseJ(r.selReasons)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",isCustom:r.isCustom===true||r.isCustom==="true"||r.isCustom==="TRUE",industry:r.industry||"",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0,poDate:normDate(o.poDate),etd:normDate(o.etd),eta:normDate(o.eta),prodStart:normDate(o.prodStart),qcDate:normDate(o.qcDate),depositDate:normDate(o.depositDate),balanceDate:normDate(o.balanceDate)});
 
@@ -452,7 +452,7 @@ function EmailDraft({r,sups,onClose}){
   );
 }
 
-const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","partnerStatus","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","exportMarkets","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","subStatus","inactiveReason","notes","specialNotes","source","kraljic","ca","ua"];
+const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","partnerStatus","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","exportMarkets","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","subStatus","rejectReason","inactiveReason","notes","specialNotes","source","kraljic","ca","ua"];
 function exportSupCSV(sups){
   const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
   const csv=[SUP_CSV_FIELDS.join(","),...sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","))].join("\n");
@@ -753,6 +753,7 @@ function SupDetail({s,ctx}){
         </IB>
         <IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
       </div>
+      {s.stage==="B4"&&s.subStatus==="rejected"&&s.rejectReason&&<div style={{background:"#FCEBEB",border:"1px solid #E24B4A",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#A32D2D",marginBottom:3}}>🚫 Lý do từ chối</div><div style={{fontSize:13,color:"#7A1E1E",lineHeight:1.7}}>{s.rejectReason}</div></div>}
       {s.stage==="B10"&&s.inactiveReason&&<div style={{background:"#F0F0F0",border:"1px solid #ccc",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#777",marginBottom:3}}>⏸ Lý do Non-active</div><div style={{fontSize:13,color:"#555",lineHeight:1.7}}>{s.inactiveReason}</div></div>}
       {s.specialNotes&&<div style={{background:"#FFFBF0",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#8A6200",marginBottom:3}}>⚠ Lưu ý đặc biệt</div><div style={{fontSize:13,color:"#5C4000",lineHeight:1.7}}>{s.specialNotes}</div></div>}
       {s.notes&&<div style={{background:"#f8f8f8",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,color:"#aaa",marginBottom:2}}>Ghi chú nội bộ</div><div style={{fontSize:13,color:"#555"}}>{s.notes}</div></div>}
@@ -771,7 +772,7 @@ function SupForm({s,ctx}){
   const {upsS,setModal,sups}=ctx;
   const [f,setF]=useState({...s,vserf:typeof s.vserf==="object"?s.vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
-  const setStage=v=>setF(p=>({...p,stage:v,subStatus:(SUBSTATUS[v]&&v===p.stage)?p.subStatus:"",inactiveReason:v==="B10"?(p.inactiveReason||""):""}));
+  const setStage=v=>setF(p=>({...p,stage:v,subStatus:(SUBSTATUS[v]&&v===p.stage)?p.subStatus:"",inactiveReason:v==="B10"?(p.inactiveReason||""):"",rejectReason:v==="B4"?(p.rejectReason||""):""}));
   const mgtDup=f.supIdMgt&&sups.some(x=>x.id!==f.id&&x.supIdMgt===f.supIdMgt);
   const pltDup=f.supIdPlatform&&sups.some(x=>x.id!==f.id&&x.supIdPlatform===f.supIdPlatform);
   return(
@@ -822,6 +823,7 @@ function SupForm({s,ctx}){
       <Sec title="Pipeline / Trạng thái NCC">
         <Rw l="Stage"><select value={f.stage||"B1"} onChange={e=>setStage(e.target.value)} style={iSt}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rw>
         {SUBSTATUS[f.stage]&&<Rw l={f.stage==="B9"?"Hình thức Active":"Kết quả liên hệ"}><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{SUBSTATUS[f.stage].map(sub=>{const sel=f.subStatus===sub.id;return<button key={sub.id} type="button" onClick={()=>set("subStatus",sel?"":sub.id)} style={{padding:"5px 12px",borderRadius:6,border:`1.5px solid ${sel?sub.c:"#ddd"}`,background:sel?sub.bg:"#fff",color:sel?sub.c:"#777",fontSize:12,fontWeight:sel?700:400,cursor:"pointer"}}>{sub.icon} {sub.label}</button>;})}</div></Rw>}
+        {f.stage==="B4"&&f.subStatus==="rejected"&&<Rw l="Lý do từ chối"><textarea value={f.rejectReason||""} onChange={e=>set("rejectReason",e.target.value)} placeholder="Nêu lý do NCC từ chối hợp tác (giá, năng lực, thời điểm, thị trường...)..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>}
         {f.stage==="B10"&&<Rw l="Lý do Non-active"><textarea value={f.inactiveReason||""} onChange={e=>set("inactiveReason",e.target.value)} placeholder="Nêu lý do NCC chuyển Non-active..." style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>}
         <Rw l="Ghi chú"><textarea value={f.notes||""} onChange={e=>set("notes",e.target.value)} style={{...iSt,minHeight:60,resize:"vertical",boxSizing:"border-box"}}/></Rw>
       </Sec>
@@ -1619,11 +1621,12 @@ function Dash({ctx}){
                   <span style={{fontSize:12,color:"#444",minWidth:160,flexShrink:0}}>{st.label.replace(st.id+" ","")}</span>
                   <div style={{flex:1,height:8,background:"#f0f0f0",borderRadius:4,overflow:"hidden",minWidth:40}}><div style={{height:"100%",width:(c/stageMax*100)+"%",background:st.c||phC,borderRadius:4}}/></div>
                   <span style={{fontSize:13,fontWeight:700,minWidth:24,textAlign:"right",color:c>0?accent:"#ccc"}}>{c}</span>
+                  <span style={{fontSize:11,fontWeight:600,minWidth:42,textAlign:"right",color:c>0?accent:"#ccc",opacity:.75}}>{sups.length?Math.round(c/sups.length*100):0}%</span>
                   <span style={{fontSize:10,color:"#bbb",width:14,textAlign:"center"}}>{isExp?"▲":"▼"}</span>
                 </div>
                 {subs&&c>0&&<div style={{padding:"0 12px 8px 50px",display:"flex",flexWrap:"wrap",gap:5}}>
-                  {subs.map(sub=>{const sc2=subCount(st.id,sub.id);return<span key={sub.id} style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:sub.bg,color:sub.c,fontWeight:600,opacity:sc2>0?1:.4}}>{sub.icon} {sub.label}: {sc2}</span>;})}
-                  {(()=>{const noSub=sups.filter(s=>s.stage===st.id&&!(s.subStatus||"")).length;return noSub>0?<span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"#f0f0f0",color:"#999",fontWeight:600}}>Chưa rõ: {noSub}</span>:null;})()}
+                  {subs.map(sub=>{const sc2=subCount(st.id,sub.id);const pct=sups.length?Math.round(sc2/sups.length*100):0;return<span key={sub.id} style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:sub.bg,color:sub.c,fontWeight:600,opacity:sc2>0?1:.4}}>{sub.icon} {sub.label}: {sc2} <span style={{fontWeight:400,opacity:.7}}>({pct}%)</span></span>;})}
+                  {(()=>{const noSub=sups.filter(s=>s.stage===st.id&&!(s.subStatus||"")).length;const pct=sups.length?Math.round(noSub/sups.length*100):0;return noSub>0?<span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"#f0f0f0",color:"#999",fontWeight:600}}>Chưa rõ: {noSub} <span style={{fontWeight:400,opacity:.7}}>({pct}%)</span></span>:null;})()}
                 </div>}
                 {isExp&&<div style={{borderTop:`1px solid ${accent}30`,maxHeight:240,overflowY:"auto"}}>
                   {c===0?<div style={{padding:"10px 12px",fontSize:12,color:"#aaa"}}>Chưa có NCC ở bước này</div>
@@ -1633,7 +1636,7 @@ function Dash({ctx}){
                       <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{padding:"8px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer",display:"flex",gap:8,alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.03)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-                          <div style={{fontSize:11,color:"#777",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.industry||"—"}{st.id==="B10"&&s.inactiveReason?` · ⏸ ${s.inactiveReason}`:""}</div>
+                          <div style={{fontSize:11,color:"#777",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.industry||"—"}{st.id==="B10"&&s.inactiveReason?` · ⏸ ${s.inactiveReason}`:""}{st.id==="B4"&&s.subStatus==="rejected"&&s.rejectReason?` · 🚫 ${s.rejectReason}`:""}</div>
                         </div>
                         {sub&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:sub.bg,color:sub.c,fontWeight:600,flexShrink:0}}>{sub.icon} {sub.label}</span>}
                         <span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:t.bg,color:t.c,fontWeight:600,flexShrink:0}}>{t.label}</span>
