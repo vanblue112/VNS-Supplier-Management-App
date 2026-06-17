@@ -115,12 +115,54 @@ const VSERF_CRITERIA=[
   {id:"minh_bach",icon:"👁️",label:"Minh bạch & hợp tác",desc:"Sẵn sàng cung cấp thông tin, chấp nhận audit",hint:"Thái độ khi được hỏi về xưởng và quy trình là chỉ báo quan trọng.",opts:[{p:0,t:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi"},{p:1,t:"Cung cấp thông tin nhỏ giọt, không nhất quán"},{p:2,t:"Trả lời khi được hỏi nhưng không chủ động, chưa sẵn sàng buyer visit"},{p:3,t:"Cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit"},{p:4,t:"Chấp nhận buyer visit và audit, có ảnh/video xưởng"},{p:5,t:"Chủ động minh bạch, sẵn sàng factory audit chính thức"}]},
 ];
 const PRESCORE_CRITERIA=[
-  {id:"ps_online",icon:"🌐",label:"Hiện diện online",desc:"Website, Alibaba/Global Sources profile, mạng xã hội",hint:"Tìm tên công ty + 'export'/'manufacturer' trên Google, Alibaba, Facebook.",opts:[{p:0,t:"Không tìm thấy bất kỳ thông tin online nào"},{p:1,t:"Chỉ có Facebook cá nhân hoặc trang rất sơ sài"},{p:2,t:"Có website hoặc Alibaba profile nhưng ít nội dung, không cập nhật"},{p:3,t:"Có website/Alibaba đủ thông tin cơ bản — chưa có nội dung XK rõ"},{p:4,t:"Profile chuyên nghiệp, có ảnh xưởng/sản phẩm thực, đề cập thị trường XK"},{p:5,t:"Profile đầy đủ: website EN+VI, Alibaba verified, ảnh xưởng thực, list thị trường XK"}]},
-  {id:"ps_legal",icon:"⚖️",label:"Pháp lý tra cứu được",desc:"MST tra được tại tracuunnt.mst.gov.vn, thông tin khớp",hint:"Tra MST: status 'đang hoạt động', tên và địa chỉ khớp thông tin họ cung cấp.",opts:[{p:0,t:"Không tra được MST, hoặc tra ra 'đã giải thể / ngừng hoạt động'"},{p:1,t:"Có MST nhưng tên/địa chỉ không khớp"},{p:2,t:"MST hợp lệ — thông tin còn thiếu"},{p:3,t:"MST hợp lệ, thông tin cơ bản khớp — chưa xác minh GP chuyên ngành"},{p:4,t:"MST hợp lệ, đầy đủ — có dấu hiệu GP chuyên ngành"},{p:5,t:"MST hợp lệ, nhất quán trên tất cả nguồn, có bằng chứng GP chuyên ngành"}]},
-  {id:"ps_product",icon:"📦",label:"Sản phẩm & năng lực",desc:"Sản phẩm khớp RFQ, có ảnh/video thực, thông số kỹ thuật rõ",hint:"Xem catalog, ảnh có watermark thực hay stock photo? Thông số kỹ thuật có đủ không?",opts:[{p:0,t:"Không tìm thấy thông tin sản phẩm, hoặc không khớp RFQ"},{p:1,t:"Có đề cập sản phẩm tương tự nhưng chỉ ảnh stock"},{p:2,t:"Có ảnh sản phẩm thực, thiếu thông số kỹ thuật"},{p:3,t:"Có catalog/thông số cơ bản, sản phẩm khớp RFQ — chưa có video xưởng"},{p:4,t:"Có catalog chi tiết, ảnh/video thực, đề cập MOQ/lead time"},{p:5,t:"Catalog đầy đủ, video xưởng và sản phẩm thực, thông số rõ, MOQ/lead time cụ thể"}]},
-  {id:"ps_export",icon:"🚢",label:"Dấu hiệu xuất khẩu",desc:"Đề cập thị trường đã xuất, chứng nhận quốc tế, reference buyer",hint:"Tìm: 'exported to', tên thị trường, logo chứng nhận ISO/BSCI trên website.",opts:[{p:0,t:"Không có bất kỳ dấu hiệu xuất khẩu nào"},{p:1,t:"Có đề cập 'xuất khẩu' nhưng không rõ thị trường"},{p:2,t:"Có đề cập 1 thị trường XK, không có chứng nhận quốc tế"},{p:3,t:"Có 2+ thị trường XK, có ít nhất 1 chứng nhận quốc tế verify được"},{p:4,t:"Có reference buyer/thị trường rõ, 2+ chứng nhận còn hiệu lực"},{p:5,t:"Buyer/thị trường cụ thể, 3+ chứng nhận verify được, lịch sử XK rõ"}]},
-  {id:"ps_consistency",icon:"🔍",label:"Nhất quán thông tin",desc:"Thông tin trên web, Alibaba, Facebook có khớp nhau không",hint:"So sánh tên, địa chỉ, năng lực, sản phẩm giữa các nguồn. Mâu thuẫn lớn = red flag.",opts:[{p:0,t:"Thông tin mâu thuẫn nghiêm trọng giữa các nguồn"},{p:1,t:"Có mâu thuẫn rõ ở 1–2 điểm quan trọng — đáng ngờ"},{p:2,t:"Thông tin cơ bản khớp nhưng năng lực/quy mô không nhất quán"},{p:3,t:"Chủ yếu nhất quán, có 1–2 điểm không rõ nhưng không đáng ngờ"},{p:4,t:"Nhất quán trên tất cả nguồn — vài chi tiết chưa verify được"},{p:5,t:"Nhất quán hoàn toàn, không có red flag"}]},
-  {id:"ps_certs",icon:"🏅",label:"Chứng nhận nhà máy & sản phẩm",desc:"Chứng nhận hệ thống (ISO, BSCI...) và chứng nhận sản phẩm (CE, FDA, Organic...)",hint:"Tìm logo chứng nhận trên website/Alibaba. Verify tại iaf.nu, bsigroup.com, ul.com.",opts:[{p:0,t:"Không tìm thấy bất kỳ chứng nhận nào"},{p:1,t:"Có đề cập chứng nhận nhưng không rõ loại, không verify được"},{p:2,t:"Có ít nhất 1 chứng nhận hệ thống — chưa có chứng nhận sản phẩm"},{p:3,t:"Có 1–2 chứng nhận hệ thống verify được + đề cập chứng nhận SP chưa verify"},{p:4,t:"Có 2+ chứng nhận hệ thống + ít nhất 1 chứng nhận sản phẩm verify được"},{p:5,t:"Đầy đủ cả hai nhóm: hệ thống + sản phẩm — tất cả còn hiệu lực và verify được"}]},
+  {id:"ps_online",icon:"🌐",label:"Hiện diện online",desc:"Website, Alibaba/Global Sources, Social media",hint:"Search tên công ty + 'export'/'manufacturer' trên Google, Alibaba, Facebook, LinkedIn, YouTube.",opts:[
+    {p:0,t:"Không tìm thấy bất kỳ thông tin online nào"},
+    {p:1,t:"Có 1 kênh cơ bản (Trang Vàng, FB...)"},
+    {p:2,t:"Có website + Social (FB/YouTube/LinkedIn) — ít hoạt động"},
+    {p:3,t:"Website + Social/Alibaba đang hoạt động"},
+    {p:4,t:"Website EN + Alibaba + Social"},
+    {p:5,t:"Website EN + Alibaba Gold + Social + Catalog đầy đủ"}
+  ]},
+  {id:"ps_legal",icon:"⚖️",label:"Pháp lý tra cứu được",desc:"MST còn hiệu lực, ngành nghề ĐKKD khớp sản phẩm, uy tín hiệp hội/báo chí",hint:"Tra MST tại tracuunnt.mst.gov.vn. So sánh ngành nghề ĐKKD với sản phẩm thực tế.",opts:[
+    {p:0,t:"MST không tìm thấy hoặc đã ngưng hoạt động"},
+    {p:1,t:"MST hợp lệ nhưng ngành nghề ĐKKD khác sản phẩm thực tế"},
+    {p:2,t:"MST + ngành nghề ĐKKD khớp"},
+    {p:3,t:"MST + ngành nghề khớp + có dấu hiệu giấy phép chuyên ngành"},
+    {p:4,t:"MST + thành viên hiệp hội uy tín / báo chí đưa tin"},
+    {p:5,t:"Đầy đủ + uy tín đặc biệt (niêm yết, FDI, giải thưởng)"}
+  ]},
+  {id:"ps_product",icon:"🏭",label:"Quy mô & Năng lực sản xuất",desc:"Diện tích nhà xưởng, nhân sự, công suất, MOQ, lead time",hint:"Tìm số liệu trong catalog, website, báo chí, hiệp hội. Số liệu từ nguồn độc lập có giá trị cao hơn tự khai.",opts:[
+    {p:0,t:"Không có thông tin gì về quy mô"},
+    {p:1,t:"Xác nhận có nhà máy thực tế (ảnh / địa chỉ KCN) nhưng không số liệu"},
+    {p:2,t:"Có số liệu sơ bộ (diện tích, nhân sự) từ nguồn tự khai"},
+    {p:3,t:"Có số liệu sơ bộ (diện tích, nhân sự) từ nguồn độc lập (báo chí, hiệp hội)"},
+    {p:4,t:"Số liệu cụ thể về quy mô, công suất"},
+    {p:5,t:"Số liệu cụ thể về quy mô lớn, công suất + MOQ + Lead time"}
+  ]},
+  {id:"ps_export",icon:"🚢",label:"Dấu hiệu xuất khẩu",desc:"Hội chợ quốc tế, record trên Panjiva/ImportYeti/ImportGenius, buyer xác nhận",hint:"Tra cứu Panjiva, ImportYeti, ImportGenius, Tradeparq. Tìm tên trong list exhibitor HawaExpo, Lifestyle Vietnam, Vifa Expo...",opts:[
+    {p:0,t:"Không có dấu hiệu xuất khẩu nào"},
+    {p:1,t:"Chỉ có tuyên bố tự khai trên website / Alibaba (không bằng chứng)"},
+    {p:2,t:"Có tham gia hội chợ quốc tế (HawaExpo, Lifestyle Vietnam...)"},
+    {p:3,t:"Có record trên trang thống kê XK (Panjiva / ImportYeti / ImportGenius / Tradeparq...) nhưng cũ (>3 năm)"},
+    {p:4,t:"Có thống kê XK trong 3 năm gần nhất, có tên buyer xác nhận"},
+    {p:5,t:"Thống kê XK liên tục, buyer là thương hiệu lớn (Crate&Barrel, IKEA, Walmart...)"}
+  ]},
+  {id:"ps_consistency",icon:"🔍",label:"Nhất quán thông tin",desc:"Đối chiếu tên, địa chỉ, năng lực, sản phẩm giữa nhiều nguồn",hint:"So sánh website, Alibaba, FB, báo chí, MST. Mâu thuẫn ở thông tin lõi (tên/địa chỉ/sản phẩm) là red flag nghiêm trọng.",opts:[
+    {p:0,t:"Mâu thuẫn nghiêm trọng giữa các nguồn"},
+    {p:1,t:"Có mâu thuẫn lớn chưa giải thích được (tên / địa chỉ / sản phẩm khác nhau giữa các nguồn)"},
+    {p:2,t:"Chỉ có 1 nguồn — không thể đối chiếu"},
+    {p:3,t:"Nhất quán cơ bản giữa các nguồn"},
+    {p:4,t:"Nhất quán tốt, mâu thuẫn nhỏ (địa chỉ trước-sau sáp nhập, tên pháp nhân vs tên thương hiệu)"},
+    {p:5,t:"Nhất quán hoàn toàn đa nguồn"}
+  ]},
+  {id:"ps_certs",icon:"🏅",label:"Chứng nhận NM & SP",desc:"Chứng nhận hệ thống (ISO, BSCI, WRAP...) và chứng nhận sản phẩm (CE, FDA, FSC, Organic...)",hint:"Tìm logo chứng nhận trên website/Alibaba. Verify tại iaf.nu, bsigroup.com, sgs.com, tuv.com.",opts:[
+    {p:0,t:"Không tìm thấy bất kỳ chứng nhận nào"},
+    {p:1,t:"Có đề cập chứng nhận nhưng không rõ loại, không verify được"},
+    {p:2,t:"Có ít nhất 1 chứng nhận hệ thống hoặc sản phẩm"},
+    {p:3,t:"Có ít nhất 1 chứng nhận hệ thống + 1 chứng nhận sản phẩm"},
+    {p:4,t:"Đầy đủ cả hai nhóm: hệ thống + sản phẩm — tất cả đều verify được"},
+    {p:5,t:"Đầy đủ cả hai nhóm: hệ thống + sản phẩm — tất cả verify được và còn hiệu lực"}
+  ]},
 ];
 const KRALJIC_QUADRANTS=[
   {id:"strategic",label:"Strategic",labelVi:"Chiến lược",c:"#A32D2D",bg:"#FCEBEB",icon:"⭐",desc:"Tác động tài chính cao · Rủi ro cao",strategy:"Quan hệ đối tác dài hạn"},
@@ -452,7 +494,7 @@ function EmailDraft({r,sups,onClose}){
   );
 }
 
-const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","exportMarkets","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","subStatus","rejectReason","inactiveReason","partnerStatus","notes","specialNotes","source","kraljic","ca","ua"];
+const SUP_CSV_FIELDS=["id","name","supIdMgt","supIdPlatform","bizModel","legalType","partnerType","industry","products","foundedYear","province","website","alibabaLink","catalogLink","channel","contactName","zalo","email","certsProduct","certsFactory","exportMarkets","capacity","moq","priceRange","leadTime","incoterm","serviceModel","paymentMethod","stage","partnerStatus","subStatus","rejectReason","inactiveReason","notes","specialNotes","source","kraljic","ca","ua"];
 function exportSupCSV(sups){
   const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes("\n")||s.includes('"')?`"${s.replace(/"/g,'""')}"`:s;};
   const csv=[SUP_CSV_FIELDS.join(","),...sups.map(s=>SUP_CSV_FIELDS.map(f=>esc(s[f])).join(","))].join("\n");
@@ -602,7 +644,7 @@ function SupList({ctx,initStage}){
   const inds=[...new Set(sups.map(s=>s.industry).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   const fl=useMemo(()=>sups.filter(s=>{
     const ti=calcTier(s.vserf);
-    return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(fP==="all"||s.partnerType===fP)&&(!q||[s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+    return(fT==="all"||ti.label.startsWith(fT))&&(fI==="all"||s.industry===fI)&&(fS==="all"||s.stage===fS)&&(fP==="all"||s.partnerType===fP)&&(!q||[s.supIdMgt,s.supIdPlatform,s.name,s.products,s.province,s.industry].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
   }),[sups,q,fT,fI,fS,fP]);
   const setFilter=(fn)=>(...args)=>{fn(...args);setPage(1);};
   const totalPages=Math.max(1,Math.ceil(fl.length/PAGE_SIZE));
@@ -611,7 +653,7 @@ function SupList({ctx,initStage}){
     <div>
       {showImport&&<ImportModal ctx={ctx} onClose={()=>setShowImport(false)}/>}
       <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-        <input value={q} onChange={e=>{setQ(e.target.value);setPage(1);}} placeholder="Tìm tên, sản phẩm, tỉnh..." style={{...iSt,flex:1,minWidth:160}}/>
+        <input value={q} onChange={e=>{setQ(e.target.value);setPage(1);}} placeholder="Tìm mã VNS, tên, sản phẩm, tỉnh..." style={{...iSt,flex:1,minWidth:160}}/>
         <Sel val={fT} onChange={setFilter(setFT)} opts={[["all","Tất cả Tier"],["Tier 1","Tier 1"],["Tier 2","Tier 2"],["Tier 3","Tier 3"],["Not","Not Qualified"]]}/>
         <Sel val={fI} onChange={setFilter(setFI)} opts={[["all","Tất cả ngành"],...inds.map(i=>[i,i])]}/>
         <Sel val={fP} onChange={setFilter(setFP)} opts={[["all","Tất cả hình thức"],...PARTNER_TYPES.map(p=>[p,p])]}/>
@@ -637,7 +679,10 @@ function SupList({ctx,initStage}){
             <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
               <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap",overflow:"hidden"}}>
+                  {s.supIdMgt&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#f0f0f0",color:"#666",fontWeight:600,fontFamily:"monospace",flexShrink:0}}>{s.supIdMgt}</span>}
+                  <span style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis"}}>{s.name||<span style={{color:"#ccc"}}>Chưa đặt tên</span>}</span>
+                </div>
                 <div style={{fontSize:12,color:"#777",marginTop:2}}>{[s.industry,s.province,s.products].filter(Boolean).join(" · ")}</div>
               </div>
               {(()=>{const sub=getSub(s.stage,s.subStatus);return sub?<span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:sub.bg,color:sub.c,fontWeight:600,flexShrink:0}}>{sub.icon} {sub.label}</span>:null;})()}
