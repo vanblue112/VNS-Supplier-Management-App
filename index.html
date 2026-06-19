@@ -101,20 +101,37 @@ const PROD_STATUS=[
 ];
 const VCOLS=[
   {id:"phap_ly",l:"01 Pháp lý"},{id:"san_xuat",l:"02 Sản xuất"},{id:"chat_luong",l:"03 Chất lượng"},
-  {id:"xuat_khau",l:"04 Xuất khẩu"},{id:"chung_tu",l:"05 Chứng từ"},{id:"rfq",l:"06 Phản hồi RFQ"},
-  {id:"oem_odm",l:"07 OEM/ODM"},{id:"giao_tiep",l:"08 Giao tiếp"},{id:"minh_bach",l:"09 Minh bạch"},
+  {id:"xuat_khau",l:"04 Xuất khẩu"},{id:"chung_tu",l:"05 Chứng từ"},
+  {id:"oem_odm",l:"06 OEM/ODM"},{id:"giao_tiep",l:"07 Giao tiếp"},{id:"minh_bach",l:"08 Minh bạch"},
 ];
 const VSERF_CRITERIA=[
-  {id:"phap_ly",icon:"⚖️",label:"Pháp lý",desc:"Giấy phép kinh doanh, MST còn hiệu lực",hint:"Tra MST tại tracuunnt.mst.gov.vn",opts:[{p:0,t:"Không tìm thấy thông tin pháp lý, hoặc đã ngừng hoạt động"},{p:1,t:"Có đăng ký nhưng MST 'ngừng hoạt động' hoặc thông tin không khớp"},{p:2,t:"Giấy phép hợp lệ nhưng không cung cấp được khi hỏi — phải tự tra"},{p:3,t:"Giấy phép hợp lệ, cung cấp được khi yêu cầu — chưa có GP chuyên ngành"},{p:4,t:"Hồ sơ đầy đủ, chủ động cung cấp — GP chuyên ngành chưa cập nhật mới nhất"},{p:5,t:"Hồ sơ đầy đủ, MST đang hoạt động, chủ động cung cấp — đủ GP chuyên ngành còn hiệu lực"}]},
-  {id:"san_xuat",icon:"🏭",label:"Sản xuất",desc:"Nhà xưởng, máy móc, công suất thực tế",hint:"Hỏi: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu?'",opts:[{p:0,t:"Không có xưởng, toàn bộ gia công ngoài — thực chất là trading"},{p:1,t:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài"},{p:2,t:"Có xưởng nhưng máy móc thiếu, công suất thấp — chỉ đáp ứng đơn nhỏ"},{p:3,t:"Có xưởng riêng, máy móc cơ bản, đáp ứng MOQ buyer — còn 1–2 công đoạn thuê ngoài"},{p:4,t:"Xưởng riêng, máy móc đầy đủ, công suất ổn định — hầu hết tự sản xuất"},{p:5,t:"Xưởng riêng, máy móc đủ toàn bộ quy trình, công suất ≥ MOQ buyer"}]},
+  {id:"phap_ly",icon:"⚖️",label:"Pháp lý",desc:"Hồ sơ pháp lý đầy đủ, MST đang hoạt động, đầu mối pháp lý rõ; có GP chuyên ngành nếu ngành yêu cầu",hint:"Tra MST tại tracuunnt.mst.gov.vn. Đối chiếu yêu cầu GP chuyên ngành theo ngành hàng (xem banner phía trên).",opts:[{p:0,t:"Không tìm thấy hồ sơ pháp lý, hoặc DN đã ngừng hoạt động"},{p:1,t:"Có MST nhưng 'ngừng hoạt động' / thông tin không khớp GPKD"},{p:2,t:"GPKD hợp lệ nhưng phải tự tra (không chủ động cung cấp), chưa có GP chuyên ngành"},{p:3,t:"GPKD hợp lệ + đầu mối pháp lý rõ, cung cấp khi được yêu cầu"},{p:4,t:"Hồ sơ đầy đủ, MST hoạt động, đầu mối rõ, chủ động cung cấp — GP chuyên ngành chưa cập nhật mới nhất"},{p:5,t:"Hồ sơ pháp lý hoàn chỉnh, MST hoạt động, đầu mối rõ, chủ động cung cấp + đủ GP chuyên ngành còn hiệu lực"}]},
+  {id:"san_xuat",icon:"🏭",label:"Sản xuất",desc:"Xưởng riêng, máy móc, công suất thực tế kê khai được",hint:"Hỏi thẳng: 'Xưởng tự sở hữu hay thuê? Công suất tháng bao nhiêu?'",opts:[{p:0,t:"Không có xưởng, toàn bộ gia công ngoài — thực chất là trading"},{p:1,t:"Có xưởng thuê, phụ thuộc lớn vào gia công ngoài"},{p:2,t:"Có xưởng nhưng máy móc thiếu, công suất thấp / không kê khai được"},{p:3,t:"Có xưởng riêng, máy móc cơ bản, công suất kê khai được ở mức đáp ứng MOQ"},{p:4,t:"Xưởng riêng, máy móc đầy đủ, công suất ổn định và kê khai rõ"},{p:5,t:"Xưởng riêng, máy móc đủ toàn bộ quy trình; công suất thực tế ≥ MOQ buyer"}]},
   {id:"chat_luong",icon:"✅",label:"Chất lượng",desc:"Hệ thống QC, chứng nhận quốc tế",hint:"Hỏi: 'Ai kiểm tra hàng trước khi xuất? Có checklist QC không?'",opts:[{p:0,t:"Không có quy trình QC nào"},{p:1,t:"Kiểm tra theo cảm tính, không có tiêu chuẩn"},{p:2,t:"Có checklist QC cơ bản, chỉ kiểm tra đầu ra (FQC)"},{p:3,t:"Có IPQC + FQC, chưa có chứng nhận quốc tế"},{p:4,t:"Có QC 3 lớp, đang lấy ISO hoặc có chứng nhận tương đương"},{p:5,t:"Có ISO 9001 hoặc tương đương còn hiệu lực, QC 3 lớp đầy đủ"}]},
-  {id:"xuat_khau",icon:"🚢",label:"Kinh nghiệm xuất khẩu",desc:"Số năm XK, thị trường đã bán, thành thạo Incoterms",hint:"Hỏi: 'Đã xuất khẩu sang thị trường nào? Giao theo FOB hay CIF?'",opts:[{p:0,t:"Chưa từng xuất khẩu, chỉ bán nội địa"},{p:1,t:"Đã XK 1–2 lần qua trung gian hoàn toàn"},{p:2,t:"Có XK trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},{p:3,t:"XK 1–2 năm, biết FOB/CIF, có ít nhất 1 thị trường ổn định"},{p:4,t:"XK ≥ 2 năm, thành thạo Incoterms, đã bán vào 2–3 thị trường"},{p:5,t:"XK ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm đa thị trường"}]},
+  {id:"xuat_khau",icon:"🚢",label:"Kinh nghiệm xuất khẩu",desc:"Số năm XK, thị trường đã bán, thành thạo Incoterms",hint:"Hỏi: 'Đã xuất khẩu sang thị trường nào? Giao theo FOB hay CIF?' — xin reference.",opts:[{p:0,t:"Chưa từng xuất khẩu, chỉ bán nội địa"},{p:1,t:"Đã XK 1–2 lần qua trung gian hoàn toàn"},{p:2,t:"Có XK trực tiếp nhưng dưới 1 năm, chưa nắm rõ Incoterms"},{p:3,t:"XK 1–2 năm, biết FOB/CIF, có ít nhất 1 thị trường ổn định"},{p:4,t:"XK ≥ 2 năm, thành thạo Incoterms, đã bán vào 2–3 thị trường"},{p:5,t:"XK ≥ 2 năm liên tục, thông thạo Incoterms, kinh nghiệm đa thị trường"}]},
   {id:"chung_tu",icon:"📄",label:"Chứng từ xuất khẩu",desc:"Tự chuẩn bị CO, packing list, invoice tiếng Anh, HS code",hint:"Hỏi thẳng: 'Tự làm chứng từ hay nhờ logistics làm hộ?'",opts:[{p:0,t:"Không biết chứng từ xuất khẩu là gì"},{p:1,t:"Biết nhưng hoàn toàn nhờ logistics làm hộ"},{p:2,t:"Tự làm packing list và invoice đơn giản, không biết HS code"},{p:3,t:"Tự làm được hầu hết chứng từ, biết HS code — đôi khi cần hỗ trợ CO"},{p:4,t:"Tự làm đầy đủ tiếng Anh, HS code chính xác — quy trình chưa chuẩn hóa"},{p:5,t:"Tự lập hoàn toàn: CO, packing list, invoice chuẩn, HS code đúng"}]},
-  {id:"rfq",icon:"⚡",label:"Phản hồi & báo giá",desc:"Tốc độ phản hồi RFQ, chất lượng báo giá",hint:"Gửi thử 1 RFQ và đo thời gian. Xem có ghi rõ đơn giá, MOQ, Incoterms, lead time không.",opts:[{p:0,t:"Không phản hồi RFQ, hoặc phản hồi sau hơn 3 ngày"},{p:1,t:"Phản hồi sau 48–72 giờ, báo giá chỉ 1 con số"},{p:2,t:"Phản hồi 24–48 giờ, có báo giá nhưng thiếu MOQ / lead time"},{p:3,t:"Phản hồi trong 24 giờ, đủ thông tin cơ bản — chưa có cost breakdown"},{p:4,t:"Phản hồi < 24 giờ, báo giá chi tiết — đôi khi gộp một số hạng mục"},{p:5,t:"Phản hồi < 24 giờ, cost breakdown rõ: đơn giá, MOQ, lead time, Incoterms"}]},
   {id:"oem_odm",icon:"🔧",label:"OEM / ODM",desc:"Khả năng làm mẫu, tùy chỉnh sản phẩm",hint:"Hỏi: 'Nếu buyer muốn thay kích thước/màu/logo, mất bao lâu có mẫu?'",opts:[{p:0,t:"Chỉ bán hàng có sẵn, không nhận tùy chỉnh"},{p:1,t:"Có thể in logo hoặc thay bao bì — không tùy chỉnh sản phẩm"},{p:2,t:"Nhận OEM cơ bản, thời gian làm mẫu >3 tuần"},{p:3,t:"Có OEM/ODM, làm mẫu 2–3 tuần, tùy chỉnh mức trung bình"},{p:4,t:"Có R&D, làm mẫu 10–14 ngày, đáp ứng hầu hết yêu cầu"},{p:5,t:"Có team R&D, làm mẫu 7–10 ngày, tùy chỉnh sâu theo spec buyer"}]},
   {id:"giao_tiep",icon:"🌐",label:"Giao tiếp tiếng Anh",desc:"Giao tiếp trực tiếp với buyer, không cần phiên dịch",hint:"Gửi 1 email tiếng Anh và đánh giá phản hồi.",opts:[{p:0,t:"Không có ai giao tiếp được tiếng Anh"},{p:1,t:"Đọc hiểu email đơn giản nhưng không tự viết được"},{p:2,t:"Viết được email cơ bản — diễn đạt còn nhiều lỗi"},{p:3,t:"Giao tiếp được qua email/chat, chưa tự tin trên Zoom"},{p:4,t:"Giao tiếp tốt qua email/chat/Zoom — đôi khi cần xác nhận lại ý"},{p:5,t:"Tiếng Anh thành thạo mọi kênh, không cần phiên dịch"}]},
   {id:"minh_bach",icon:"👁️",label:"Minh bạch & hợp tác",desc:"Sẵn sàng cung cấp thông tin, chấp nhận audit",hint:"Thái độ khi được hỏi về xưởng và quy trình là chỉ báo quan trọng.",opts:[{p:0,t:"Từ chối cung cấp thông tin cơ bản, né tránh câu hỏi"},{p:1,t:"Cung cấp thông tin nhỏ giọt, không nhất quán"},{p:2,t:"Trả lời khi được hỏi nhưng không chủ động, chưa sẵn sàng buyer visit"},{p:3,t:"Cởi mở, sẵn sàng buyer visit không chính thức — chưa quen audit"},{p:4,t:"Chấp nhận buyer visit và audit, có ảnh/video xưởng"},{p:5,t:"Chủ động minh bạch, sẵn sàng factory audit chính thức"}]},
 ];
+const INDUSTRY_LICENSE={
+  "Accessories":{need:"KHÔNG",gp:"Chỉ cần GPKD. Nếu có mạ kim loại: GP môi trường/PCCC là tuân thủ vận hành."},
+  "Baby & Toy":{need:"CÓ ĐIỀU KIỆN",gp:"Đồ chơi TE: hợp quy QCVN 3:2019/BKHCN + công bố hợp quy + dấu CR (nội địa). XK: EN71 (EU), ASTM F963/CPSIA (US). An toàn trẻ em — soi kỹ."},
+  "Bags & Luggage":{need:"KHÔNG",gp:"Chỉ cần GPKD. Da PU/da thật: REACH khi XK EU (tuân thủ vận hành)."},
+  "Construction Materials":{need:"CÓ ĐIỀU KIỆN",gp:"Hợp quy QCVN 16:2023/BXD + công bố hợp quy. XK EU: CE theo CPR (EU 305/2011)."},
+  "Fashion Accessories":{need:"KHÔNG",gp:"Chỉ cần GPKD."},
+  "Food & Agriculture":{need:"CÓ",gp:"Giấy CN cơ sở đủ điều kiện ATTP; kiểm dịch TV/ĐV (phytosanitary); HACCP/ISO 22000/FSSC 22000 tùy thị trường. Bắt buộc — thiếu = rủi ro pháp lý."},
+  "Footwear":{need:"KHÔNG",gp:"Chỉ cần GPKD."},
+  "Furniture":{need:"CÓ ĐIỀU KIỆN",gp:"Gỗ tự nhiên: hồ sơ nguồn gốc gỗ hợp pháp (NĐ 102/2020 – VNTLAS), bảng kê lâm sản; XK EU: EUDR. Gỗ CN/MDF/kim loại: nhẹ hơn."},
+  "Handicraft & Woven":{need:"CÓ ĐIỀU KIỆN",gp:"Kiểm dịch TV / chứng thư hun trùng khi XK; XK EU: kiểm tra phạm vi EUDR với mây/tre/gỗ."},
+  "Hardware, Tools & Equipment":{need:"KHÔNG",gp:"Chỉ cần GPKD. Nếu có sơn/mạ/khí thải: GP môi trường + nghiệm thu PCCC (tuân thủ vận hành)."},
+  "Home & Kitchen":{need:"CÓ ĐIỀU KIỆN",gp:"Dụng cụ/đồ chứa TIẾP XÚC THỰC PHẨM: công bố hợp quy QCVN 12-1→12-4. XK EU: Reg 1935/2004; Đức: LFGB. Đồ trang trí không tiếp xúc TP: không cần."},
+  "Office & Stationery":{need:"KHÔNG",gp:"Chỉ cần GPKD. VPP cho trẻ em (bút màu, đất nặn) có thể vướng an toàn."},
+  "Packaging":{need:"CÓ ĐIỀU KIỆN",gp:"Bao bì TIẾP XÚC THỰC PHẨM: hợp quy QCVN 12:2011/BYT. XK EU: Reg 1935/2004 + PPWR + EPR. Bao bì công nghiệp: nhẹ hơn."},
+  "Pet Supplies":{need:"CÓ ĐIỀU KIỆN",gp:"Thức ăn vật nuôi: Luật Chăn nuôi 2018, NĐ 13/2020; XK: chứng thư thú y. Phụ kiện (đồ chơi, đệm, dây dắt): không cần."},
+  "Textiles & Apparel":{need:"KHÔNG",gp:"Chỉ cần GPKD. WRAP/BSCI/SA8000/OEKO-TEX/GOTS là chứng nhận tự nguyện → chấm ở trụ 03 Chất lượng."},
+  "Other":{need:"KIỂM TRA",gp:"Đối chiếu Phụ lục IV Luật Đầu tư 2020 (ngành nghề KD có điều kiện) trước khi chấm trụ 01."},
+};
 const PRESCORE_CRITERIA=[
   {id:"ps_online",icon:"🌐",label:"Hiện diện online",desc:"Website, Alibaba/Global Sources, Social media",hint:"Search tên công ty + 'export'/'manufacturer' trên Google, Alibaba, Facebook, LinkedIn, YouTube.",opts:[
     {p:0,t:"Không tìm thấy bất kỳ thông tin online nào"},
@@ -192,14 +209,23 @@ const normDate=v=>{
   if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){const[mo,dd,yy]=s.split("/");return`${yy}-${mo.padStart(2,"0")}-${dd.padStart(2,"0")}`;}
   return s;
 };
+const VSERF_IDS=["phap_ly","san_xuat","chat_luong","xuat_khau","chung_tu","oem_odm","giao_tiep","minh_bach"];
 const calcTier=v=>{
   if(!v)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t:0};
-  const t=Object.values(v).reduce((a,b)=>a+(b||0),0);
+  const t=VSERF_IDS.reduce((a,id)=>a+(v[id]||0),0);
   if((v.phap_ly||0)<3||(v.san_xuat||0)<3)return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
-  if(t>=38)return{label:"Tier 1",c:"#3B6D11",bg:"#EAF3DE",t};
-  if(t>=27)return{label:"Tier 2",c:"#185FA5",bg:"#E6F1FB",t};
-  if(t>=18)return{label:"Tier 3",c:"#854F0B",bg:"#FAEEDA",t};
+  if(t>=34)return{label:"Tier 1",c:"#3B6D11",bg:"#EAF3DE",t};
+  if(t>=24)return{label:"Tier 2",c:"#185FA5",bg:"#E6F1FB",t};
+  if(t>=16)return{label:"Tier 3",c:"#854F0B",bg:"#FAEEDA",t};
   return{label:"Not Qualified",c:"#A32D2D",bg:"#FCEBEB",t};
+};
+// Tier hiển thị có ngữ cảnh: đối tác nền tảng miễn VSERF; đối tác trực tiếp chưa đến B6 thì "Not verified"
+const stageNum=s=>parseInt(String(s||"B1").replace(/[^0-9]/g,""))||1;
+const tierOf=s=>{
+  if(s.partnerType==="Đối tác nền tảng")return{label:"Nền tảng",c:"#185FA5",bg:"#E6F1FB",t:0,exempt:true};
+  const ti=calcTier(s.vserf);
+  if(ti.label==="Not Qualified"&&stageNum(s.stage)<6)return{label:"Not verified",c:"#888",bg:"#F0F0F0",t:ti.t,notVerified:true};
+  return ti;
 };
 const calcSupPerf=(supId,orders)=>{
   const closed=(orders||[]).filter(o=>o.supId===supId&&o.stage==="closed");
@@ -276,7 +302,7 @@ const newS=()=>({
   leadTime:"",incoterm:"",serviceModel:"",paymentMethod:"",stage:"B1",subStatus:"",rejectReason:"",inactiveReason:"",
   notes:"",specialNotes:"",source:"proactive",kraljic:"",supIdMgt:"",supIdPlatform:"",
   catalogLink:"",alibabaLink:"",websiteLink:"",exportMarkets:"[]",
-  vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}),
+  vserf:JSON.stringify({phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,oem_odm:0,giao_tiep:0,minh_bach:0}),
   prescore:"{}",perf:"{}",partnerStatus:"",ca:now(),ua:now()
 });
 
@@ -302,7 +328,7 @@ const newR=(rfqs=[])=>({id:newId("r"),type:"rfq",code:genCode("RFQ",rfqs),sales:
 const newINQ=(rfqs=[])=>({id:newId("i"),type:"inq",code:genCode("INQ",rfqs),sales:"",date:today(),desc:"",markets:"[]",deadline:"",specLink:"",notes:"",status:"inq_new",urgent:false,sids:"[]",snotes:"{}",squotes:"{}",ca:now(),ua:now()});
 const newO=()=>({id:newId("o"),code:"PO-"+Date.now().toString().slice(-5),rfqId:"",supId:"",stage:"po_issued",prodStatus:"",poDate:today(),poValue:"",currency:"USD",depositPct:30,depositPaid:false,depositDate:"",balancePaid:false,balanceDate:"",prodStart:"",etd:"",eta:"",qcType:"",qcResult:"",qcDate:"",qcNotes:"",booking:"",portLoad:"",portDest:"",trackingNo:"",rating:0,onTimeRate:"",qualityRate:"",perfNotes:"",notes:"",ca:now(),ua:now()});
 
-const normSup=s=>{const _m=LEGACY_PS_TO_STAGE[s.partnerStatus];return{...s,stage:s.stage||(_m?_m[0]:"B1"),subStatus:s.subStatus||(_m?_m[1]:""),rejectReason:s.rejectReason||"",inactiveReason:s.inactiveReason||"",vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}};};
+const normSup=s=>{const _m=LEGACY_PS_TO_STAGE[s.partnerStatus];return{...s,stage:s.stage||(_m?_m[0]:"B1"),subStatus:s.subStatus||(_m?_m[1]:""),rejectReason:s.rejectReason||"",inactiveReason:s.inactiveReason||"",vserf:parseJ(s.vserf)||{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,oem_odm:0,giao_tiep:0,minh_bach:0},prescore:parseJ(s.prescore)||{},perf:parseJ(s.perf)||{}};};
 const normRfq=r=>({...r,markets:parseJ(r.markets)||[],sids:parseJ(r.sids)||[],snotes:parseJ(r.snotes)||{},squotes:parseJ(r.squotes)||{},feasibility:parseJ(r.feasibility)||{},rejected:parseJ(r.rejected)||{},selReasons:parseJ(r.selReasons)||{},urgent:r.urgent===true||r.urgent==="true"||r.urgent==="TRUE",isCustom:r.isCustom===true||r.isCustom==="true"||r.isCustom==="TRUE",industry:r.industry||"",date:normDate(r.date)||today(),deadline:normDate(r.deadline)||""});
 const normOrd=o=>({...o,depositPaid:o.depositPaid===true||o.depositPaid==="true"||o.depositPaid==="TRUE",balancePaid:o.balancePaid===true||o.balancePaid==="true"||o.balancePaid==="TRUE",depositPct:parseInt(o.depositPct)||30,rating:parseInt(o.rating)||0,poDate:normDate(o.poDate),etd:normDate(o.etd),eta:normDate(o.eta),prodStart:normDate(o.prodStart),qcDate:normDate(o.qcDate),depositDate:normDate(o.depositDate),balanceDate:normDate(o.balanceDate)});
 
@@ -670,7 +696,8 @@ function SupList({ctx,initStage}){
       {fl.length===0&&<Empty text="Không tìm thấy supplier nào."/>}
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {paginated.map(s=>{
-          const ti=calcTier(s.vserf);const st=STAGES.find(x=>x.id===s.stage);
+          const ti=tierOf(s);const st=STAGES.find(x=>x.id===s.stage);
+          const medal=ti.exempt?"🌐":ti.notVerified?"🔍":ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕";
           const ps=s.prescore||{};
           const psIds=PRESCORE_CRITERIA.map(c=>c.id);
           const psAnswered=psIds.filter(id=>ps[id]!==undefined&&ps[id]!==null&&ps[id]!=="").length;
@@ -678,7 +705,7 @@ function SupList({ctx,initStage}){
           const psV=psAnswered>=5?(psTotal>=24?{label:"Triển vọng",c:"#1D9E75",bg:"#EAF3DE",icon:"✅"}:psTotal>=15?{label:"Cần xác minh",c:"#854F0B",bg:"#FAEEDA",icon:"⚠️"}:{label:"Loại sớm",c:"#A32D2D",bg:"#FCEBEB",icon:"❌"}):null;
           return(
             <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ti.label==="Tier 1"?"🥇":ti.label==="Tier 2"?"🥈":ti.label==="Tier 3"?"🥉":"✕"}</div>
+              <div style={{width:36,height:36,borderRadius:8,background:ti.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{medal}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap",overflow:"hidden"}}>
                   {s.supIdMgt&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:"#f0f0f0",color:"#666",fontWeight:600,fontFamily:"monospace",flexShrink:0}}>{s.supIdMgt}</span>}
@@ -695,7 +722,7 @@ function SupList({ctx,initStage}){
               }
               <span style={{fontSize:11,padding:"2px 9px",borderRadius:4,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>
               <span style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:"#f5f5f5",color:"#777",flexShrink:0}}>{st?.id}</span>
-              <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.t}/45</span>
+              <span style={{fontSize:12,color:"#aaa",minWidth:36,textAlign:"right",flexShrink:0}}>{ti.exempt?"—":`${ti.t}/40`}</span>
             </div>
           );
         })}
@@ -713,7 +740,8 @@ function SupList({ctx,initStage}){
 
 function SupDetail({s,ctx}){
   const {setModal,delS,canEdit,orders}=ctx;
-  const ti=calcTier(s.vserf);const perf=calcSupPerf(s.id,orders||[]);
+  const ti=tierOf(s);const perf=calcSupPerf(s.id,orders||[]);
+  const isPlatform=s.partnerType==="Đối tác nền tảng";
   const ptColor=s.partnerType==="Đối tác trực tiếp"?"#3B6D11":s.partnerType==="Đối tác nền tảng"?"#185FA5":"#aaa";
   const ptBg=s.partnerType==="Đối tác trực tiếp"?"#EAF3DE":s.partnerType==="Đối tác nền tảng"?"#E6F1FB":"#f0f0f0";
   return(
@@ -728,7 +756,7 @@ function SupDetail({s,ctx}){
           <div style={{fontSize:13,color:"#777",marginTop:3}}>{s.industry}{s.province?" · "+s.province:""}</div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <span style={{fontSize:13,padding:"4px 12px",borderRadius:6,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label} · {ti.t}/45</span>
+          <span style={{fontSize:13,padding:"4px 12px",borderRadius:6,background:ti.bg,color:ti.c,fontWeight:600}}>{ti.label}{ti.exempt?"":` · ${ti.t}/40`}</span>
           <span style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:ptBg,color:ptColor,fontWeight:600}}>{s.partnerType||"Chưa xác định"}</span>
           {(()=>{const st=STAGES.find(x=>x.id===s.stage);const sub=getSub(s.stage,s.subStatus);return st?<span style={{fontSize:12,padding:"4px 10px",borderRadius:6,background:st.bg||"#f0f0f0",color:st.c||"#555",fontWeight:600}}>{st.label}{sub?` · ${sub.icon} ${sub.label}`:""}</span>:null;})()}
         </div>
@@ -782,7 +810,7 @@ function SupDetail({s,ctx}){
           <div style={{display:"flex",gap:6,padding:"3px 0",flexWrap:"wrap"}}>
             {s.website&&<a href={s.website} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #185FA5",color:"#185FA5",textDecoration:"none",fontWeight:600}}>🌐 Website</a>}
             {s.alibabaLink&&<a href={s.alibabaLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #E8922A",color:"#E8922A",textDecoration:"none",fontWeight:600}}>🏪 Alibaba</a>}
-            {s.catalogLink&&<a href={s.catalogLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #1D9E75",color:"#1D9E75",textDecoration:"none",fontWeight:600}}>📁 Catalog</a>}
+            {s.catalogLink&&<a href={s.catalogLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"3px 9px",borderRadius:5,border:"1px solid #1D9E75",color:"#1D9E75",textDecoration:"none",fontWeight:600}}>📁 Hồ sơ năng lực</a>}
           </div>
         </IB>
         <IB title="Liên hệ"><IR l="Tên" v={s.contactName}/><IR l="Zalo/SĐT" v={s.zalo}/><IR l="Email" v={s.email}/></IB>
@@ -797,7 +825,9 @@ function SupDetail({s,ctx}){
           <IR l="Incoterm" v={s.incoterm}/>
           <IR l="Thanh toán" v={s.paymentMethod}/>
         </IB>
-        <IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>
+        {isPlatform
+          ?<IB title="VSERF"><div style={{fontSize:12,color:"#185FA5",background:"#E6F1FB",borderRadius:7,padding:"10px 12px",lineHeight:1.6}}>🌐 Đối tác nền tảng — <b>không yêu cầu chấm VSERF</b>. Việc thẩm định do nền tảng/Buyer tự thực hiện.</div></IB>
+          :<IB title="VSERF">{VCOLS.map(c=><div key={c.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><span style={{color:"#777"}}>{c.l}</span><span style={{fontWeight:600,color:(s.vserf[c.id]||0)<3&&(c.id==="phap_ly"||c.id==="san_xuat")?"#A32D2D":"#1a1a1a"}}>{s.vserf[c.id]||0}/5</span></div>)}</IB>}
       </div>
       {s.stage==="B4"&&s.subStatus==="rejected"&&s.rejectReason&&<div style={{background:"#FCEBEB",border:"1px solid #E24B4A",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#A32D2D",marginBottom:3}}>🚫 Lý do từ chối</div><div style={{fontSize:13,color:"#7A1E1E",lineHeight:1.7}}>{s.rejectReason}</div></div>}
       {s.stage==="B10"&&s.inactiveReason&&<div style={{background:"#F0F0F0",border:"1px solid #ccc",borderRadius:8,padding:"10px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:600,color:"#777",marginBottom:3}}>⏸ Lý do Non-active</div><div style={{fontSize:13,color:"#555",lineHeight:1.7}}>{s.inactiveReason}</div></div>}
@@ -806,7 +836,7 @@ function SupDetail({s,ctx}){
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         {canEdit&&<button onClick={()=>setModal({t:"sup-form",d:s})} style={gBtn}>Sửa</button>}
         {canEdit&&<button onClick={()=>setModal({t:"prescore",d:s})} style={{...gBtn,color:"#534AB7",borderColor:"#534AB7"}}>🔍 Pre-score</button>}
-        {canEdit&&<button onClick={()=>setModal({t:"vserf",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>📋 Chấm VSERF</button>}
+        {canEdit&&!isPlatform&&<button onClick={()=>setModal({t:"vserf",d:s})} style={{...gBtn,color:"#1D9E75",borderColor:"#1D9E75"}}>📋 Chấm VSERF</button>}
         <button onClick={()=>setModal({t:"brief",d:s})} style={{...pBtn,background:"#185FA5"}}>Xuất Brief</button>
         {canEdit&&<button onClick={()=>delS(s.id)} style={{...gBtn,color:"#E24B4A",borderColor:"#E24B4A",marginLeft:"auto"}}>Xóa</button>}
       </div>
@@ -816,7 +846,7 @@ function SupDetail({s,ctx}){
 
 function SupForm({s,ctx}){
   const {upsS,setModal,sups}=ctx;
-  const [f,setF]=useState({...s,vserf:typeof s.vserf==="object"?s.vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,rfq:0,oem_odm:0,giao_tiep:0,minh_bach:0}});
+  const [f,setF]=useState({...s,vserf:typeof s.vserf==="object"?s.vserf:{phap_ly:0,san_xuat:0,chat_luong:0,xuat_khau:0,chung_tu:0,oem_odm:0,giao_tiep:0,minh_bach:0}});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const setStage=v=>setF(p=>({...p,stage:v,subStatus:(SUBSTATUS[v]&&v===p.stage)?p.subStatus:"",inactiveReason:v==="B10"?(p.inactiveReason||""):"",rejectReason:v==="B4"?(p.rejectReason||""):""}));
   const mgtDup=f.supIdMgt&&sups.some(x=>x.id!==f.id&&x.supIdMgt===f.supIdMgt);
@@ -837,7 +867,7 @@ function SupForm({s,ctx}){
         <Rw l="Tỉnh / TP"><select value={f.province||""} onChange={e=>set("province",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{PROVINCES.map(p=><option key={p}>{p}</option>)}</select></Rw>
         <Rw l="Website"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.website||""} onChange={e=>set("website",e.target.value)} placeholder="https://..." style={iSt}/>{f.website&&<a href={f.website} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #185FA5",color:"#185FA5",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
         <Rw l="Alibaba / Global Src"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.alibabaLink||""} onChange={e=>set("alibabaLink",e.target.value)} placeholder="https://..." style={iSt}/>{f.alibabaLink&&<a href={f.alibabaLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #E8922A",color:"#E8922A",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
-        <Rw l="Catalog / Google Drive"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.catalogLink||""} onChange={e=>set("catalogLink",e.target.value)} placeholder="https://drive.google.com/..." style={iSt}/>{f.catalogLink&&<a href={f.catalogLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #1D9E75",color:"#1D9E75",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
+        <Rw l="Hồ sơ năng lực"><div style={{display:"flex",gap:6,alignItems:"center"}}><input value={f.catalogLink||""} onChange={e=>set("catalogLink",e.target.value)} placeholder="https://drive.google.com/..." style={iSt}/>{f.catalogLink&&<a href={f.catalogLink} target="_blank" rel="noopener noreferrer" style={{fontSize:11,padding:"5px 9px",borderRadius:5,border:"1px solid #1D9E75",color:"#1D9E75",whiteSpace:"nowrap",textDecoration:"none"}}>🔗</a>}</div></Rw>
         <Rw l="Kênh tìm kiếm"><select value={f.channel||""} onChange={e=>set("channel",e.target.value)} style={iSt}><option value="">-- Chọn --</option>{CHANNELS.map(c=><option key={c}>{c}</option>)}</select></Rw>
       </Sec>
       <Sec title="Liên hệ">
@@ -897,8 +927,9 @@ function VSERFChecklist({supplier,ctx}){
     <Card style={{maxHeight:"85vh",overflowY:"auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <h2 style={{fontSize:15,fontWeight:600,margin:0}}>📋 VSERF — {supplier.name}</h2>
-        {answered===9&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:8,background:ti.bg,border:`1.5px solid ${ti.c}`}}><span style={{fontSize:20,fontWeight:800,color:ti.c}}>{total}/45</span><span style={{fontSize:13,fontWeight:700,color:ti.c}}>{ti.label}</span></div>}
+        {answered===8&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:8,background:ti.bg,border:`1.5px solid ${ti.c}`}}><span style={{fontSize:20,fontWeight:800,color:ti.c}}>{total}/40</span><span style={{fontSize:13,fontWeight:700,color:ti.c}}>{ti.label}</span></div>}
       </div>
+      {(()=>{const lic=INDUSTRY_LICENSE[supplier.industry];if(!supplier.industry)return<div style={{fontSize:12,color:"#854F0B",background:"#FAEEDA",border:"1px solid #EFC982",borderRadius:8,padding:"8px 12px",marginBottom:12}}>⚠ Chưa chọn Ngành hàng — không tra được yêu cầu giấy phép chuyên ngành cho trụ 01 Pháp lý.</div>;const cNeed=lic.need==="CÓ"?"#A32D2D":lic.need==="CÓ ĐIỀU KIỆN"?"#854F0B":lic.need==="KIỂM TRA"?"#185FA5":"#0F6E56";return<div style={{fontSize:12,background:"#F8FAFC",border:"1px solid #D6E2EC",borderRadius:8,padding:"9px 12px",marginBottom:12,lineHeight:1.6}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><span style={{fontWeight:700,color:"#185FA5"}}>⚖️ GP chuyên ngành — {supplier.industry}</span><span style={{fontSize:10,padding:"1px 7px",borderRadius:4,background:cNeed,color:"#fff",fontWeight:700}}>{lic.need}</span></div><div style={{color:"#555"}}>{lic.gp}</div></div>;})()}
       <ChecklistEngine criteria={VSERF_CRITERIA} scores={scores} setScores={setScores} mandatoryIds={["phap_ly","san_xuat"]} accentColor="#1D9E75" accentBg="#F0FDF9"/>
       <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12,paddingTop:12,borderTop:"1px solid #f0f0f0"}}><button onClick={()=>setModal(null)} style={gBtn}>Đóng</button><button onClick={handleSave} style={pBtn}>Lưu VSERF</button></div>
     </Card>
@@ -929,14 +960,14 @@ function PreScoreChecklist({supplier,ctx}){
 }
 
 function Brief({s}){
-  const ti=calcTier(s.vserf);const d=new Date().toLocaleDateString("vi-VN");
+  const ti=tierOf(s);const d=new Date().toLocaleDateString("vi-VN");
   return(
     <div>
       <div style={{display:"flex",marginBottom:10}}><button onClick={()=>window.print()} style={{...gBtn,marginLeft:"auto"}}>🖨 In / PDF</button></div>
       <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:12,padding:"2rem"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2.5px solid #1D9E75",paddingBottom:14,marginBottom:16}}>
           <div><div style={{fontSize:10,fontWeight:700,color:"#1D9E75",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>VinaSources — Supplier Brief</div><h1 style={{margin:0,fontSize:22,fontWeight:700}}>{s.name}</h1><div style={{fontSize:12,color:"#777",marginTop:4}}>{s.industry}{s.province?" · "+s.province:""}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:17,fontWeight:700,padding:"6px 14px",borderRadius:7,background:ti.bg,color:ti.c}}>{ti.label}</div><div style={{fontSize:11,color:ti.c,marginTop:4}}>{ti.t}/45</div><div style={{fontSize:10,color:"#bbb",marginTop:3}}>{d}</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:17,fontWeight:700,padding:"6px 14px",borderRadius:7,background:ti.bg,color:ti.c}}>{ti.label}</div><div style={{fontSize:11,color:ti.c,marginTop:4}}>{ti.t}/40</div><div style={{fontSize:10,color:"#bbb",marginTop:3}}>{d}</div></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.2rem",marginBottom:14}}>
           <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",marginBottom:7}}>Sản phẩm chủ lực</div><div style={{fontSize:13}}>{s.products||"—"}</div></div>
@@ -1605,13 +1636,13 @@ function Kraljic({ctx}){
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:20}}>{q.icon}</span><div><div style={{fontSize:13,fontWeight:700,color:q.c}}>{q.label} <span style={{fontWeight:400,fontSize:12}}>({q.labelVi})</span></div><div style={{fontSize:11,color:"#666"}}>{q.desc}</div></div><span style={{marginLeft:"auto",fontSize:18,fontWeight:700,color:q.c}}>{grouped[q.id].length}</span></div>
             <div style={{fontSize:11,color:"#555",background:"rgba(255,255,255,0.6)",borderRadius:6,padding:"6px 8px",marginBottom:8}}>💡 {q.strategy}</div>
             <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {grouped[q.id].map(s=>{const ti=calcTier(s.vserf);return(<div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div></div><span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>{canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}</div>);})}
+              {grouped[q.id].map(s=>{const ti=tierOf(s);return(<div key={s.id} style={{background:"#fff",borderRadius:6,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry||"—"}</div></div><span style={{fontSize:10,padding:"1px 6px",borderRadius:3,background:ti.bg,color:ti.c,fontWeight:600,flexShrink:0}}>{ti.label}</span>{canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{fontSize:10,padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"none",cursor:"pointer",color:"#777",flexShrink:0}}>Đổi</button>}</div>);})}
               {grouped[q.id].length===0&&<div style={{fontSize:12,color:"#aaa",textAlign:"center",padding:"8px 0"}}>Chưa có NCC</div>}
             </div>
           </div>
         ))}
       </div>
-      {grouped.unclassified.length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length})</div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>{grouped.unclassified.map(s=>{const ti=calcTier(s.vserf);return(<div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label}</div></div>{canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}</div>);})}</div></div>}
+      {grouped.unclassified.length>0&&<div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:12,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#777"}}>📋 Chưa phân loại ({grouped.unclassified.length})</div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>{grouped.unclassified.map(s=>{const ti=tierOf(s);return(<div key={s.id} style={{border:"1px solid #eee",borderRadius:8,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:11,color:"#777"}}>{s.industry} · {ti.label}</div></div>{canEdit&&<button onClick={()=>setModal({t:"kraljic-edit",d:s})} style={{...pBtn,fontSize:11,padding:"4px 10px",background:"#534AB7",flexShrink:0}}>Phân loại</button>}</div>);})}</div></div>}
     </div>
   );
 }
@@ -1633,9 +1664,9 @@ function KraljicEdit({s,ctx}){
 function Dash({ctx}){
   const {sups,rfqs,orders,setModal,navToStage}=ctx;
   const [expStage,setExpStage]=useState(null);
-  const ti={t1:0,t2:0,t3:0,nq:0};let tv=0,vc=0;
-  sups.forEach(s=>{const t=calcTier(s.vserf);if(t.label==="Tier 1")ti.t1++;else if(t.label==="Tier 2")ti.t2++;else if(t.label==="Tier 3")ti.t3++;else ti.nq++;if(t.t>0){tv+=t.t;vc++;}});
-  const av=vc?Math.round(tv/vc):0;const t12=sups.length?Math.round((ti.t1+ti.t2)/sups.length*100):0;
+  const ti={t1:0,t2:0,t3:0,nq:0,exempt:0,nv:0};let tv=0,vc=0;
+  sups.forEach(s=>{const t=tierOf(s);if(t.exempt){ti.exempt++;return;}if(t.notVerified){ti.nv++;return;}if(t.label==="Tier 1")ti.t1++;else if(t.label==="Tier 2")ti.t2++;else if(t.label==="Tier 3")ti.t3++;else ti.nq++;if(t.t>0){tv+=t.t;vc++;}});
+  const av=vc?Math.round(tv/vc):0;const scored=sups.length-ti.exempt;const t12=scored>0?Math.round((ti.t1+ti.t2)/scored*100):0;
   const ind={};sups.forEach(s=>{if(s.industry)ind[s.industry]=(ind[s.industry]||0)+1;});
   const indData=Object.entries(ind).sort((a,b)=>b[1]-a[1]);const indMax=indData.length?indData[0][1]:1;
   const stageCount=id=>sups.filter(s=>s.stage===id).length;
@@ -1677,7 +1708,7 @@ function Dash({ctx}){
                 {isExp&&<div style={{borderTop:`1px solid ${accent}30`,maxHeight:240,overflowY:"auto"}}>
                   {c===0?<div style={{padding:"10px 12px",fontSize:12,color:"#aaa"}}>Chưa có NCC ở bước này</div>
                   :sups.filter(s=>s.stage===st.id).map(s=>{
-                    const t=calcTier(s.vserf);const sub=getSub(s.stage,s.subStatus);
+                    const t=tierOf(s);const sub=getSub(s.stage,s.subStatus);
                     return(
                       <div key={s.id} onClick={()=>setModal({t:"sup-detail",d:s})} style={{padding:"8px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer",display:"flex",gap:8,alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.03)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <div style={{flex:1,minWidth:0}}>
@@ -1698,7 +1729,7 @@ function Dash({ctx}){
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1",v:ti.t1,c:"#1D9E75"},{l:"Tier 2",v:ti.t2,c:"#185FA5"},{l:"Tier 3",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
+        <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Phân bổ Tier</div>{[{l:"Tier 1",v:ti.t1,c:"#1D9E75"},{l:"Tier 2",v:ti.t2,c:"#185FA5"},{l:"Tier 3",v:ti.t3,c:"#854F0B"},{l:"Not Qualified",v:ti.nq,c:"#A32D2D"},{l:"Chưa thẩm định (<B6)",v:ti.nv,c:"#888"},{l:"Đối tác nền tảng (miễn VSERF)",v:ti.exempt,c:"#185FA5"}].map(r=><div key={r.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:2,background:r.c,flexShrink:0}}/><span style={{fontSize:12,color:"#777",flex:1}}>{r.l}</span><span style={{fontSize:13,fontWeight:600,color:r.c}}>{r.v}</span></div>)}</div>
         <div style={{background:"#fff",border:"1px solid #e5e5e5",borderRadius:10,padding:"1rem"}}><div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Orders theo stage</div>{ORDER_STAGES.map(st=>{const c=(orders||[]).filter(o=>o.stage===st.id).length;return<div key={st.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:13}}>{st.icon}</span><span style={{fontSize:12,color:"#777",flex:1}}>{st.label}</span><span style={{fontSize:13,fontWeight:600,color:st.c}}>{c}</span></div>;})}</div>
       </div>
 
